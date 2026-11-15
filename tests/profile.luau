@@ -1,0 +1,22 @@
+local H = require("./harness")
+local Config = H.require(H.shared.Config)
+local Steam = H.require(H.shared.Steam)
+local Core = H.require(H.server.Sim.Core)
+local hf = Steam.hf(6.9)
+local sub = 645 / 4165 * (hf - Steam.hLiquid(165))
+local cond = { pressure = { 6.9, 6.9 }, inletEnthalpy = { hf - sub, hf - sub }, flow = { 4165, 4165 } }
+local core = Core.new({ seed = 7, age = 1 })
+core:setDesignPattern()
+core:solveSteady(Config.NOMINAL_THERMAL, cond, { xenon = true, iterations = 10 })
+local function time(name, n, fn)
+	local t = os.clock()
+	for _ = 1, n do fn() end
+	print(string.format("%-18s %.2f ms", name, (os.clock() - t) / n * 1000))
+end
+time("sweep", 50, function() core:sweep() end)
+time("kinetics", 50, function() core:kinetics(0.1) end)
+time("distributePower", 50, function() core:distributePower() end)
+time("distributeFlow", 50, function() core:distributeFlow(cond) end)
+time("thermal", 50, function() core:thermal(0.1, cond) end)
+time("slow", 10, function() core:slow(2) end)
+time("step", 50, function() core:step(0.1, cond) end)
