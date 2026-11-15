@@ -49,7 +49,7 @@ Config.Core = {
 	FUEL_R = 3.6e-3, -- K/W fuel-to-coolant
 	FUEL_C = 3.3e3, -- J/K
 	GRAPHITE_R = 0.050, -- K/W graphite-to-coolant
-	GRAPHITE_C = 2.2e4, -- J/K (about a third of the real stack so soak-in takes ~20 min, not an hour)
+	GRAPHITE_C = 6.5e4, -- J/K; with GRAPHITE_R the stack takes about 50 minutes to soak, as it really does
 	GRAPHITE_HEAT_FRACTION = 0.055,
 
 	-- Xenon / iodine.
@@ -100,8 +100,9 @@ Config.Primary = {
 	PUMP_COASTDOWN = 28, -- s, time for speed to halve after trip
 	PUMP_MOTOR_MW = 5.2,
 	LOOP_RATED_FLOW = 4165, -- kg/s with three pumps
-	DRUM_ELEVATION_HEAD = 0.22, -- MPa static head at pump suction
-	THERMAL_MASS = 0.9e9, -- J/K for the whole circuit (reduced from the real ~7e9 so heatup fits a session)
+	DRUM_ELEVATION_HEAD = 0.30, -- MPa static head at pump suction
+	RISER_HEAD = 0.18, -- MPa static head of the risers above the channels
+	THERMAL_MASS = 0.45e9, -- J/K of water and steel (well under the real figure so heatup fits a session; the graphite adds its own)
 	DRUM_AREA = 55, -- m2 water surface per loop
 	DRUM_NOMINAL_MASS = 1.6e5, -- kg of water per loop at zero level, hot
 	NOMINAL_PRESSURE = 6.9,
@@ -109,8 +110,8 @@ Config.Primary = {
 }
 
 Config.Secondary = {
-	STEAM_NOMINAL = 1290, -- kg/s total at full power
-	TURBINE_STEAM = 645, -- kg/s per turbine at 400 MWe
+	STEAM_NOMINAL = 1190, -- kg/s total at full power
+	TURBINE_STEAM = 595, -- kg/s per turbine at 400 MWe
 	BYPASS_CAPACITY = 0.30, -- fraction of nominal steam flow per turbine bypass
 	FEEDWATER_TEMP = 165, -- degC at full load
 	FEED_PUMP_FLOW = 450, -- kg/s per main feed pump

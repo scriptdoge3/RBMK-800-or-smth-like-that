@@ -287,6 +287,16 @@ function Rods.step(self, dt: number)
 			arSpeed = Util.clamp(e * 50, -1, 1) * R.SPEED_AUTO
 		end
 	end
+	-- The regulators are period-limited: they stop pulling when power is
+	-- already climbing quickly and push in if it climbs faster still.
+	local period = core.period
+	if period > 0 and power < 0.10 then
+		if period < 22 then
+			arSpeed = R.SPEED_AUTO
+		elseif period < 35 and arSpeed < 0 then
+			arSpeed = 0
+		end
+	end
 	-- The local regulators need a few percent of power to see anything.
 	if self.larOn and power < 0.06 then
 		self.larOn = false

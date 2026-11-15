@@ -302,6 +302,7 @@ function Electrical.step(self, dt: number)
 				b.reserve = true
 				b.normal = false
 				plant:log("Bus " .. name .. " transferred to reserve feed")
+				plant:raise("bus.reserve")
 			end
 		end
 	end
@@ -328,7 +329,7 @@ function Electrical.step(self, dt: number)
 				b.dgSpeed = 0
 				b.dgWillFail = false
 				plant:log(string.format("Diesel generator %d FAILED TO START", b.index))
-				plant:raise("dg." .. b.index .. ".fail")
+				plant:raise("dg.fail")
 			elseif b.dgTimer >= 12 then
 				b.dgState = 2
 				plant:log(string.format("Diesel generator %d at rated speed", b.index))

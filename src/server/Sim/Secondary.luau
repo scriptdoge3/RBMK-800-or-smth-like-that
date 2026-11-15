@@ -20,7 +20,7 @@ Secondary.__index = Secondary
 
 local NOMINAL_P = Config.Primary.NOMINAL_PRESSURE
 local RATED = Config.NOMINAL_ELECTRIC / 2 -- W per machine
-local STEAM_WORK = 628e3 -- J per kg of steam at design conditions
+local STEAM_WORK = 684e3 -- J per kg of steam at design conditions (31% gross cycle efficiency)
 local ROTOR_ENERGY = 2.7e9 -- J at rated speed
 local WINDAGE = 6e6 -- W at rated speed
 local FEED_BUS = { "1A", "1B", "2A", "2B" }
@@ -109,9 +109,9 @@ function Secondary.new(plant)
 	self.feedTotal = 0
 	self.level = {}
 	for l = 1, 2 do
-		self.level[l] = { auto = false, valve = 0, dir = 0, set = 0, int = 0, autoSeconds = 0 }
+		self.level[l] = { auto = false, valve = 0, dir = 0, set = 0, int = 0, autoSeconds = 0, stuck = 0, lastFeed = 0, demand = 0 }
 	end
-	self.da = { mass = 1.5e5, temp = 35, peg = false, levelAuto = true, valve = 0, dir = 0, pegFlow = 0 }
+	self.da = { mass = 1.2e5, temp = 35, peg = false, levelAuto = true, valve = 0, dir = 0, pegFlow = 0 }
 	self.condFlow = 0
 	self.poolHeat = 0 -- W dumped into the suppression pool this tick
 	self.autoSeconds = 0
@@ -199,8 +199,7 @@ function Secondary.new(plant)
 		c["lvl." .. l .. ".auto"] = function(v)
 			local on = v >= 0.5
 			if on and not lc.auto then
-				-- Bumpless transfer.
-				lc.int = lc.valve
+				lc.int = 0
 			end
 			lc.auto = on
 		end
@@ -242,10 +241,13 @@ function Secondary.switchPump(self, pump, on: boolean)
 	end
 end
 
-local function servicePump(self, pump, dt: number)
+local function servicePump(self, pump, dt: number, alarm: string?)
 	if pump.on and not self.plant:busLive(pump.bus) then
 		pump.on = false
 		self.plant:log(pump.name .. " tripped: bus undervoltage")
+		if alarm then
+			self.plant:raise(alarm)
+		end
 	end
 	if pump.repair > 0 then
 		pump.repair -= dt
@@ -530,6 +532,11 @@ function Secondary.step(self, dt: number)
 			v.open = true
 		elseif P < set - 0.35 and not v.stuck then
 			v.open = false
+		elseif v.stuck and v.open and P < 4.0 then
+			-- A valve that failed to reseat finally closes at low pressure.
+			v.stuck = false
+			v.open = false
+			plant:log(string.format("Safety valve group %d reseated", g))
 		end
 		local isOpen = v.open or v.manual
 		v.flow = if isOpen then Sec.SAFETY_VALVE_CAPACITY * Sec.STEAM_NOMINAL * pRatio else 0
@@ -543,7 +550,7 @@ function Secondary.step(self, dt: number)
 	local da = self.da
 	local condCapacity = 0
 	for _, pump in self.condPumps do
-		servicePump(self, pump, dt)
+		servicePump(self, pump, dt, "cond.pump")
 		if pump.on then
 			condCapacity += Sec.COND_PUMP_FLOW
 			elec:addLoad(pump.bus, 1.2e6)
@@ -551,7 +558,7 @@ function Secondary.step(self, dt: number)
 	end
 	local daLevel = da.mass / 2.5e5
 	if da.levelAuto then
-		da.valve = Util.clamp(da.valve + ((0.60 - daLevel) * 0.8 - (da.valve - 0.5) * 0.02) * dt, 0, 1)
+		da.valve = Util.clamp(da.valve + ((0.50 - daLevel) * 0.8 - (da.valve - 0.5) * 0.02) * dt, 0, 1)
 	else
 		da.valve = Util.clamp(da.valve + da.dir * 0.1 * dt, 0, 1)
 	end
@@ -564,9 +571,9 @@ function Secondary.step(self, dt: number)
 	local condTemp = 0.5 * (self.turbines[1].condT + self.turbines[2].condT) + 70 * loadFrac
 	-- Heating steam: turbine extraction first, then pegging steam from the main header.
 	local target = Sec.FEEDWATER_TEMP
-	local need = condFlow * CP * math.max(0, target - condTemp) + da.mass * CP * (target - da.temp) / 150
+	local need = condFlow * CP * math.max(0, target - condTemp) + da.mass * CP * (target - da.temp) / 400
 	local extraction = loadFrac * Sec.STEAM_NOMINAL * 0.13 * 2.0e6
-	local pegAvail = if da.peg and P > 0.8 then 130e6 * math.min(1, pRatio * 2) else 0
+	local pegAvail = if da.peg and P > 0.8 then 110e6 * math.min(1, pRatio * 1.2) else 0
 	local heat = Util.clamp(need, 0, extraction + pegAvail)
 	da.pegFlow = math.max(0, heat - extraction) / 2.0e6
 	aux += da.pegFlow
@@ -580,10 +587,11 @@ function Secondary.step(self, dt: number)
 	-- Feedwater pumps.
 	local running = 0
 	for _, pump in self.feedPumps do
-		servicePump(self, pump, dt)
+		servicePump(self, pump, dt, "fw.pump")
 		if pump.on and daLevel < 0.08 then
 			pump.on = false
 			plant:log(pump.name .. " tripped: deaerator level low")
+			plant:raise("fw.pump")
 		end
 		if pump.on then
 			running += 1
@@ -591,15 +599,28 @@ function Secondary.step(self, dt: number)
 	end
 	local suction = math.max(Steam.psat(da.temp), 0.1) + 0.2
 
-	-- Drum level controllers (three-element).
+	-- Drum level controllers, three-element: the level error trims a feed
+	-- flow demand that otherwise follows steam flow, and the valve is moved
+	-- until measured feed flow meets that demand.
 	for l = 1, 2 do
 		local lc = self.level[l]
 		local loop = pri.loops[l]
-		if lc.auto then
-			local e = (lc.set - loop.level) / 1000 -- metres
-			lc.int = Util.clamp(lc.int + e * 0.25 * dt, 0, 1)
-			local feedForward = (loop.steam - loop.feed) / 1500
-			lc.valve = Util.clamp(lc.int + e * 1.6 + feedForward, 0, 1)
+		if lc.stuck > 0 then
+			-- Valve actuator fault: it stays where it is.
+			lc.stuck -= dt
+		elseif lc.auto then
+			local e = (lc.set - loop.indicated) / 1000 -- metres
+			-- No integrating against a valve that is already hard closed or open.
+			if not ((lc.valve <= 0.001 and e < 0) or (lc.valve >= 0.999 and e > 0)) then
+				lc.int = Util.clamp(lc.int + e * 4 * dt, -150, 150)
+			end
+			local demand = math.max(0, loop.steam + 350 * e + lc.int)
+			lc.demand = demand
+			if running > 0 then
+				lc.valve = Util.clamp(lc.valve + Util.clamp((demand - lc.lastFeed) / 900, -0.15, 0.15) * dt, 0, 1)
+			else
+				lc.valve = Util.approach(lc.valve, 0.05, 0.05 * dt)
+			end
 			lc.autoSeconds += dt
 			self.autoSeconds += dt * 0.5
 		else
@@ -633,7 +654,16 @@ function Secondary.step(self, dt: number)
 			local dp = header - P - 0.2
 			feed[l] = if dp > 0 then FEED_CV * (self.level[l].valve ^ 1.5) * math.sqrt(dp) else 0
 		end
+		-- Pumps run out at about 120% of rated flow.
+		local limit = running * Sec.FEED_PUMP_FLOW * 1.2
+		local sum = feed[1] + feed[2]
+		if sum > limit then
+			feed[1] *= limit / sum
+			feed[2] *= limit / sum
+		end
 	end
+	self.level[1].lastFeed = feed[1]
+	self.level[2].lastFeed = feed[2]
 	self.feedHeader = header
 	local mainFeed = feed[1] + feed[2]
 	for _, pump in self.feedPumps do

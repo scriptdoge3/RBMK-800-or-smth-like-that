@@ -58,9 +58,6 @@ core:design(cond)
 report(core, "design point")
 print(string.format("kOffset %.5f  ormScale %.2f  rod worth total %.2f%%  (%.2f s)", core.kOffset, core.ormScale, core.rodWorthTotal * 100, os.clock() - t0))
 H.near(core.keff, 0.9995, 1.0005, "design keff")
-local ks = {}
-for z = 1, core.NZ do ks[z] = string.format("%.3f", core.kax[z]) end
-print("kax: " .. table.concat(ks, " "))
 
 -- Frozen-feedback reactivity experiments from the design point.
 local saved = table.clone(core.rodPos)
@@ -170,7 +167,7 @@ report(core, "poisoned 200 MW state, every manual rod out")
 -- Nudge k to exactly critical; this stands in for picking the exact moment.
 local shift = 1 - core.keff
 print(string.format("  (k shifted by %+.2f%% to make it critical)", shift * 100))
-for f = 1, core.NF do core.kbase[f] += shift end
+core:shiftK(shift)
 core:solveSteady(200e6, low, { xenon = false, iterations = 25 })
 report(core, "poisoned 200 MW state, critical")
 saved = table.clone(core.rodPos)

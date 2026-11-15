@@ -60,6 +60,8 @@ function Primary.new(plant)
 			blowdownDir = 0,
 			letdownAuto = false,
 			leak = 0, -- kg/s from a pipe break in the compartments
+			levelBias = 0, -- mm error on the narrow-range transmitter (instrument fault)
+			indicated = 0,
 			kc = 1,
 			ncHead = 0,
 			npsh = 1,
@@ -69,7 +71,7 @@ function Primary.new(plant)
 			self.pumps[l][i] = {
 				on = false,
 				speed = 0,
-				valve = 0,
+				valve = 1, -- throttles stand open in shutdown so the core can thermosiphon
 				valveDir = 0,
 				bus = PUMP_BUS[i],
 				failed = false,
@@ -151,6 +153,9 @@ function Primary.stopPump(self, pump, why: string)
 	if pump.on then
 		pump.on = false
 		self.plant:log(pump.name .. " " .. why)
+		if string.sub(why, 1, 7) == "tripped" then
+			self.plant:raise("mcp.trip")
+		end
 	end
 end
 
@@ -264,7 +269,7 @@ function Primary.hydraulics(self, dt: number)
 		end
 		local tSuction = Steam.tLiquid(hin)
 		local psatSuction = Steam.psat(tSuction)
-		local npsh = self.pressure + P.DRUM_ELEVATION_HEAD - psatSuction - 0.13 * (flow / P.LOOP_RATED_FLOW) ^ 2
+		local npsh = self.pressure + P.DRUM_ELEVATION_HEAD - psatSuction - 0.15 * (flow / P.LOOP_RATED_FLOW) ^ 2
 		-- A badly low drum level starves the suction as well.
 		if loop.level < -900 then
 			npsh -= 0.0004 * (-900 - loop.level)
@@ -304,13 +309,17 @@ function Primary.hydraulics(self, dt: number)
 		end
 		loop.pumpHeat = pumpHeat
 		if flow > 1 then
-			hin += pumpHeat / flow
+			-- (Capped: a pump spinning up against almost no flow would
+			-- otherwise appear to flash the water in its casing.)
+			hin += math.min(pumpHeat / flow, 2.0e4)
 		end
 		hin = math.max(hin, Steam.hLiquid(15))
 		loop.inletEnthalpy = hin
 		loop.inletTemp = Steam.tLiquid(math.min(hin, hf))
 		loop.subcool = math.max(0, tsat - loop.inletTemp)
-		self.cond.pressure[l] = self.pressure
+		-- The channels sit under the static head of the risers, so they
+		-- boil at a slightly higher temperature than the drums.
+		self.cond.pressure[l] = self.pressure + P.RISER_HEAD
 		self.cond.inletEnthalpy[l] = math.min(hin, hf + 1e5)
 		self.cond.flow[l] = flow
 	end
@@ -334,7 +343,7 @@ function Primary.thermal(self, dt: number)
 	-- Standing losses, and the cooldown heat exchangers when in service.
 	qOut += 2.5e6 * (self.temp - 30) / 250
 	if self.cooldownOn then
-		qOut += 45e6 * math.max(0, self.temp - 35) / 250
+		qOut += 90e6 * math.max(0, self.temp - 30) / 250
 	end
 	local dT = (qIn - qOut) / P.THERMAL_MASS * dt
 	self.temp = Util.clamp(self.temp + dT, 15, 360)
@@ -364,6 +373,7 @@ function Primary.thermal(self, dt: number)
 		end
 		local volume = loop.mass / rho + core.loopVoidVolume[l]
 		loop.level = Util.clamp((volume - loop.vRef) / P.DRUM_AREA * 1000, -2000, 1500)
+		loop.indicated = loop.level + loop.levelBias
 	end
 end
 
@@ -378,7 +388,8 @@ function Primary.publish(self, S)
 		local loop = self.loops[l]
 		local k = "loop." .. l
 		S[k .. ".flow"] = loop.flow * 3.6
-		S[k .. ".level"] = loop.level
+		S[k .. ".level"] = loop.indicated
+		S[k .. ".levelWide"] = loop.level
 		S[k .. ".dp"] = loop.dp
 		S[k .. ".subcool"] = loop.subcool
 		S[k .. ".tin"] = loop.inletTemp

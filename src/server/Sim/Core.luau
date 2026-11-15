@@ -96,7 +96,7 @@ function Core.new(opts: { seed: number?, age: number? })
 	self.fuelLoop = table.create(NF, 1)
 	self.fuelZone = table.create(NF, 1)
 	self.burnup = table.create(NF, 0.5) -- 0 fresh .. 1 ready for discharge
-	self.kbase = table.create(NF, 1)
+	self.knode = table.create(N, 1.04) -- base multiplication of every fuel node (the burnup map)
 	self.fweight = table.create(NF, 1) -- fissile loading relative to average
 	self.voidBase = table.create(NF, 0)
 	self.voidCoef = table.create(NF, 0)
@@ -113,6 +113,7 @@ function Core.new(opts: { seed: number?, age: number? })
 	self.wear = table.create(NF, 0)
 	self.status = table.create(NF, STATUS_OK)
 	self.leak = table.create(NF, 0) -- kg/s lost through a ruptured tube
+	self.fluxRel = table.create(NF, 1) -- neutron flux relative to the core mean (what in-core detectors see)
 
 	local maxR = 0
 	for c = 1, NC do
@@ -140,10 +141,7 @@ function Core.new(opts: { seed: number?, age: number? })
 		self.wear[f] = w
 	end
 	self.kOffset = 0
-	self.kshape = table.create(NF, 0) -- radial burnup profile found by design()
-	self.kax = table.create(NZ, 0) -- axial burnup profile, same
 	self.ormScale = 1
-	self:_buildKBase()
 
 	-- Rod state lives here so the neutronics and the displays can read it.
 	-- pos is insertion in metres: 0 = fully withdrawn.
@@ -238,20 +236,51 @@ function Core.new(opts: { seed: number?, age: number? })
 	self._x = table.create(NZ, 0)
 	self.layerScale = table.create(NZ, 1)
 	self.production = 0
-	return self
-end
 
--- Radial multiplication profile: a flat plateau with a more reactive outer
--- ring, which is what flattens the power across this very large core.
-function Core._buildKBase(self)
-	local L = self.layout
-	for f = 1, self.NF do
-		local c = L.fuelCells[f]
-		local r = math.sqrt(L.cellX[c] ^ 2 + L.cellY[c] ^ 2) / self.radius
-		local t = Util.clamp((r - 0.70) / 0.30, 0, 1)
-		local ring = t * t * (3 - 2 * t)
-		self.kbase[f] = 1.045 + 0.030 * ring + 0.07 * (0.5 - self.burnup[f]) + self.kshape[f] + self.kOffset
+	-- Coarse radial blocks (2 m squares) for the radial rebalance. Blocks
+	-- that the core edge cuts down to a few cells are merged inward.
+	local BLOCK = 8
+	local perSide = math.ceil(L.grid / BLOCK)
+	local rawOf = table.create(NC, 0)
+	local counts = {}
+	for c = 1, NC do
+		local bx, by = (L.cellGX[c] - 1) // BLOCK, (L.cellGY[c] - 1) // BLOCK
+		rawOf[c] = by * perSide + bx
+		counts[rawOf[c]] = (counts[rawOf[c]] or 0) + 1
 	end
+	local mid = (perSide - 1) / 2
+	local idOf = {}
+	local nBlocks = 0
+	self.blockOf = table.create(NC, 1)
+	for c = 1, NC do
+		local raw = rawOf[c]
+		local guard = 0
+		while counts[raw] < 24 and guard < 4 do
+			local bx, by = raw % perSide, raw // perSide
+			if math.abs(bx - mid) >= math.abs(by - mid) then
+				bx += if bx < mid then 1 else -1
+			else
+				by += if by < mid then 1 else -1
+			end
+			raw = by * perSide + bx
+			guard += 1
+		end
+		if not idOf[raw] then
+			nBlocks += 1
+			idOf[raw] = nBlocks
+		end
+		self.blockOf[c] = idOf[raw]
+	end
+	self.nBlocks = nBlocks
+	self._M = table.create(nBlocks * nBlocks, 0)
+	self._Lm = table.create(nBlocks * nBlocks, 0)
+	self._FB = table.create(nBlocks, 0)
+	self._PB = table.create(nBlocks * NZ, 0)
+	self._g = table.create(nBlocks, 1)
+	self._gx = table.create(nBlocks, 0)
+	self._gb = table.create(nBlocks, 0)
+	self.blockScale = table.create(nBlocks, 1)
+	return self
 end
 
 -- Recompute the absorption of one rod channel from the rod position.
@@ -371,62 +400,95 @@ function Core.sweep(self)
 	self.rho = (self.keff - 1) / self.keff
 end
 
--- Axial rebalance. One sweep per tick only moves the shape a little, but in
--- a 7 m core the top and bottom halves are barely coupled and a scram can
--- shift power between them within a second. So after each sweep the layers
--- are rescaled by the best set of 14 factors (a Rayleigh-Ritz step on the
--- layer-collapsed problem). That also yields a variational, and therefore
--- accurate, eigenvalue for the current shape.
+-- Coarse-mesh rebalance. One sweep per tick only moves the shape a little,
+-- but a core this large is so loosely coupled that a rod movement or a scram
+-- shifts power between its regions within a second. So after each sweep the
+-- flux is rescaled, layer by layer and block by block, by the best factors a
+-- Rayleigh-Ritz step can find on the collapsed problem. That keeps the map
+-- honest for the operator and yields a variational, and therefore accurate,
+-- eigenvalue for the current shape.
 function Core.rebalance(self)
 	local NC, NZ = self.NC, self.NZ
 	local psi, absn, kinf, dgeo = self.psi, self.absn, self.kinf, self.dgeo
 	local nb = self.layout.neighbors
 	local cr, cz = self.cr, self.cz
 	local F, T, E, P = self._F, self._T, self._E, self._P
+	local blockOf, NB = self.blockOf, self.nBlocks
+	local M, FB, PB = self._M, self._FB, self._PB
 	for z = 1, NZ do
 		F[z], T[z], E[z], P[z] = 0, 0, 0, 0
+	end
+	for i = 1, NB * NB do
+		M[i] = 0
+	end
+	for i = 1, NB do
+		FB[i] = 0
+	end
+	for i = 1, NB * NZ do
+		PB[i] = 0
 	end
 	for c = 1, NC do
 		local base = (c - 1) * NZ
 		local q = (c - 1) * 4
-		local b1, b2, b3, b4 = nb[q + 1], nb[q + 2], nb[q + 3], nb[q + 4]
-		b1 = if b1 > 0 then (b1 - 1) * NZ else -1
-		b2 = if b2 > 0 then (b2 - 1) * NZ else -1
-		b3 = if b3 > 0 then (b3 - 1) * NZ else -1
-		b4 = if b4 > 0 then (b4 - 1) * NZ else -1
+		local n1, n2, n3, n4 = nb[q + 1], nb[q + 2], nb[q + 3], nb[q + 4]
+		local b1 = if n1 > 0 then (n1 - 1) * NZ else -1
+		local b2 = if n2 > 0 then (n2 - 1) * NZ else -1
+		local b3 = if n3 > 0 then (n3 - 1) * NZ else -1
+		local b4 = if n4 > 0 then (n4 - 1) * NZ else -1
+		local bc = blockOf[c]
+		local pbBase = (bc - 1) * NZ
+		local d1, d2, d3, d4 = 0, 0, 0, 0
+		local diagAcc, axAcc, fAcc = 0, 0, 0
 		for z = 1, NZ do
 			local n = base + z
 			local v = psi[n]
-			local sum = 0
-			if b1 >= 0 then
-				sum += psi[b1 + z]
-			end
-			if b2 >= 0 then
-				sum += psi[b2 + z]
-			end
-			if b3 >= 0 then
-				sum += psi[b3 + z]
-			end
-			if b4 >= 0 then
-				sum += psi[b4 + z]
-			end
+			local s1 = if b1 >= 0 then psi[b1 + z] else 0
+			local s2 = if b2 >= 0 then psi[b2 + z] else 0
+			local s3 = if b3 >= 0 then psi[b3 + z] else 0
+			local s4 = if b4 >= 0 then psi[b4 + z] else 0
+			d1 += v * s1
+			d2 += v * s2
+			d3 += v * s3
+			d4 += v * s4
 			local a = absn[n]
 			local prod = kinf[n] * a * v
 			P[z] += prod
-			F[z] += prod * v
-			T[z] += ((a + dgeo[n]) * v - cr * sum) * v
+			PB[pbBase + z] += prod
+			local pv = prod * v
+			F[z] += pv
+			fAcc += pv
+			local diagTerm = (a + dgeo[n]) * v * v
+			diagAcc += diagTerm
+			T[z] += diagTerm - cr * (s1 + s2 + s3 + s4) * v
 			if z < NZ then
-				E[z] += cz * v * psi[n + 1]
+				local e = cz * v * psi[n + 1]
+				E[z] += e
+				axAcc += e
 			end
+		end
+		FB[bc] += fAcc
+		local row = (bc - 1) * NB
+		M[row + bc] += diagAcc - 2 * axAcc
+		if n1 > 0 then
+			M[row + blockOf[n1]] -= cr * d1
+		end
+		if n2 > 0 then
+			M[row + blockOf[n2]] -= cr * d2
+		end
+		if n3 > 0 then
+			M[row + blockOf[n3]] -= cr * d3
+		end
+		if n4 > 0 then
+			M[row + blockOf[n4]] -= cr * d4
 		end
 	end
 
-	-- Largest eigenvalue of F f = k T f, T tridiagonal with off-diagonal -E.
+	-- Axial: largest eigenvalue of F f = k T f, T tridiagonal with off-diagonal -E.
 	local f, b, cp, x = self._f, self._b, self._cp, self._x
 	for z = 1, NZ do
 		f[z] = 1
 	end
-	local k = self.keff
+	local kAxial = 0
 	local ok = true
 	for _ = 1, 40 do
 		for z = 1, NZ do
@@ -465,40 +527,116 @@ function Core.rebalance(self)
 			ok = false
 			break
 		end
-		k = num / den
+		kAxial = num / den
 		mean /= NZ
 		for z = 1, NZ do
 			f[z] = x[z] / mean
 		end
 	end
-	local scale = self.layerScale
-	if ok and k == k then
+	local axialOk = ok and kAxial == kAxial and kAxial > 0
+
+	-- Radial: the same problem collapsed onto the blocks, M dense symmetric.
+	-- Cholesky factor once, then inverse power iteration.
+	local Lm, g, gx, gb = self._Lm, self._g, self._gx, self._gb
+	local radialOk = true
+	for i = 1, NB do
+		local ri = (i - 1) * NB
+		for j = 1, i do
+			local rj = (j - 1) * NB
+			local sum = 0.5 * (M[ri + j] + M[rj + i])
+			for k = 1, j - 1 do
+				sum -= Lm[ri + k] * Lm[rj + k]
+			end
+			if i == j then
+				if sum <= 0 then
+					radialOk = false
+					break
+				end
+				Lm[ri + j] = math.sqrt(sum)
+			else
+				Lm[ri + j] = sum / Lm[rj + j]
+			end
+		end
+		if not radialOk then
+			break
+		end
+	end
+	local kRadial = 0
+	if radialOk then
+		for i = 1, NB do
+			g[i] = 1
+		end
+		for _ = 1, 60 do
+			for i = 1, NB do
+				gb[i] = FB[i] * g[i]
+			end
+			-- Solve L y = b, then L^T x = y.
+			for i = 1, NB do
+				local ri = (i - 1) * NB
+				local sum = gb[i]
+				for k = 1, i - 1 do
+					sum -= Lm[ri + k] * gx[k]
+				end
+				gx[i] = sum / Lm[ri + i]
+			end
+			for i = NB, 1, -1 do
+				local sum = gx[i]
+				for k = i + 1, NB do
+					sum -= Lm[(k - 1) * NB + i] * gx[k]
+				end
+				gx[i] = sum / Lm[(i - 1) * NB + i]
+			end
+			local num, den, mean = 0, 0, 0
+			for i = 1, NB do
+				num += gx[i] * FB[i] * gx[i]
+				den += gx[i] * FB[i] * g[i]
+				mean += gx[i]
+			end
+			if den <= 0 or mean <= 0 then
+				radialOk = false
+				break
+			end
+			kRadial = num / den
+			mean /= NB
+			for i = 1, NB do
+				g[i] = gx[i] / mean
+			end
+		end
+		radialOk = radialOk and kRadial == kRadial and kRadial > 0
+	end
+
+	-- Both estimates are lower bounds on the eigenvalue, so take the larger.
+	local k = math.max(if axialOk then kAxial else 0, if radialOk then kRadial else 0)
+	if k > 0 then
 		self.keff = Util.clamp(k, 0.5, 1.5)
 		self.rho = (self.keff - 1) / self.keff
-		local total = 0
-		for z = 1, NZ do
-			-- Limit how far one tick may move a layer.
-			local s = Util.clamp(f[z], 0.5, 2)
-			scale[z] = s
-			total += s * P[z]
-		end
-		self.production = total
-	else
-		local total = 0
-		for z = 1, NZ do
-			scale[z] = 1
-			total += P[z]
-		end
-		self.production = total
 	end
+	local scale, blockScale = self.layerScale, self.blockScale
+	for z = 1, NZ do
+		-- Limit how far one tick may move a layer or a block.
+		scale[z] = if axialOk then Util.clamp(f[z], 0.5, 2) else 1
+	end
+	for i = 1, NB do
+		blockScale[i] = if radialOk then Util.clamp(g[i], 0.6, 1.6) else 1
+	end
+	local total = 0
+	for i = 1, NB do
+		local base = (i - 1) * NZ
+		local sum = 0
+		for z = 1, NZ do
+			sum += scale[z] * PB[base + z]
+		end
+		total += blockScale[i] * sum
+	end
+	self.production = total
 end
 
--- Apply the layer factors, normalise the shape, and fill node powers.
+-- Apply the rebalance factors, normalise the shape, and fill node powers.
 function Core.distributePower(self)
 	local NC, NZ, NF = self.NC, self.NZ, self.NF
 	local psi, absn, kinf, pnode, hist = self.psi, self.absn, self.kinf, self.pnode, self.hist
 	local cellKind, cellRef = self.layout.cellKind, self.layout.cellRef
-	local scale = self.layerScale
+	local scale, blockScale, blockOf = self.layerScale, self.blockScale, self.blockOf
 	local total = self.production
 	if total <= 0 then
 		return
@@ -516,33 +654,42 @@ function Core.distributePower(self)
 	local decayScale = if histTotal > 0 then decayPower / histTotal else 0
 	local uniformDecay = if histTotal > 0 then 0 else decayPower / (NF * NZ)
 	local power = self.power
+	local fluxRel = self.fluxRel
+	local invNZ = 1 / NZ
 	local maxP = 0
 	for c = 1, NC do
 		local base = (c - 1) * NZ
+		local cellNorm = norm * blockScale[blockOf[c]]
 		if cellKind[c] == 1 then
-			local sum = 0
+			local sum, fis = 0, 0
 			for z = 1, NZ do
 				local n = base + z
-				local v = psi[n] * norm * scale[z]
+				local v = psi[n] * cellNorm * scale[z]
 				psi[n] = v
-				local p = kinf[n] * absn[n] * v * promptScale + hist[n] * decayScale + uniformDecay
+				local production = kinf[n] * absn[n] * v
+				local p = production * promptScale + hist[n] * decayScale + uniformDecay
 				pnode[n] = p
 				sum += p
+				fis += production
 			end
 			power[cellRef[c]] = sum
+			fluxRel[cellRef[c]] = fis * invNZ
 			if sum > maxP then
 				maxP = sum
 			end
 		else
 			for z = 1, NZ do
 				local n = base + z
-				psi[n] = psi[n] * norm * scale[z]
+				psi[n] = psi[n] * cellNorm * scale[z]
 			end
 		end
 	end
 	self.maxChannelPower = maxP
 	for z = 1, NZ do
 		scale[z] = 1
+	end
+	for i = 1, self.nBlocks do
+		blockScale[i] = 1
 	end
 end
 
@@ -621,7 +768,11 @@ function Core.distributeFlow(self, cond: LoopConditions)
 	local valve, phi2, flow, loop, status = self.valve, self.phi2, self.flow, self.fuelLoop, self.status
 	local sum1, sum2 = 0, 0
 	for f = 1, NF do
-		local w = valve[f] / math.sqrt(phi2[f])
+		-- Most of a channel's pressure drop is across its inlet throttle,
+		-- which is what keeps the flow steady when boiling changes the
+		-- friction further up.
+		local v = valve[f]
+		local w = 1 / math.sqrt(0.6 / (v * v) + 0.16 * phi2[f])
 		flow[f] = w
 		if loop[f] == 1 then
 			sum1 += w
@@ -659,8 +810,7 @@ function Core.thermal(self, dt: number, cond: LoopConditions, relax: number?)
 	local NZ, NF = self.NZ, self.NF
 	local fuelCell, loopOf = self.fuelCell, self.fuelLoop
 	local pnode, tf, tg, void, kinf, xe = self.pnode, self.tf, self.tg, self.void, self.kinf, self.xe
-	local kbase, voidCoef, flow, phi2 = self.kbase, self.voidCoef, self.flow, self.phi2
-	local kax = self.kax
+	local knode, voidCoef, flow, phi2 = self.knode, self.voidCoef, self.flow, self.phi2
 	local heat, xExit, tOut, cladT, tfMax, margin = self.heat, self.xExit, self.tOut, self.cladT, self.tfMax, self.margin
 	local power, status = self.power, self.status
 	local gFrac = C.GRAPHITE_HEAT_FRACTION
@@ -719,7 +869,7 @@ function Core.thermal(self, dt: number, cond: LoopConditions, relax: number?)
 			g = 0.02
 		end
 		local base = (fuelCell[f] - 1) * NZ
-		local kb, av = kbase[f], voidCoef[f]
+		local av = voidCoef[f]
 		local h = P.hin
 		local dry = cladT[f] > tsat + 80
 		local cladHot = cladT[f] - 30
@@ -768,7 +918,7 @@ function Core.thermal(self, dt: number, cond: LoopConditions, relax: number?)
 			void[n] = ve
 			voidSum += alpha
 			rhoSum += rho
-			kinf[n] = kb + kax[z] + av * ve - aD * (math.sqrt(tfn + 273.15) - sqrtT0) + aG * (tgn - T0) - wXe * xe[n]
+			kinf[n] = knode[n] + av * ve - aD * (math.sqrt(tfn + 273.15) - sqrtT0) + aG * (tgn - T0) - wXe * xe[n]
 			sumTf += tfn
 			sumTg += tgn
 			h = h2
@@ -1031,7 +1181,7 @@ function Core.computeOrm(self)
 			orm += worth / meanRod
 		end
 	end
-	self.orm = orm * self.ormScale
+	self.orm = math.min(orm * self.ormScale, self.NR)
 end
 
 -- Advance the core by one tick.
@@ -1154,94 +1304,239 @@ function Core.setDesignPattern(self)
 	end
 end
 
--- Build an "equilibrium" core: find the burnup profile that flattens the
--- power at the design point, set the channel throttles to match, and shift
--- the multiplication so the design point is exactly critical. `yield` is
--- called between iterations so a game server can stay responsive.
+-- Build an "equilibrium" core. Years of on-load refuelling leave a burnup
+-- map that makes the full-power flux flat across the plateau, so the design
+-- works backwards: choose the flux shape wanted at the design point, work out
+-- the feedback (void, fuel and graphite temperature, xenon) that goes with
+-- it, and solve the diffusion equation for the multiplication each node must
+-- have. Channel-to-channel burnup scatter is then laid on top, the channel
+-- throttles are set for the design power, and the whole map is shifted so
+-- the design point is exactly critical. `yield` is called between stages so
+-- a game server can stay responsive.
 function Core.design(self, cond: LoopConditions, yield: (() -> ())?)
-	local NZ, NF = self.NZ, self.NF
+	local NZ, NF, NC, N = self.NZ, self.NF, self.NC, self.N
 	local L = self.layout
 	local pause = yield or function() end
-	self:setDesignPattern()
+	local psi, absn, dgeo, kinf, knode = self.psi, self.absn, self.dgeo, self.kinf, self.knode
+	local nb = L.neighbors
+	local cr, cz = self.cr, self.cz
 
-	-- Neighbour lists for smoothing the channel power map.
-	local nearFuel = table.create(NF)
+	-- Target flux: gently domed across the plateau, rolling off to the
+	-- reflector; axially a flattened cosine. (A perfectly flat plateau
+	-- would have no restoring force against tilts at all.)
+	local axialT = table.create(NZ, 1)
+	for z = 1, NZ do
+		axialT[z] = math.sin(math.pi * (z - 0.5) / NZ) ^ 0.55
+	end
+	local target = table.create(N, 0)
+	for f = 1, NF do
+		local c = L.fuelCells[f]
+		local r = math.sqrt(L.cellX[c] ^ 2 + L.cellY[c] ^ 2) / self.radius
+		local t = Util.clamp((r - 0.78) / 0.22, 0, 1)
+		local radial = (1 - (self.designDome or 0.15) * r * r) * (1 - (self.designEdge or 0.75) * t * t * (3 - 2 * t))
+		local base = (c - 1) * NZ
+		for z = 1, NZ do
+			target[base + z] = radial * axialT[z]
+		end
+	end
+
+	-- The multiplication each fuel node needs for the target flux to solve
+	-- the diffusion equation with the rods where they presently stand.
+	local function required(): { number }
+		-- Rod channels make no neutrons; their flux follows from their neighbours.
+		for _ = 1, 6 do
+			for i = 1, self.NR do
+				local c = self.rodCell[i]
+				local base = (c - 1) * NZ
+				local q = (c - 1) * 4
+				for z = 1, NZ do
+					local n = base + z
+					local sum = 0
+					for d = 1, 4 do
+						local o = nb[q + d]
+						if o > 0 then
+							sum += target[(o - 1) * NZ + z]
+						end
+					end
+					sum *= cr
+					if z > 1 then
+						sum += cz * target[n - 1]
+					end
+					if z < NZ then
+						sum += cz * target[n + 1]
+					end
+					target[n] = sum / (absn[n] + dgeo[n])
+				end
+			end
+		end
+		local out = table.create(N, 0)
+		for f = 1, NF do
+			local c = L.fuelCells[f]
+			local base = (c - 1) * NZ
+			local q = (c - 1) * 4
+			for z = 1, NZ do
+				local n = base + z
+				local t = target[n]
+				local sum = 0
+				for d = 1, 4 do
+					local o = nb[q + d]
+					if o > 0 then
+						sum += target[(o - 1) * NZ + z]
+					end
+				end
+				sum *= cr
+				if z > 1 then
+					sum += cz * target[n - 1]
+				end
+				if z < NZ then
+					sum += cz * target[n + 1]
+				end
+				out[n] = ((absn[n] + dgeo[n]) * t - sum) / (absn[n] * t)
+			end
+		end
+		return out
+	end
+
+	-- The burnup map reflects where rods usually stand only region by
+	-- region, never cell by cell: work the requirement out with every rod
+	-- withdrawn, again with the design pattern, and keep just a smoothed
+	-- version of the difference.
+	for i = 1, self.NR do
+		self:setRodPosition(i, 0)
+	end
+	local reqOut = required()
+	self:setDesignPattern()
+	local reqPattern = required()
+	pause()
 	local fx, fy = table.create(NF, 0), table.create(NF, 0)
 	for f = 1, NF do
 		local c = L.fuelCells[f]
 		fx[f], fy[f] = L.cellX[c], L.cellY[c]
 	end
+	local req = table.create(N, 0)
+	-- Channel-to-channel burnup scatter, with its regional average removed:
+	-- in a core this loosely coupled a tenth of a percent of regional
+	-- imbalance is a large power tilt.
+	local scatter = table.create(NF, 0)
 	for f = 1, NF do
-		local list = {}
 		local x, y = fx[f], fy[f]
+		local list = {}
+		local burnSum, members = 0, 0
 		for g = 1, NF do
 			local dx, dy = fx[g] - x, fy[g] - y
-			if dx * dx + dy * dy <= 12.5 then
-				list[#list + 1] = g
+			if dx * dx + dy * dy <= 20.5 then
+				list[#list + 1] = (L.fuelCells[g] - 1) * NZ
+				burnSum += self.burnup[g]
+				members += 1
 			end
 		end
-		nearFuel[f] = list
-	end
-	pause()
-
-	-- Target shapes: flat to 80% of the radius then falling to the edge;
-	-- axially a flattened cosine.
-	local radial = table.create(NF, 1)
-	local sumT = 0
-	for f = 1, NF do
-		local r = math.sqrt(fx[f] ^ 2 + fy[f] ^ 2) / self.radius
-		local t = if r < 0.8 then 1 else Util.lerp(1, 0.5, (r - 0.8) / 0.2)
-		radial[f] = t
-		sumT += t
-	end
-	for f = 1, NF do
-		radial[f] *= NF / sumT
-	end
-	local axialT = table.create(NZ, 1)
-	local sumA = 0
-	for z = 1, NZ do
-		axialT[z] = math.sin(math.pi * (z - 0.5) / NZ) ^ 0.55
-		sumA += axialT[z]
-	end
-	for z = 1, NZ do
-		axialT[z] *= NZ / sumA
-	end
-
-	self:solveSteady(Config.NOMINAL_THERMAL, cond, { xenon = true, iterations = 24 })
-	pause()
-	local smooth = table.create(NF, 1)
-	local passes = 8
-	for pass = 1, passes do
-		local avg = self.thermalPower / NF
-		for f = 1, NF do
-			local s = 0
-			local list = nearFuel[f]
-			for _, g in list do
-				s += self.power[g]
-			end
-			smooth[f] = s / #list / avg
-		end
-		for f = 1, NF do
-			self.kshape[f] = Util.clamp(self.kshape[f] - 0.035 * (smooth[f] - radial[f]), -0.08, 0.08)
-		end
+		scatter[f] = 0.07 * (burnSum / members - self.burnup[f])
+		local base = (L.fuelCells[f] - 1) * NZ
+		local count = #list
 		for z = 1, NZ do
-			self.kax[z] = Util.clamp(self.kax[z] - 0.035 * (self.axial[z] - axialT[z]), -0.05, 0.05)
+			local sum = 0
+			for _, gb in list do
+				sum += reqPattern[gb + z] - reqOut[gb + z]
+			end
+			req[base + z] = reqOut[base + z] + sum / count
 		end
-		self:_buildKBase()
-		if pass >= passes - 2 then
-			-- Throttle each channel for its design power, as the real
-			-- plant does with its inlet valves.
-			for f = 1, NF do
-				self.valve[f] = Util.clamp(0.45 + 0.55 * self.power[f] / avg, 0.6, 1.3)
+	end
+	pause()
+
+	-- Design power distribution and the thermal state that goes with it.
+	local nominalNode = Config.NOMINAL_THERMAL / (NF * NZ)
+	local xeEq = (C.GAMMA_I + C.GAMMA_XE) / (C.LAMBDA_XE + C.XE_BURN)
+	local tsat = 0.5 * (Steam.tsat(cond.pressure[1]) + Steam.tsat(cond.pressure[2]))
+	local total = 0
+	for f = 1, NF do
+		local base = (L.fuelCells[f] - 1) * NZ
+		for z = 1, NZ do
+			total += self.fweight[f] * target[base + z]
+		end
+	end
+	self.fission = Config.NOMINAL_THERMAL
+	self.thermalPower = Config.NOMINAL_THERMAL
+	for i, g in C.DECAY do
+		self.decay[i] = g[1] * Config.NOMINAL_THERMAL
+	end
+	local avgChannel = Config.NOMINAL_THERMAL / NF
+	for f = 1, NF do
+		local base = (L.fuelCells[f] - 1) * NZ
+		local sum = 0
+		for z = 1, NZ do
+			local n = base + z
+			local p = Config.NOMINAL_THERMAL * self.fweight[f] * target[n] / total
+			self.pnode[n] = p
+			sum += p
+			local phi = p / nominalNode
+			self.tg[n] = tsat + p * C.GRAPHITE_HEAT_FRACTION * C.GRAPHITE_R
+			self.xe[n] = (C.GAMMA_I + C.GAMMA_XE) * phi / (C.LAMBDA_XE + C.XE_BURN * phi) / xeEq
+			self.iod[n] = C.GAMMA_I * phi / C.LAMBDA_I
+			self.hist[n] = phi
+		end
+		self.power[f] = sum
+		-- Throttle each channel for its design power, as the real plant
+		-- does with its inlet valves.
+		self.valve[f] = Util.clamp(0.45 + 0.55 * sum / avgChannel, 0.6, 1.3)
+	end
+	self.histTotal = NF * NZ
+	for _ = 1, 8 do
+		self:distributeFlow(cond)
+		self:thermal(0, cond, 1)
+	end
+	pause()
+
+	-- Take the feedback out of the requirement to get the bare burnup map,
+	-- and lay the channel-to-channel scatter on top.
+	for f = 1, NF do
+		local base = (L.fuelCells[f] - 1) * NZ
+		for z = 1, NZ do
+			local n = base + z
+			local feedback = kinf[n] - knode[n]
+			knode[n] = Util.clamp(req[n] - feedback, 0.90, self.designKMax or 1.30) + scatter[f]
+		end
+	end
+	for n = 1, N do
+		psi[n] = target[n]
+	end
+	self.keff = 1
+	pause()
+
+	-- Converge the real flux on that map, let the feedback follow the real
+	-- power shape part of the way, and trim to exactly critical.
+	for pass = 1, (self.designPasses or 1) + 1 do
+		self:distributeFlow(cond)
+		self:thermal(0, cond, 0)
+		self:settle(40)
+		self:rebalance()
+		self:distributePower()
+		if pass > (self.designPasses or 1) then
+			self:calibrateCritical()
+			break
+		end
+		for f = 1, NF do
+			local base = (L.fuelCells[f] - 1) * NZ
+			for z = 1, NZ do
+				local n = base + z
+				local phi = self.pnode[n] / nominalNode
+				local eq = (C.GAMMA_I + C.GAMMA_XE) * phi / (C.LAMBDA_XE + C.XE_BURN * phi) / xeEq
+				self.xe[n] += 0.5 * (eq - self.xe[n])
+				self.iod[n] = C.GAMMA_I * phi / C.LAMBDA_I
+				self.hist[n] = phi
+				local tgEq = tsat + self.pnode[n] * C.GRAPHITE_HEAT_FRACTION * C.GRAPHITE_R
+				self.tg[n] += 0.5 * (tgEq - self.tg[n])
 			end
 		end
-		self:solveSteady(Config.NOMINAL_THERMAL, cond, { xenon = true, iterations = 10 })
+		self:distributeFlow(cond)
+		self:thermal(0, cond, 0.5)
+		self:settle(15)
 		self:calibrateCritical()
 		pause()
 	end
-	self:solveSteady(Config.NOMINAL_THERMAL, cond, { xenon = true, iterations = 12 })
-	self:calibrateCritical()
-	pause()
+	self:rebalance()
+	self:distributePower()
+	self:slow(0)
+	self:equilibratePrecursors()
 
 	-- Calibrate the margin estimate against the real thing: pull every rod
 	-- with the feedback frozen and see how much reactivity that frees.
@@ -1275,6 +1570,10 @@ function Core.design(self, cond: LoopConditions, yield: (() -> ())?)
 	self.keff = k0
 	self.rho = (k0 - 1) / k0
 	self:computeOrm()
+	-- Reference values other systems calibrate against.
+	self.designConductance = { self.loopConductance[1], self.loopConductance[2] }
+	self.designVoidVolume = { self.loopVoidVolume[1], self.loopVoidVolume[2] }
+	self.designZonePower = table.clone(self.zonePower)
 	self.designed = true
 end
 
@@ -1287,10 +1586,12 @@ function Core.settle(self, sweeps: number): number
 		if total > 0 then
 			local norm = (self.NF * self.NZ) / total
 			local psi, scale, NZ = self.psi, self.layerScale, self.NZ
+			local blockScale, blockOf = self.blockScale, self.blockOf
 			for c = 1, self.NC do
 				local base = (c - 1) * NZ
+				local cellNorm = norm * blockScale[blockOf[c]]
 				for z = 1, NZ do
-					psi[base + z] *= norm * scale[z]
+					psi[base + z] *= cellNorm * scale[z]
 				end
 			end
 		end
@@ -1324,24 +1625,36 @@ end
 
 -- Shift every channel's multiplication so the present state is exactly critical.
 function Core.calibrateCritical(self)
-	local shift = 1 - self.keff
+	self:shiftK(1 - self.keff)
+end
+
+-- Add the same amount to the multiplication of every fuel node.
+function Core.shiftK(self, shift: number)
 	self.kOffset += shift
+	local NZ = self.NZ
 	for f = 1, self.NF do
-		self.kbase[f] += shift
+		local base = (self.fuelCell[f] - 1) * NZ
+		for z = 1, NZ do
+			self.knode[base + z] += shift
+			self.kinf[base + z] += shift
+		end
 	end
 end
 
--- Put every temperature back to cold and clear the poison.
-function Core.resetCold(self, temperature: number?)
+-- Put every temperature back to cold. The poison (xenon, iodine) and the
+-- decay heat are cleared too unless `keepHistory` is set.
+function Core.resetCold(self, temperature: number?, keepHistory: boolean?)
 	local t = temperature or C.T_REF
 	for n = 1, self.N do
 		self.tf[n] = t
 		self.tg[n] = t
 		self.void[n] = 0
-		self.xe[n] = 0
-		self.iod[n] = 0
-		self.hist[n] = 0
 		self.pnode[n] = 0
+		if not keepHistory then
+			self.xe[n] = 0
+			self.iod[n] = 0
+			self.hist[n] = 0
+		end
 	end
 	for f = 1, self.NF do
 		self.cladT[f] = t
@@ -1350,13 +1663,15 @@ function Core.resetCold(self, temperature: number?)
 		self.tOut[f] = t
 		self.tfMax[f] = t
 	end
-	self.histTotal = 0
 	self.fission = 1
 	for i = 1, 6 do
 		self.prec[i] = 0
 	end
-	for i = 1, #self.decay do
-		self.decay[i] = 0
+	if not keepHistory then
+		self.histTotal = 0
+		for i = 1, #self.decay do
+			self.decay[i] = 0
+		end
 	end
 	self.logRate = 0
 	self.period = math.huge
