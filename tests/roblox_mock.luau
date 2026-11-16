@@ -237,10 +237,24 @@ H.check((fired.CoreMap or 0) >= 2, "server broadcasts the core map")
 -- Geometry sanity: the board must face the operator and the bench must face up.
 do
 	local f = PanelLayout.face(3, "vert")
-	local toOperator = (Vector3.new(0, f.center.Y, 0) - f.center).Unit
-	H.check(f.normal:Dot(toOperator) > 0.95, "vertical boards face the middle of the room")
-	local b = PanelLayout.face(3, "bench")
-	H.check(b.normal.Y > 0.8 and b.normal:Dot(toOperator) > 0.2, "benches slope up and toward the operator")
+	local inward = true
+	for _, p in PanelLayout.panels do
+		local board = PanelLayout.face(p.index, "vert")
+		local bench = PanelLayout.face(p.index, "bench")
+		local toDesk = Vector3.new(-4, board.center.Y, -13) - board.center
+		if board.normal:Dot(toDesk.Unit) < 0.5 or bench.normal.Y < 0.8 or bench.normal:Dot(toDesk.Unit) < 0.1 then
+			inward = false
+		end
+	end
+	H.check(inward, "every board faces into the room and every bench slopes toward the operator")
+	-- The run turns one square corner, between the wing and the back wall.
+	local _, _, wingBack = PanelLayout.panelFrame(PanelLayout.WING_PANELS)
+	local _, _, wallBack = PanelLayout.panelFrame(PanelLayout.WING_PANELS + 1)
+	H.check(math.abs(wingBack:Dot(wallBack)) < 1e-6, "the wing meets the back wall at 90 degrees")
+	local o2, r2 = PanelLayout.panelFrame(PanelLayout.WING_PANELS)
+	local o3, r3 = PanelLayout.panelFrame(PanelLayout.WING_PANELS + 1)
+	H.check(((o2 + r2 * 8) - (o3 - r3 * 8)).Magnitude < 1e-6, "the two runs join edge to edge at the corner")
+	H.check(PanelLayout.panels[PanelLayout.WING_PANELS + 1].id == "P3", "the reactor panel is the one at the corner")
 	local u, v = PanelLayout.toFace(f, PanelLayout.toWorld(f, 3.25, 1.5, 0))
 	H.near(u, 3.24, 3.26, "face coordinates round-trip (u)")
 	H.near(v, 1.49, 1.51, "face coordinates round-trip (v)")
@@ -281,7 +295,7 @@ for _ = 1, 30 do
 	renderStepped.fire(0.016)
 end
 H.check(findText("RBMK-800 UNIT"), "unit computer shows live data")
-H.check(findText("CORE MAP: FLUX"), "core map received and titled")
+H.check(findText("CHANNEL CARTOGRAM   FLUX"), "channel cartogram received and titled")
 H.check(findText("Unit in cold shutdown"), "event log reached the client")
 
 -- Click every control on every face, the way a player would.

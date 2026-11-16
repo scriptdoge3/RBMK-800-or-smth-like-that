@@ -55,6 +55,66 @@ local built = Panels.build(room, ctx)
 Controls.start(built, ctx)
 ProcedureGui.start()
 
+-- On the operators' desk: a green-screen terminal with a live summary, and
+-- the alarm teleprinter, which prints the event log on its paper.
+local function surface(target: Instance, pixelsPerStud: number): SurfaceGui
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = pixelsPerStud
+	gui.LightInfluence = 0
+	gui.Adornee = target :: any
+	gui.Parent = target
+	return gui
+end
+local function typed(gui: SurfaceGui, size: number, color: Color3): TextLabel
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -14, 1, -10)
+	label.Position = UDim2.fromOffset(7, 5)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.Code
+	label.TextSize = size
+	label.TextColor3 = color
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextYAlignment = Enum.TextYAlignment.Top
+	label.TextWrapped = true
+	label.Text = ""
+	label.Parent = gui
+	return label
+end
+local terminalText: TextLabel? = nil
+local paperText: TextLabel? = nil
+do
+	local screenPart = room:WaitForChild("DeskScreen1", 10)
+	if screenPart then
+		terminalText = typed(surface(screenPart, 110), 15, Color3.fromRGB(110, 255, 140))
+		terminalText.Text = "UNIT COMPUTER\nNOT READY"
+	end
+	local paperPart = room:WaitForChild("PrinterPaper", 10)
+	if paperPart then
+		paperText = typed(surface(paperPart, 70), 10, Color3.fromRGB(30, 30, 34))
+		paperText.TextYAlignment = Enum.TextYAlignment.Bottom
+	end
+end
+local function refreshDesk()
+	local g = ctx.get
+	local t = math.floor(g("time"))
+	if terminalText then
+		terminalText.Text = string.format(
+			"RBMK-800 UNIT 1   %02d:%02d:%02d\n\nPOWER  %7.2f %%  %5.0f MWT\nPERIOD %7.0f S\nMARGIN %7.0f RODS\nPRESS  %7.2f MPA %4.0f C\nFLOW   %7.0f T/H\nSTEAM  %7.0f  FEED %5.0f\nGROSS  %7.0f MWE",
+			t // 3600, (t // 60) % 60, t % 60, g("n.power"), g("n.thermal"), g("n.period"), g("core.orm"), g("pri.press"), g("pri.temp"), g("pri.flow"), g("steam.total"), g("fw.total"), g("plant.gross")
+		)
+	end
+	if paperText then
+		local lines = built.logLines
+		local shown = {}
+		for i = math.max(1, #lines - 11), #lines do
+			table.insert(shown, string.upper(lines[i]))
+		end
+		paperText.Text = table.concat(shown, "\n")
+	end
+end
+
 -- Status banner: shown until the plant model is running, and when it is lost.
 local screen = Instance.new("ScreenGui")
 screen.Name = "RBMKStatus"
@@ -96,6 +156,7 @@ local function addLog(lines: { any })
 end
 
 local gotSnapshot = false
+local snapshotCount = 0
 local hornOn = false
 local wasDestroyed = false
 local destroyedAt = 0
@@ -110,6 +171,10 @@ snapshotEvent.OnClientEvent:Connect(function(buf: buffer)
 		banner.Visible = false
 	end
 	built.refresh()
+	snapshotCount += 1
+	if snapshotCount % 5 == 1 then
+		refreshDesk()
+	end
 
 	local horn = ctx.get("horn") >= 0.5
 	if horn ~= hornOn then

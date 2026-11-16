@@ -10,8 +10,9 @@ come out, a 16-second scram whose first seconds can add reactivity ("positive sc
 shutdown (AZ) rods, AZ-1 to AZ-5 protection levels, the KOM clutch-release key, xenon
 in real time, and fuel channels that burst when you starve or overheat them.
 
-![The control room from the operator's position](docs/room-operator-view.png)
-![The reactor control panel](docs/reactor-panel-3d.png)
+![The control room](docs/room.png)
+![The corner, with the reactor panel](docs/corner.png)
+![The reactor control panel](docs/reactor-panel.png)
 
 *Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
 the game's scripts create, so the geometry is the game's; Roblox's own lighting and
@@ -41,9 +42,16 @@ The server needs a few seconds at startup to design the core ("Commissioning the
 | Mouse wheel | While seated: zoom. |
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
-Six panels stand in a horseshoe, left to right: **P1** reactor auxiliaries and emergency
-cooling, **P2** main circulation, **P3** reactor control, **P4** feedwater, **P5** turbines,
-**P6** electrical. Every server runs one shared unit; anyone can operate any panel.
+The boards form an L, after a late-1970s American boiling-water-reactor control room:
+**P1** reactor auxiliaries and emergency cooling and **P2** main circulation on the left
+wing, a square corner, then along the back wall **P3** reactor control (the rod panel, at
+the corner), **P4** feedwater, **P5** turbines and **P6** electrical. An operators' desk
+stands in the middle. Every server runs one shared unit; anyone can operate any panel.
+
+Everything in the room is dated before 1986: edgewise meters, strip-chart recorders,
+pistol-grip switches, annunciator windows, a lamp-mosaic channel cartogram, red LED
+readouts, a green-phosphor unit computer, and on the desk a video terminal, an alarm
+teleprinter that prints the event log, dial telephones, binders and logbooks.
 
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,

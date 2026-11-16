@@ -19,7 +19,9 @@ PanelLayout.BENCH_FRONT_HEIGHT = 3.1
 PanelLayout.BENCH_SLOPE = math.rad(22)
 PanelLayout.VERT_HEIGHT = 6.6
 PanelLayout.ANN_HEIGHT = 2.2
-PanelLayout.ARC_RADIUS = 40
+PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
+PanelLayout.CORNER_X = -36 -- where the left wing meets the back wall, at a right angle
+PanelLayout.WING_PANELS = 2 -- panels on the wing; the rest run along the back wall
 PanelLayout.PIXELS_PER_STUD = 80
 PanelLayout.FACE_THICKNESS = 0.3
 
@@ -481,14 +483,21 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 
 -- Where a panel stands: its origin is the floor point under the middle of
 -- the bench's front edge; x is the operator's right, z points back at them.
+--
+-- The boards form an L, as in a classic control room: P1 and P2 stand on a
+-- wing along the left wall, the run turns a square corner, and P3 to P6 fill
+-- the back wall. The reactor panel, P3, is the one at the corner.
 function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
-	local R = PanelLayout.ARC_RADIUS
-	local step = 2 * math.asin(PanelLayout.PANEL_WIDTH / (2 * R)) + math.rad(0.6)
-	local theta = (index - (#panels + 1) / 2) * step
-	local origin = Vector3.new(R * math.sin(theta), 0, -R * math.cos(theta))
-	local toOperator = Vector3.new(-math.sin(theta), 0, math.cos(theta))
-	local right = Vector3.new(math.cos(theta), 0, math.sin(theta))
-	return origin, right, toOperator
+	local W = PanelLayout.PANEL_WIDTH
+	local z = PanelLayout.BACK_WALL_Z
+	local cx = PanelLayout.CORNER_X
+	local wing = PanelLayout.WING_PANELS
+	if index <= wing then
+		-- On the wing, facing east; panel `wing` is the one next to the corner.
+		local fromCorner = (wing - index + 0.5) * W
+		return Vector3.new(cx, 0, z + fromCorner), Vector3.new(0, 0, -1), Vector3.new(1, 0, 0)
+	end
+	return Vector3.new(cx + (index - wing - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
 function PanelLayout.face(index: number, face: string): Face

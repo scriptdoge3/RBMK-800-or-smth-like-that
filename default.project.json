@@ -22,9 +22,9 @@
     "Lighting": {
       "$properties": {
         "Ambient": [
-          0.35,
-          0.35,
-          0.37
+          0.46,
+          0.43,
+          0.38
         ],
         "OutdoorAmbient": [
           0.3,
@@ -33,7 +33,30 @@
         ],
         "Brightness": 1.5,
         "GlobalShadows": false,
-        "ClockTime": 12
+        "ClockTime": 12,
+        "EnvironmentDiffuseScale": 0.2,
+        "EnvironmentSpecularScale": 0.3,
+        "ExposureCompensation": 0.15
+      },
+      "Bloom": {
+        "$className": "BloomEffect",
+        "$properties": {
+          "Intensity": 0.35,
+          "Size": 20,
+          "Threshold": 1.6
+        }
+      },
+      "Grade": {
+        "$className": "ColorCorrectionEffect",
+        "$properties": {
+          "Contrast": 0.08,
+          "Saturation": 0.05,
+          "TintColor": [
+            1.0,
+            0.975,
+            0.93
+          ]
+        }
       }
     },
     "SoundService": {

@@ -18,9 +18,12 @@ local PPS = PanelLayout.PIXELS_PER_STUD
 
 local INK = Color3.fromRGB(24, 26, 28)
 local PAPER = Color3.fromRGB(236, 232, 214)
-local SCREEN = Color3.fromRGB(12, 16, 14)
-local DIGIT = Color3.fromRGB(120, 255, 150)
-local AMBER_TEXT = Color3.fromRGB(255, 190, 70)
+-- Period hardware: numeric readouts are red LED panel meters, the unit
+-- computer is a green-phosphor tube, and nothing has a colour screen.
+local SCREEN = Color3.fromRGB(22, 8, 8)
+local DIGIT = Color3.fromRGB(255, 62, 44)
+local TUBE = Color3.fromRGB(8, 18, 12)
+local PHOSPHOR = Color3.fromRGB(110, 255, 140)
 local LAMP = {
 	red = { Color3.fromRGB(255, 50, 40), Color3.fromRGB(70, 22, 20) },
 	green = { Color3.fromRGB(60, 240, 90), Color3.fromRGB(20, 60, 28) },
@@ -87,6 +90,20 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	t.TextWrapped = true
 	t.Text = str
 	t.Parent = parent
+	return t
+end
+
+-- An engraved nameplate: white lettering on a black laminate strip, the way
+-- every label in a real control room is made.
+local PLATE = Color3.fromRGB(22, 22, 24)
+local PLATE_TEXT = Color3.fromRGB(240, 240, 232)
+local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number): TextLabel
+	local t = text(parent, x, y, w, h, str, size, PLATE_TEXT)
+	t.BackgroundTransparency = 0
+	t.BackgroundColor3 = PLATE
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 2)
+	c.Parent = t
 	return t
 end
 
@@ -161,12 +178,25 @@ local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
 end
 
--- Colour scale for the core map, cold blue through green and yellow to red.
+-- The channel cartogram is a mosaic of lamps, one per channel, and a lamp
+-- has only a handful of states: dark, dim green, green, yellow, amber, red.
+local LAMP_STEPS = {
+	{ 0.10, Color3.fromRGB(34, 36, 34) },
+	{ 0.30, Color3.fromRGB(26, 84, 40) },
+	{ 0.50, Color3.fromRGB(58, 214, 84) },
+	{ 0.65, Color3.fromRGB(238, 220, 60) },
+	{ 0.80, Color3.fromRGB(255, 150, 40) },
+	{ 2.00, Color3.fromRGB(255, 52, 40) },
+}
 local PALETTE: { Color3 } = {}
 for i = 0, 31 do
-	local t = i / 31
-	local hue = 0.66 * (1 - t)
-	PALETTE[i + 1] = Color3.fromHSV(hue, 0.9, 0.35 + 0.65 * math.min(1, t * 1.6 + 0.15))
+	local t = (i + 0.5) / 32
+	for _, step in LAMP_STEPS do
+		if t < step[1] then
+			PALETTE[i + 1] = step[2]
+			break
+		end
+	end
 end
 
 function Panels.build(room: Instance, ctx: Context)
@@ -201,15 +231,18 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.section = function(gui, _face, _part, w)
 		local f = box(gui, w.x, w.y, w.w, w.h, Color3.new(0, 0, 0))
 		f.BackgroundTransparency = 1
-		outline(f, Color3.fromRGB(70, 74, 70), 2)
+		outline(f, Color3.fromRGB(60, 54, 44), 2)
 		if w.label ~= "" then
-			local t = text(gui, w.x + 0.1, w.y - 0.02, w.w - 0.2, 0.24, w.label, 0.15, Color3.fromRGB(40, 44, 40))
-			t.TextXAlignment = Enum.TextXAlignment.Left
+			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135)
 		end
 	end
 
 	builders.label = function(gui, _face, _part, w)
-		local t = text(gui, w.x, w.y, w.w, w.h, w.label, if w.title then 0.3 elseif w.small then 0.16 else 0.18, INK)
+		if w.title then
+			plate(gui, w.x, w.y, w.w, w.h, w.label, 0.28)
+			return
+		end
+		local t = text(gui, w.x, w.y, w.w, w.h, w.label, if w.small then 0.16 else 0.18, INK)
 		if w.small then
 			t.TextXAlignment = Enum.TextXAlignment.Left
 			t.TextYAlignment = Enum.TextYAlignment.Top
@@ -218,7 +251,7 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.meter = function(gui, face, part, w)
-		text(gui, w.x - 0.08, w.y, w.w + 0.16, 0.5, w.label, 0.145)
+		plate(gui, w.x - 0.06, w.y + 0.04, w.w + 0.12, 0.42, w.label, 0.125)
 		local sx, sy, sw, sh = w.x + 0.1, w.y + 0.52, w.w - 0.2, 1.6
 		local frameBack = box(gui, sx - 0.04, sy - 0.04, sw + 0.08, sh + 0.08, Color3.fromRGB(30, 30, 32))
 		local scale = box(gui, sx, sy, sw, sh, PAPER)
@@ -281,7 +314,7 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.digital = function(gui, face, part, w)
-		text(gui, w.x, w.y, w.w, 0.26, w.label, 0.14)
+		plate(gui, w.x, w.y + 0.01, w.w, 0.22, w.label, 0.125)
 		bezel(controls, face, w.x, w.y + 0.28, w.w, w.h - 0.3, 0.07, BEZEL, 0.04)
 		local screen = box(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, SCREEN)
 		outline(screen, Color3.fromRGB(70, 70, 70), 1)
@@ -305,8 +338,7 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.lamp = function(gui, face, part, w)
 		local d = math.min(0.24, w.h - 0.06)
 		local setLens = lens(controls, face, w.x + 0.03 + d / 2, w.y + w.h / 2, d, LAMP[w.color])
-		local t = text(gui, w.x + d + 0.09, w.y, w.w - d - 0.1, w.h, w.label, 0.14)
-		t.TextXAlignment = Enum.TextXAlignment.Left
+		plate(gui, w.x + d + 0.12, w.y + 0.05, w.w - d - 0.14, w.h - 0.1, w.label, 0.12)
 		local lastOn: boolean? = nil
 		local function isOn(): boolean
 			local v = get(w.sig)
@@ -336,8 +368,12 @@ function Panels.build(room: Instance, ctx: Context)
 		round(ring)
 		local cap = cylinder(controls, face, cx, cy, d, 0.16, BUTTON[w.color])
 		local home = cap.CFrame
-		local t = text(gui, w.x - 0.05, w.y + d + 0.12, w.w + 0.1, w.h - d - 0.12, w.label, if w.big then 0.2 else 0.135)
-		t.TextYAlignment = Enum.TextYAlignment.Top
+		plate(gui, w.x - 0.02, w.y + d + 0.16, w.w + 0.04, w.h - d - 0.18, w.label, if w.big then 0.2 else 0.12)
+		-- A bright metal collar under the cap; the scram button also gets a yellow guard plate.
+		if w.big then
+			block(controls, face, cx, cy, d + 0.3, d + 0.3, 0.03, Color3.fromRGB(232, 196, 40))
+		end
+		cylinder(controls, face, cx, cy, d + 0.12, 0.06, Color3.fromRGB(186, 186, 190)).Material = Enum.Material.Metal
 		region(part, w, function(_button: number)
 			ctx.click()
 			cap.CFrame = home - face.normal * 0.06
@@ -357,7 +393,9 @@ function Panels.build(room: Instance, ctx: Context)
 	-- Shared by toggles and pump switches: a lever that leans left or right.
 	local function lever(face: PanelLayout.Face, cx: number, cy: number, key: boolean?): (boolean) -> ()
 		local baseColor = if key then Color3.fromRGB(190, 160, 70) else Color3.fromRGB(50, 52, 56)
-		cylinder(controls, face, cx, cy, 0.4, 0.05, baseColor)
+		-- Black escutcheon plate, then the hub the handle turns on.
+		block(controls, face, cx, cy, 0.58, 0.58, 0.025, Color3.fromRGB(26, 26, 28))
+		cylinder(controls, face, cx, cy, 0.36, 0.07, baseColor).Material = Enum.Material.Metal
 		local handle = block(controls, face, cx, cy, 0.13, 0.44, 0.2, if key then Color3.fromRGB(230, 200, 90) else Color3.fromRGB(20, 20, 22), -32)
 		return function(on: boolean)
 			handle.CFrame = blockCFrame(face, cx, cy, 0.1 + 0.05, if on then 32 else -32)
@@ -367,7 +405,9 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.toggle = function(gui, face, part, w)
 		local compact = w.compact
 		local labelH = if compact then 0.26 else 0.42
-		text(gui, w.x - 0.04, w.y, w.w + 0.08, labelH, w.label, 0.135)
+		if w.label ~= "" then
+			plate(gui, w.x + 0.01, w.y + 0.01, w.w - 0.02, labelH - 0.05, w.label, 0.115)
+		end
 		local cy = w.y + labelH + 0.28
 		local set = lever(face, w.x + w.w / 2, cy, w.key)
 		local py = cy + 0.28
@@ -393,7 +433,7 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.pump = function(gui, face, part, w)
-		text(gui, w.x - 0.04, w.y, w.w + 0.08, 0.28, w.label, 0.15)
+		plate(gui, w.x + 0.03, w.y + 0.01, w.w - 0.06, 0.24, w.label, 0.13)
 		local setGreen = lens(controls, face, w.x + 0.26, w.y + 0.44, 0.22, LAMP.green)
 		local setRed = lens(controls, face, w.x + w.w - 0.26, w.y + 0.44, 0.22, LAMP.red)
 		local cy = w.y + 0.88
@@ -420,14 +460,16 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.selector = function(gui, face, part, w)
-		text(gui, w.x - 0.04, w.y, w.w + 0.08, 0.26, w.label, 0.135)
+		if w.label ~= "" then
+			plate(gui, w.x + 0.03, w.y + 0.01, w.w - 0.06, 0.22, w.label, 0.12)
+		end
 		local cx, cy = w.x + w.w / 2, w.y + 0.58
+		block(controls, face, cx, cy, 0.62, 0.62, 0.025, Color3.fromRGB(26, 26, 28))
 		local n = #w.positions
 		cylinder(controls, face, cx, cy, 0.5, 0.12, Color3.fromRGB(40, 42, 46))
 		local pointer = block(controls, face, cx, cy, 0.09, 0.5, 0.18, Color3.fromRGB(230, 230, 225), 0)
-		local screen = box(gui, w.x + 0.05, w.y + 0.92, w.w - 0.1, 0.3, SCREEN)
-		local readout = text(gui, w.x + 0.05, w.y + 0.92, w.w - 0.1, 0.3, "", 0.17, AMBER_TEXT, Enum.Font.Code)
-		local _ = screen
+		-- A legend window under the knob shows the selected position.
+		local readout = plate(gui, w.x + 0.08, w.y + 0.94, w.w - 0.16, 0.27, "", 0.15)
 		local function index(): number
 			return math.clamp(math.floor(get(w.sig) - w.base + 1.5), 1, n)
 		end
@@ -452,8 +494,11 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.jog = function(gui, face, part, w)
-		text(gui, w.x, w.y, w.w, 0.26, w.label, 0.135)
+		plate(gui, w.x + 0.08, w.y + 0.01, w.w - 0.16, 0.22, w.label, 0.12)
 		local cy = w.y + 0.56
+		for _, bx in { w.x + 0.32, w.x + w.w - 0.32 } do
+			cylinder(controls, face, bx, cy, 0.52, 0.05, Color3.fromRGB(186, 186, 190)).Material = Enum.Material.Metal
+		end
 		local lower = cylinder(controls, face, w.x + 0.32, cy, 0.42, 0.14, BUTTON.black)
 		local raise = cylinder(controls, face, w.x + w.w - 0.32, cy, 0.42, 0.14, BUTTON.black)
 		text(gui, w.x + 0.55, cy - 0.2, w.w - 1.1, 0.4, "<  >", 0.2, Color3.fromRGB(60, 60, 60))
@@ -488,8 +533,7 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.recorder = function(gui, face, part, w)
-		local title = text(gui, w.x, w.y, w.w, 0.24, w.label, 0.13)
-		title.TextXAlignment = Enum.TextXAlignment.Left
+		plate(gui, w.x, w.y, math.min(w.w, #w.label * 0.082 + 0.3), 0.21, w.label, 0.12)
 		local gx, gy, gw, gh = w.x, w.y + 0.26, w.w, w.h - 0.3
 		local paper = box(gui, gx, gy, gw, gh, PAPER)
 		outline(paper, Color3.fromRGB(40, 40, 40), 2)
@@ -551,12 +595,16 @@ function Panels.build(room: Instance, ctx: Context)
 		for i, alarm in w.alarms do
 			local c, r = (i - 1) % cols, (i - 1) // cols
 			if r < rows then
-				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(58, 56, 50))
-				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, Color3.fromRGB(120, 118, 108))
+				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(168, 164, 150))
+				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, Color3.fromRGB(74, 72, 64))
 				local index = AlarmList.index[alarm.id]
 				local urgent = alarm.id == "az5" or alarm.id == "chan.rupture" or alarm.id == "core.damage" or alarm.id == "rs.press"
 				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent }
 			end
+		end
+		for i = #w.alarms + 1, cols * rows do
+			local c, r = (i - 1) % cols, (i - 1) // cols
+			box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(150, 146, 134))
 		end
 		table.insert(regions[part], {
 			x = 0,
@@ -584,10 +632,9 @@ function Panels.build(room: Instance, ctx: Context)
 		local size = cell * G
 		local ox = px(w.x) + (px(w.w) - size) // 2
 		local oy = px(w.y) + px(0.3)
-		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(16, 18, 20))
+		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
 		local _ = back
-		local title = text(gui, w.x + 0.1, w.y + 0.03, w.w - 0.2, 0.26, "CORE MAP", 0.17, Color3.fromRGB(220, 220, 210), Enum.Font.Code)
-		title.TextXAlignment = Enum.TextXAlignment.Left
+		local title = plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "CHANNEL CARTOGRAM", 0.13)
 		local frames = table.create(L.nCells)
 		local lastByte = table.create(L.nCells, -1)
 		for c = 1, L.nCells do
@@ -605,7 +652,7 @@ function Panels.build(room: Instance, ctx: Context)
 		out.setMap = function(buf: buffer)
 			current = buf
 			local mode = buffer.readu8(buf, 0)
-			title.Text = string.format("CORE MAP: %s  (blue low, red %g %s)", modeNames[mode] or "?", scales[mode] and scales[mode][1] or 0, scales[mode] and scales[mode][2] or "")
+			title.Text = string.format("CHANNEL CARTOGRAM   %s   RED LAMP = %g %s", modeNames[mode] or "?", scales[mode] and scales[mode][1] or 0, scales[mode] and scales[mode][2] or "")
 			local NC = L.nCells
 			for c = 1, NC do
 				local v = buffer.readu8(buf, c)
@@ -636,7 +683,7 @@ function Panels.build(room: Instance, ctx: Context)
 			h = w.h,
 			widget = w,
 			tip = function()
-				return "Core map. Rod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout."
+				return "Channel cartogram: one lamp per channel, dark through green, yellow and amber to red.\nRod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout."
 			end,
 		} :: any)
 		out.mapCellAt = function(u: number, v: number): number
@@ -760,15 +807,15 @@ function Panels.build(room: Instance, ctx: Context)
 
 	builders.axial = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
-		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(16, 18, 20))
-		text(gui, w.x, w.y + 0.03, w.w, 0.26, "AXIAL", 0.17, Color3.fromRGB(220, 220, 210), Enum.Font.Code)
-		text(gui, w.x, w.y + 0.3, w.w, 0.18, "TOP", 0.12, Color3.fromRGB(150, 150, 150), Enum.Font.Code)
-		text(gui, w.x, w.y + w.h - 0.2, w.w, 0.18, "BOTTOM", 0.12, Color3.fromRGB(150, 150, 150), Enum.Font.Code)
+		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
+		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "AXIAL", 0.13)
+		text(gui, w.x, w.y + 0.3, w.w, 0.18, "TOP", 0.11, Color3.fromRGB(190, 190, 180))
+		text(gui, w.x, w.y + w.h - 0.2, w.w, 0.18, "BOTTOM", 0.11, Color3.fromRGB(190, 190, 180))
 		local N = 14
 		local y0, rowH = w.y + 0.5, (w.h - 0.75) / N
 		local bars = {}
 		for z = 1, N do
-			local bar = box(gui, w.x + 0.06, y0 + (z - 1) * rowH + 0.03, 0.1, rowH - 0.06, Color3.fromRGB(90, 220, 120))
+			local bar = box(gui, w.x + 0.06, y0 + (z - 1) * rowH + 0.03, 0.1, rowH - 0.06, Color3.fromRGB(255, 120, 40))
 			bars[z] = bar
 		end
 		local maxW = w.w - 0.12
@@ -776,7 +823,8 @@ function Panels.build(room: Instance, ctx: Context)
 			for z = 1, N do
 				local v = get("core.ax" .. z)
 				bars[z].Size = UDim2.fromOffset(math.max(1, px(maxW * math.clamp(v / 2, 0, 1))), px(rowH - 0.06))
-				bars[z].BackgroundColor3 = if v > 1.6 then Color3.fromRGB(255, 90, 60) elseif v > 1.4 then Color3.fromRGB(250, 200, 60) else Color3.fromRGB(90, 220, 120)
+				-- Neon bargraph: orange, burning brighter and redder as a layer peaks.
+				bars[z].BackgroundColor3 = if v > 1.6 then Color3.fromRGB(255, 50, 36) elseif v > 1.4 then Color3.fromRGB(255, 176, 60) else Color3.fromRGB(255, 120, 40)
 			end
 		end)
 		region(part, w, nil, function()
@@ -786,13 +834,13 @@ function Panels.build(room: Instance, ctx: Context)
 
 	builders.computer = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.16, BEZEL, 0.09)
-		local screen = box(gui, w.x, w.y, w.w, w.h, SCREEN)
+		local screen = box(gui, w.x, w.y, w.w, w.h, TUBE)
 		outline(screen, Color3.fromRGB(60, 60, 60), 3)
-		local left = text(gui, w.x + 0.1, w.y + 0.06, 3.5, w.h - 0.12, "", 0.165, DIGIT, Enum.Font.Code)
+		local left = text(gui, w.x + 0.1, w.y + 0.06, 3.5, w.h - 0.12, "", 0.165, PHOSPHOR, Enum.Font.Code)
 		left.TextXAlignment = Enum.TextXAlignment.Left
 		left.TextYAlignment = Enum.TextYAlignment.Top
 		left.TextWrapped = false
-		local right = text(gui, w.x + 3.65, w.y + 0.06, w.w - 3.75, w.h - 0.12, "", 0.14, AMBER_TEXT, Enum.Font.Code)
+		local right = text(gui, w.x + 3.65, w.y + 0.06, w.w - 3.75, w.h - 0.12, "", 0.14, Color3.fromRGB(84, 214, 112), Enum.Font.Code)
 		right.TextXAlignment = Enum.TextXAlignment.Left
 		right.TextYAlignment = Enum.TextYAlignment.Top
 		local function clock(t: number): string
@@ -834,7 +882,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local frame = box(gui, w.x, w.y, w.w, w.h, Color3.new(0, 0, 0))
 		frame.BackgroundTransparency = 1
 		outline(frame, Color3.fromRGB(70, 74, 70), 2)
-		text(gui, w.x, w.y + 0.02, w.w, 0.24, "SYNCHROSCOPE", 0.15, Color3.fromRGB(40, 44, 40))
+		plate(gui, w.x + 0.7, w.y + 0.05, w.w - 1.4, 0.22, "SYNCHROSCOPE", 0.13)
 		local d = 1.9
 		local cx, cy = w.x + w.w / 2, w.y + 0.36 + d / 2
 		local dial = box(gui, cx - d / 2, cy - d / 2, d, d, PAPER)
@@ -919,11 +967,11 @@ function Panels.build(room: Instance, ctx: Context)
 			if lit ~= t.lit then
 				t.lit = lit
 				if lit then
-					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(235, 40, 30) else Color3.fromRGB(255, 244, 200)
-					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(20, 20, 20)
+					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(240, 40, 30) else Color3.fromRGB(255, 252, 226)
+					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(10, 10, 10)
 				else
-					t.tile.BackgroundColor3 = Color3.fromRGB(58, 56, 50)
-					t.label.TextColor3 = Color3.fromRGB(120, 118, 108)
+					t.tile.BackgroundColor3 = Color3.fromRGB(168, 164, 150)
+					t.label.TextColor3 = Color3.fromRGB(74, 72, 64)
 				end
 			end
 		end
