@@ -28,7 +28,7 @@ Config.Core = {
 	-- Relative absorption of a rod-channel cell (a fuel cell is 1.0).
 	ABS_ABSORBER = 1.45,
 	ABS_GRAPHITE = 0.02,
-	ABS_WATER = 0.38,
+	ABS_WATER = 0.47,
 	ABS_STEAM = 0.02,
 
 	-- Point kinetics.

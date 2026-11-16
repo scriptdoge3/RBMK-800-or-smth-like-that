@@ -573,7 +573,10 @@ function Secondary.step(self, dt: number)
 	local target = Sec.FEEDWATER_TEMP
 	local need = condFlow * CP * math.max(0, target - condTemp) + da.mass * CP * (target - da.temp) / 400
 	local extraction = loadFrac * Sec.STEAM_NOMINAL * 0.13 * 2.0e6
-	local pegAvail = if da.peg and P > 0.8 then 110e6 * math.min(1, pRatio * 1.2) else 0
+	-- Pegging steam comes off the main header through a pressure interlock:
+	-- below 6 MPa it shuts, so a shut-down reactor is not bled cold to keep
+	-- the feedwater warm.
+	local pegAvail = if da.peg and P > 6.0 then 110e6 else 0
 	local heat = Util.clamp(need, 0, extraction + pegAvail)
 	da.pegFlow = math.max(0, heat - extraction) / 2.0e6
 	aux += da.pegFlow
@@ -612,12 +615,12 @@ function Secondary.step(self, dt: number)
 			local e = (lc.set - loop.indicated) / 1000 -- metres
 			-- No integrating against a valve that is already hard closed or open.
 			if not ((lc.valve <= 0.001 and e < 0) or (lc.valve >= 0.999 and e > 0)) then
-				lc.int = Util.clamp(lc.int + e * 4 * dt, -60, 60)
+				lc.int = Util.clamp(lc.int + e * 4 * dt, -40, 40)
 			end
 			-- The level trim has limited authority, so the shrink after a
 			-- scram is refilled gently rather than by flooding the drums
 			-- with cold water.
-			local demand = math.max(0, loop.steam + Util.clamp(350 * e + lc.int, -90, 90))
+			local demand = math.max(0, loop.steam + Util.clamp(350 * e + lc.int, -45, 45))
 			lc.demand = demand
 			if running > 0 then
 				lc.valve = Util.clamp(lc.valve + Util.clamp((demand - lc.lastFeed) / 900, -0.15, 0.15) * dt, 0, 1)

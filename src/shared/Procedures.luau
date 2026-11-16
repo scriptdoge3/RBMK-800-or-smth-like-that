@@ -71,7 +71,7 @@ Procedures.pages = {
 			"[ ] At 6.9 MPa the bypass valves open by themselves and hold pressure",
 			"",
 			"TURBINES",
-			"[ ] P4: pegging steam ON (warms the feedwater with spare steam)",
+			"[ ] P4: pegging steam ON (warms the feedwater with spare steam; it only works above 6 MPa)",
 			"[ ] P3: raise the setpoint to 6%, null the AR ERROR meter, switch to AR-1,",
 			"    then raise to about 15%. Stay under 25% until a generator is on the grid",
 			"[ ] P5: RESET LATCH turbine 1, open STEAM ISOL fully, SPEED SET 500, soak two minutes",

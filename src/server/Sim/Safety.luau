@@ -145,7 +145,7 @@ function Safety.step(self, dt: number)
 
 	-- Reactor space: steam from burst tubes against the relief pipes.
 	local inflow = core.loopLeak[1] + core.loopLeak[2]
-	local equilibrium = 100 * (inflow / RELIEF) ^ 2
+	local equilibrium = math.min(600, 100 * (inflow / RELIEF) ^ 2)
 	self.rsPress = Util.lag(self.rsPress, equilibrium, dt, 2.5)
 	if self.rsPress > LID_LIFT and not core.destroyed then
 		core:destroy("reactor space overpressure lifted the upper plate")

@@ -180,11 +180,208 @@ case("scram", function()
 	for _, l in logSince(plant, mark) do
 		print("      | " .. l)
 	end
-	H.check(peak < 102, "no power rise on AZ-5 from the design state")
+	-- The pre-1986 scram does almost nothing for its first three seconds;
+	-- at the design point that shows as a small bump, not an excursion.
+	H.near(peak, 99, 106, "power barely moves in the scram's dead first seconds (peak %)")
 	H.check(S["rod.allIn"] == 1 and S["n.power"] < 1, "reactor shut down")
 	H.near(S["pri.press"], 5.0, 7.4, "pressure held after the scram (MPa)")
 	H.near(math.abs(S["pri.heatup"]), 0, 10, "cooldown rate inside the limit (C/min)")
 	H.check(S["core.ruptured"] == 0, "no damage")
+end)
+
+-- The accident this reactor is known for, compressed. The unit is brought
+-- to low power deep in a xenon pit, so nearly every rod has to come out to
+-- keep it critical; protections are bypassed; feedwater is cut back and all
+-- eight pumps run, leaving the core on the edge of boiling; then the
+-- turbine is tripped for a rundown test and AZ-5 is pressed.
+case("accident", function()
+	local plant = fresh(1)
+	local S = plant.S
+	local core, rods = plant.core, plant.rods
+	local L = core.layout
+	for _, key in { "turbines", "level", "press", "feed", "mcp", "period" } do
+		plant:command("prot.bypass." .. key, 1)
+	end
+	plant:command("eccs.auto", 0)
+	plant:command("rod.blockBypass", 1)
+	plant:command("lar.sw", 0)
+	plant:command("ar.mode", 0)
+
+	-- The operator chases the falling power by pulling rods wherever the
+	-- flux is lowest (manual rods, then the idle regulators' rods and the
+	-- short bottom rods), exactly as on the night.
+	local function pull(count: number): number
+		local cand = {}
+		for i = 1, core.NR do
+			local kind = rods.kind[i]
+			local idle = kind ~= "AZ" and not rods:isAuto(i)
+			if idle and core.rodPos[i] > 0.05 and not rods.stuck[i] then
+				local sum, n = 0, 0
+				for _, c in core.rodNeighbors[i] do
+					sum += core.fluxRel[L.cellRef[c]]
+					n += 1
+				end
+				table.insert(cand, { i = i, p = if n > 0 then sum / n else 0 })
+			end
+		end
+		table.sort(cand, function(a, b)
+			return a.p < b.p
+		end)
+		plant:command("rod.clear", 1)
+		for k = 1, math.min(count, #cand) do
+			plant:command("rod.select", cand[k].i)
+		end
+		for _ = 1, 170 do
+			plant:hold("rod.move", -1)
+			plant:step(DT)
+		end
+		plant:hold("rod.move", 0)
+		plant:command("rod.clear", 1)
+		return #cand
+	end
+	-- Xenon keeps building (time passing in the pit) for as long as the
+	-- operator can keep up, until almost nothing is left in the core.
+	local function poison(factor: number)
+		for n = 1, core.N do
+			core.xe[n] *= factor
+		end
+	end
+	-- Power falls as the xenon builds; the regulator is switched back in
+	-- at 200 MW with its setpoint matched.
+	local guard = 0
+	while S["n.power"] > 8.2 and guard < 400 do
+		guard += 1
+		poison(1.012)
+		run(plant, 2)
+	end
+	rods.setpoint = S["n.power"] / 100
+	plant:command("ar.mode", 1)
+	line(plant, "regulator in at low power")
+	guard = 0
+	while guard < 500 and not core.destroyed and S["az5.active"] == 0 do
+		guard += 1
+		run(plant, 5)
+		local power, ar = S["n.power"], S["ar.pos1"]
+		local target = rods.setpoint * 100
+		if S["rod.azOut"] == 0 then
+			-- Re-cock the shutdown rods before anything else may be withdrawn.
+			plant:command("rod.group", 1)
+			for _ = 1, 170 do
+				plant:hold("rod.move", -1)
+				plant:step(DT)
+			end
+			plant:hold("rod.move", 0)
+			plant:command("rod.clear", 1)
+		elseif power < target * 0.93 and ar < 1.5 then
+			if pull(8) == 0 then
+				break
+			end
+		elseif power > target * 1.1 or ar > 4.5 then
+			poison(1.02)
+		elseif S["core.orm"] > 7.5 then
+			poison(1.008)
+		else
+			break
+		end
+		if guard % 25 == 0 then
+			line(plant, string.format("  xenon %.2f%%", S["core.xenon"]))
+		end
+	end
+	line(plant, "low power, poisoned")
+	-- Feedwater nearly off, fourth pump on in each loop.
+	plant:command("lvl.1.auto", 0)
+	plant:command("lvl.2.auto", 0)
+	plant.secondary.level[1].valve = 0.06
+	plant.secondary.level[2].valve = 0.06
+	plant:command("mcp.14.sw", 1)
+	plant:command("mcp.24.sw", 1)
+	guard = 0
+	while guard < 30 do
+		guard += 1
+		run(plant, 10)
+		local target = rods.setpoint * 100
+		if S["n.power"] < target * 0.93 and S["ar.pos1"] < 1.5 then
+			if pull(8) == 0 then
+				break
+			end
+		elseif S["n.power"] > target * 1.1 or S["ar.pos1"] > 4.5 then
+			poison(1.02)
+		end
+	end
+	line(plant, "before the test")
+	print(string.format("    margin %.1f rods, void effect %+.2f beta, axial offset %+.0f%%, subcooling %.1f C, xenon %.2f%%, scram state az5=%d",
+		S["core.orm"], S["core.void"], S["core.offset"], S["loop.1.subcool"], S["core.xenon"], S["az5.active"]))
+	H.check(S["core.orm"] < 15, string.format("the unit is being run far below the 15-rod limit (ORM %.1f)", S["core.orm"]))
+	H.check(S["az5.active"] == 0 and not core.destroyed, "still running, with the protections bypassed")
+
+	-- The rundown test: steam to the turbine shut off, four pumps coasting down.
+	local mark = #plant.logLines
+	plant:command("tg.1.trip", 1)
+	plant:command("tg.2.trip", 1)
+	for l = 1, 2 do
+		plant:command(string.format("mcp.%d3.sw", l), 0)
+		plant:command(string.format("mcp.%d4.sw", l), 0)
+	end
+	run(plant, 36, function(t)
+		if math.abs(t % 6) < 0.05 then
+			print(string.format("      rundown t=%2.0f s  P=%6.2f%%  rho=%+.2f b  flow=%5.0f t/h  AR=%.2f m  period=%4.0f s", t, S["n.power"], S["n.rho"], S["pri.flow"], S["ar.pos1"], S["n.period"]))
+		end
+	end)
+	local atButton = S["n.power"]
+	line(plant, "36 s into the rundown")
+	plant:command("az5.button", 1)
+	local peak, peakAt = atButton, 0
+	run(plant, 20, function(t)
+		if S["n.power"] > peak then
+			peak, peakAt = S["n.power"], t
+		end
+		if t <= 8.05 and math.abs(t * 2 - math.floor(t * 2 + 0.5)) < 0.01 then
+			print(string.format("      AZ-5 +%.1f s  P=%9.2f%%  rho=%+.2f b  offset=%+3.0f%%  fuel max %4.0f C  ruptured %d", t, S["n.power"], S["n.rho"], S["core.offset"], S["core.maxFuel"], S["core.ruptured"]))
+		end
+	end)
+	for _, l in logSince(plant, mark) do
+		if not string.find(l, "RUPTURED") then
+			print("      | " .. l)
+		end
+	end
+	print(string.format("    AZ-5 pressed at %.1f%% power; peak %.0f%% of nominal %.1f s later; %d channels burst; reactor %s",
+		atButton, peak, peakAt, S["core.ruptured"], if core.destroyed then "DESTROYED" else "survived"))
+	H.check(peak > atButton * 2, "pressing AZ-5 in this state drives the power up, not down")
+	H.check(S["rod.allIn"] == 1 or core.destroyed, "it ends with the rods in or the reactor gone")
+end)
+
+-- The end state itself: a prompt-critical excursion must wreck the core,
+-- and the wrecked plant must keep stepping sanely until it is replaced.
+case("runaway", function()
+	local plant = fresh(1)
+	local S = plant.S
+	local core = plant.core
+	local mark = #plant.logLines
+	core:shiftK(0.012) -- a reactivity step of well over one beta
+	local peak = 0
+	run(plant, 20, function()
+		peak = math.max(peak, S["n.power"])
+	end)
+	local shown = 0
+	for _, l in logSince(plant, mark) do
+		if not string.find(l, "RUPTURED") and not string.find(l, "ALARM") and shown < 8 then
+			shown += 1
+			print("      | " .. l)
+		end
+	end
+	print(string.format("    peak %.0f%% of nominal, %d channels burst, reactor space %.0f kPa", peak, S["core.ruptured"], S["rs.press"]))
+	H.check(peak > 1000, "prompt-critical excursion")
+	H.check(core.destroyed, "the reactor is destroyed")
+	H.check(S["core.destroyed"] == 1 and S["rod.stuck"] > 100, "the control room shows it: rods jammed, core lost")
+	run(plant, 120)
+	local bad = 0
+	for _, v in S do
+		if v ~= v or v == math.huge or v == -math.huge then
+			bad += 1
+		end
+	end
+	H.check(bad == 0, "the wrecked plant keeps running without numerical trouble")
+	H.check(S["n.power"] < 5, "what is left is subcritical")
 end)
 
 for _, c in cases do

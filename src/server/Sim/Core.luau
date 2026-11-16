@@ -1289,8 +1289,11 @@ function Core.solveSteady(self, powerW: number, cond: LoopConditions, opts: { xe
 end
 
 -- The rod pattern the core is designed around: full power, equilibrium
--- xenon, shutdown rods cocked, regulators mid-travel and a few dozen manual
--- rods holding the operating reactivity margin.
+-- xenon, shutdown rods cocked, regulators mid-travel and a few manual rods
+-- holding the operating reactivity margin. (The burnup map is built for
+-- this pattern, so it is kept axially neutral: a design with many rods
+-- dipped into the top would leave the top of the core over-reactive
+-- whenever they were pulled.)
 function Core.setDesignPattern(self)
 	local rr = 0
 	for i, rod in self.layout.rods do
