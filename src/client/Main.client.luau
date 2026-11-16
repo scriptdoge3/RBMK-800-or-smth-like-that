@@ -96,6 +96,7 @@ local function addLog(lines: { any })
 end
 
 local gotSnapshot = false
+local hornOn = false
 local wasDestroyed = false
 local destroyedAt = 0
 
@@ -111,10 +112,13 @@ snapshotEvent.OnClientEvent:Connect(function(buf: buffer)
 	built.refresh()
 
 	local horn = ctx.get("horn") >= 0.5
-	if horn and not hornSound.IsPlaying then
-		hornSound:Play()
-	elseif not horn and hornSound.IsPlaying then
-		hornSound:Stop()
+	if horn ~= hornOn then
+		hornOn = horn
+		if horn then
+			hornSound:Play()
+		else
+			hornSound:Stop()
+		end
 	end
 
 	local destroyed = ctx.get("core.destroyed") >= 0.5

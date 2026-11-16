@@ -54,21 +54,37 @@ nodeMeta.__index = function(node, key)
 	return child
 end
 
-local services = {
+local services: { [string]: any } = {
 	ReplicatedStorage = newNode("ReplicatedStorage", nil, nil, nil),
 	ServerScriptService = newNode("ServerScriptService", nil, nil, nil),
+	StarterPlayerScripts = newNode("StarterPlayerScripts", nil, nil, nil),
 }
 rawget(services.ReplicatedStorage, "_kids").RBMK = newNode("RBMK", services.ReplicatedStorage, "src/shared", nil)
 rawget(services.ServerScriptService, "_kids").RBMKServer =
 	newNode("RBMKServer", services.ServerScriptService, "src/server", nil)
 scan(rawget(services.ReplicatedStorage, "_kids").RBMK, "src/shared")
 scan(rawget(services.ServerScriptService, "_kids").RBMKServer, "src/server")
+rawget(services.StarterPlayerScripts, "_kids").RBMKClient =
+	newNode("RBMKClient", services.StarterPlayerScripts, "src/client", nil)
+scan(rawget(services.StarterPlayerScripts, "_kids").RBMKClient, "src/client")
 
 local game = {
 	GetService = function(_, name: string)
 		return services[name] or error("unknown service " .. name)
 	end,
 }
+
+-- Extra globals handed to every module (the Roblox mock adds Instance,
+-- Vector3, workspace and friends here before anything is required).
+local extraNames: { string } = {}
+local extraValues: { any } = {}
+function Harness.setGlobal(name: string, value: any)
+	table.insert(extraNames, name)
+	table.insert(extraValues, value)
+end
+function Harness.setService(name: string, value: any)
+	services[name] = value
+end
 
 local function requireNode(node: any): any
 	local file = rawget(node, "_file")
@@ -82,16 +98,22 @@ local function requireNode(node: any): any
 	-- The Roblox globals are passed in as locals rather than through a custom
 	-- environment: Luau turns native code generation off for chunks with a
 	-- replaced environment, and the core model is ten times slower without it.
-	local source = "local script, game, require, warn = ...; " .. fs.readFile(file)
+	local names = "script, game, require, warn"
+	if #extraNames > 0 then
+		names ..= ", " .. table.concat(extraNames, ", ")
+	end
+	local source = "local " .. names .. " = ...; " .. fs.readFile(file)
 	local bytecode = luau.compile(source, { optimizationLevel = 2, debugLevel = 1 })
 	local chunk = luau.load(bytecode, { debugName = file, codegenEnabled = true })
-	local value = chunk(node, game, requireNode, print)
+	local value = chunk(node, game, requireNode, print, table.unpack(extraValues))
 	moduleCache[file] = { value = value }
 	return value
 end
 
 Harness.shared = rawget(services.ReplicatedStorage, "_kids").RBMK
 Harness.server = rawget(services.ServerScriptService, "_kids").RBMKServer
+Harness.client = rawget(services.StarterPlayerScripts, "_kids").RBMKClient
+Harness.sharedNode = rawget(services.ReplicatedStorage, "_kids").RBMK
 Harness.require = requireNode
 
 -- Minimal assertion helpers.
