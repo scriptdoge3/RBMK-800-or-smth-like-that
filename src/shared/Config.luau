@@ -110,8 +110,8 @@ Config.Primary = {
 }
 
 Config.Secondary = {
-	STEAM_NOMINAL = 1190, -- kg/s total at full power
-	TURBINE_STEAM = 595, -- kg/s per turbine at 400 MWe
+	STEAM_NOMINAL = 1250, -- kg/s total at full power
+	TURBINE_STEAM = 625, -- kg/s per turbine at 400 MWe
 	BYPASS_CAPACITY = 0.30, -- fraction of nominal steam flow per turbine bypass
 	FEEDWATER_TEMP = 165, -- degC at full load
 	FEED_PUMP_FLOW = 450, -- kg/s per main feed pump

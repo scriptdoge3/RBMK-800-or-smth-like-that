@@ -148,7 +148,8 @@ function Protection.step(self, dt: number)
 	a.power = held(self, "power", deadBuses >= 2, 1.5, dt)
 	a.eccs = safety.eccsActive
 	a.period4 = startupRange and period > 0 and period < 15 and not a.period
-	a.deviation = (rods.arMode > 0 or rods.larOn) and power > 0.10 and power - rods.setpoint > 0.07
+	-- (Not during a runback, when the setpoint has just been stepped down on purpose.)
+	a.deviation = (rods.arMode > 0 or rods.larOn) and power > 0.10 and power - rods.setpoint > 0.07 and (rods.runback == 0 or rods.runbackDone)
 	a.loadReject = power > 0.25 and onGrid == 0 and tripped < 2
 	a.oneTurbine = power > 0.52 and onGrid == 1
 	a.oneMcp = power > 0.62 and minRunning < 3

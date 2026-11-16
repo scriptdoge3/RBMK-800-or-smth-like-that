@@ -20,7 +20,7 @@ Secondary.__index = Secondary
 
 local NOMINAL_P = Config.Primary.NOMINAL_PRESSURE
 local RATED = Config.NOMINAL_ELECTRIC / 2 -- W per machine
-local STEAM_WORK = 698e3 -- J per kg of steam at design conditions (31% gross cycle efficiency)
+local STEAM_WORK = 650e3 -- J per kg of steam at design conditions (31% gross cycle efficiency)
 local ROTOR_ENERGY = 2.7e9 -- J at rated speed
 local WINDAGE = 6e6 -- W at rated speed
 local FEED_BUS = { "1A", "1B", "2A", "2B" }
@@ -612,9 +612,12 @@ function Secondary.step(self, dt: number)
 			local e = (lc.set - loop.indicated) / 1000 -- metres
 			-- No integrating against a valve that is already hard closed or open.
 			if not ((lc.valve <= 0.001 and e < 0) or (lc.valve >= 0.999 and e > 0)) then
-				lc.int = Util.clamp(lc.int + e * 4 * dt, -150, 150)
+				lc.int = Util.clamp(lc.int + e * 4 * dt, -60, 60)
 			end
-			local demand = math.max(0, loop.steam + 350 * e + lc.int)
+			-- The level trim has limited authority, so the shrink after a
+			-- scram is refilled gently rather than by flooding the drums
+			-- with cold water.
+			local demand = math.max(0, loop.steam + Util.clamp(350 * e + lc.int, -90, 90))
 			lc.demand = demand
 			if running > 0 then
 				lc.valve = Util.clamp(lc.valve + Util.clamp((demand - lc.lastFeed) / 900, -0.15, 0.15) * dt, 0, 1)

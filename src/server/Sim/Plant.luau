@@ -318,6 +318,90 @@ function Plant.publish(self)
 	self.protection:publish(S)
 end
 
+-- Put the unit straight into steady operation at the given fraction of full
+-- power, with equilibrium xenon and both generators on the grid. Players
+-- always begin from cold shutdown; this exists so the test suite (and a
+-- future training mode) can reach an operating state without a startup.
+function Plant.hotStart(self, powerFraction: number?)
+	local frac = Util.clamp(powerFraction or 1, 0.2, 1)
+	local core, pri, sec, elec, rods = self.core, self.primary, self.secondary, self.elec, self.rods
+	local pressure = Config.Primary.NOMINAL_PRESSURE
+
+	pri.cooldownOn = false
+	pri.pressure = pressure
+	pri.temp = Steam.tsat(pressure)
+	pri.heatupRate = 0
+	for l = 1, 2 do
+		local loop = pri.loops[l]
+		loop.mass = Config.Primary.DRUM_NOMINAL_MASS
+		loop.letdownAuto = true
+		loop.inletLag = nil
+		for i, pump in pri.pumps[l] do
+			pump.on = i <= 3
+			pump.speed = if i <= 3 then 1 else 0
+			pump.valve = 1
+		end
+	end
+
+	sec.pressSet = pressure
+	sec.pressAuto = true
+	sec.pressInt = frac
+	for k = 1, 2 do
+		local t = sec.turbines[k]
+		t.tripped, t.tripCause, t.stopOpen = false, "", true
+		t.iso, t.cv, t.loadSet, t.speed, t.speedTarget = 1, frac, 1.05, 1, 2
+		t.metal = 270
+		t.lubeAC, t.turningGear, t.gland, t.sjae, t.vacPump, t.vacBreaker = true, false, true, true, false, false
+		t.air, t.condP, t.condT = 0.0004, 0.005, 30
+		t.cw[1].on, t.cw[2].on = true, true
+		local g = elec.gens[k]
+		g.field, g.volts, g.gcb, g.yard, g.mode = true, 1, true, true, "grid"
+	end
+	for i, pump in sec.feedPumps do
+		pump.on = i <= 3
+	end
+	for i, pump in sec.condPumps do
+		pump.on = i <= 2
+	end
+	for l = 1, 2 do
+		local lc = sec.level[l]
+		lc.auto, lc.valve, lc.int = true, 0.55 * frac + 0.1, 0
+	end
+	sec.da.temp, sec.da.peg, sec.da.mass = Config.Secondary.FEEDWATER_TEMP, true, 1.25e5
+
+	core:setDesignPattern()
+	local cond = nominalConditions()
+	-- Start from a flat flux guess: the shutdown shape is concentrated in a
+	-- small part of the core and would take a long time to spread out.
+	for n = 1, core.N do
+		core.psi[n] = 1
+	end
+	core.keff = 1
+	core:solveSteady(frac * Config.NOMINAL_THERMAL, cond, { xenon = true, iterations = 30 })
+	-- Trim to exactly critical at this power with the regulator's own rods mid-travel.
+	core:settle(60)
+	core:calibrateCritical()
+	-- Feedwater is already flowing in the state being entered.
+	for l = 1, 2 do
+		pri.loops[l].feed = frac * Config.Secondary.STEAM_NOMINAL / 2
+		pri.loops[l].feedEnthalpy = Steam.hLiquid(Config.Secondary.FEEDWATER_TEMP)
+	end
+	rods:resetProtection()
+	rods.arMode = 1
+	rods.setpoint = frac
+	rods.larOn = true
+	for _ = 1, 300 do
+		self:step(0.1)
+	end
+	table.clear(self.alarms.changed)
+	for i in self.alarms.state do
+		self.alarms.state[i] = 0
+	end
+	self.protection:reset()
+	self.primary.stress = 0
+	self:log(string.format("Unit placed in operation at %.0f%% power", frac * 100))
+end
+
 -- Snapshot of the core for the map display: one byte per lattice cell for
 -- the selected quantity, one for its condition, then one flag byte per rod.
 function Plant.mapBuffer(self): buffer

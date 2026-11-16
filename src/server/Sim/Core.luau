@@ -789,8 +789,11 @@ function Core.distributeFlow(self, cond: LoopConditions)
 		local g = flow[f] * (if loop[f] == 1 then s1 else s2)
 		flow[f] = g
 		if status[f] == STATUS_RUPTURED then
-			-- A burst tube dumps its flow into the reactor space.
-			local lk = math.min(g, 22)
+			-- A burst tube empties into the reactor space from both ends:
+			-- what its inlet throttle passes, and water flashing back down
+			-- the outlet pipe from the drum separator.
+			local p = cond.pressure[loop[f]]
+			local lk = math.min(g, 8) + 16 * math.sqrt(math.max(p - 0.3, 0) / 7)
 			leak[f] = lk
 			if loop[f] == 1 then
 				leak1 += lk
@@ -1112,15 +1115,20 @@ function Core.slow(self, dt: number)
 		self.voidCoefCore = voidWeighted / weight
 	end
 
-	-- Absorber standing near a channel lowers its void effect, which is why
-	-- running with few rods in the core is dangerous.
+	self:updateVoidCoefficients()
+	self:computeOrm()
+end
+
+-- Absorber standing near a channel lowers its void effect, which is why
+-- running with few rods in the core is dangerous.
+function Core.updateVoidCoefficients(self)
 	local near = self.layout.rodsNear
 	local ins = table.create(self.NR, 0)
 	for i = 1, self.NR do
 		ins[i] = self:rodInsertion(i)
 	end
-	local voidBase = self.voidBase
-	for f = 1, NF do
+	local voidBase, voidCoef = self.voidBase, self.voidCoef
+	for f = 1, self.NF do
 		local list = near[f]
 		local s = 0
 		for _, r in list do
@@ -1129,8 +1137,6 @@ function Core.slow(self, dt: number)
 		local mean = if #list > 0 then s / #list else 0
 		voidCoef[f] = voidBase[f] * (1 - C.VOID_ROD_SUPPRESSION * mean)
 	end
-
-	self:computeOrm()
 end
 
 -- Operating reactivity margin in equivalent fully inserted rods, weighted by
@@ -1237,7 +1243,8 @@ function Core.solveSteady(self, powerW: number, cond: LoopConditions, opts: { xe
 	local layer = table.create(NZ, 0)
 	local nominalNode = Config.NOMINAL_THERMAL / (NF * NZ)
 	local xeEq = (C.GAMMA_I + C.GAMMA_XE) / (C.LAMBDA_XE + C.XE_BURN)
-	-- First bring the kinf field up for the present temperatures.
+	-- First bring the kinf field up for the present rods and temperatures.
+	self:updateVoidCoefficients()
 	self:distributeFlow(cond)
 	self:thermal(0, cond, 0)
 	for _ = 1, iterations do

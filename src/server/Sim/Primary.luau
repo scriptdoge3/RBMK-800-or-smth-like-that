@@ -314,6 +314,12 @@ function Primary.hydraulics(self, dt: number)
 			hin += math.min(pumpHeat / flow, 2.0e4)
 		end
 		hin = math.max(hin, Steam.hLiquid(15))
+		-- A change in feedwater takes several seconds to work its way down
+		-- the downcomers and through the pumps to the channel inlets.
+		if loop.inletLag then
+			hin = Util.lag(loop.inletLag, hin, dt, 7)
+		end
+		loop.inletLag = hin
 		loop.inletEnthalpy = hin
 		loop.inletTemp = Steam.tLiquid(math.min(hin, hf))
 		loop.subcool = math.max(0, tsat - loop.inletTemp)
