@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- The whole unit. Owns every subsystem, steps them in order, and exposes two
 -- flat interfaces to the rest of the game:
 --

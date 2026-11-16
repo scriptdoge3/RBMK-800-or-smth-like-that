@@ -389,9 +389,87 @@ for _ = 1, 100 do
 end
 H.check((fired.Alarm or 0) > 0, "annunciator changes reach the client")
 
--- Save what was built as a place file so it can be inspected in Studio.
+-- Optional: dump the artwork of every panel face as JSON so it can be
+-- rendered outside Roblox for a quick look at the layout.
+--   lune run tests/roblox_mock -- dump=/some/dir
 local fs = require("@lune/fs")
-local out = roblox.serializePlace(dm, true)
-print(string.format("  mock place serialises to %d kB", #out // 1024))
-local _ = fs
+local process = require("@lune/process")
+local serde = require("@lune/serde")
+local dumpDir: string? = nil
+for _, a in process.args do
+	dumpDir = string.match(a, "^dump=(.+)$") or dumpDir
+end
+if dumpDir then
+	local function rgb(c)
+		return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }
+	end
+	local function describe(obj, into)
+		for _, child in obj:GetChildren() do
+			if child:IsA("GuiObject") then
+				local item: any = {
+					class = child.ClassName,
+					x = child.Position.X.Offset,
+					y = child.Position.Y.Offset,
+					sx = child.Position.X.Scale,
+					sy = child.Position.Y.Scale,
+					w = child.Size.X.Offset,
+					h = child.Size.Y.Offset,
+					ws = child.Size.X.Scale,
+					hs = child.Size.Y.Scale,
+					ax = child.AnchorPoint.X,
+					ay = child.AnchorPoint.Y,
+					bg = rgb(child.BackgroundColor3),
+					alpha = 1 - child.BackgroundTransparency,
+					z = child.ZIndex,
+					rot = child.Rotation,
+					visible = child.Visible,
+					round = child:FindFirstChildOfClass("UICorner") ~= nil,
+					kids = {},
+				}
+				local stroke = child:FindFirstChildOfClass("UIStroke")
+				if stroke and stroke.Enabled then
+					item.stroke = rgb(stroke.Color)
+					item.strokeW = stroke.Thickness
+				end
+				if child:IsA("TextLabel") then
+					item.text = child.Text
+					item.size = child.TextSize
+					item.color = rgb(child.TextColor3)
+					item.font = child.Font.Name
+					item.alignX = child.TextXAlignment.Name
+					item.alignY = child.TextYAlignment.Name
+				end
+				describe(child, item.kids)
+				table.insert(into, item)
+			end
+		end
+	end
+	local faces = {}
+	for _, p in PanelLayout.panels do
+		for _, faceName in { "ann", "vert", "bench" } do
+			local part = room:FindFirstChild(p.id .. "_" .. faceName)
+			local gui = part:FindFirstChildOfClass("SurfaceGui")
+			local items = {}
+			describe(gui, items)
+			local widgets = {}
+			for _, w in p.widgets do
+				if w.face == faceName then
+					table.insert(widgets, { kind = w.kind, x = w.x, y = w.y, w = w.w, h = w.h, color = w.color, big = w.big, key = w.key, compact = w.compact })
+				end
+			end
+			table.insert(faces, {
+				panel = p.id,
+				face = faceName,
+				width = part.Size.X * PanelLayout.PIXELS_PER_STUD,
+				height = part.Size.Y * PanelLayout.PIXELS_PER_STUD,
+				pps = PanelLayout.PIXELS_PER_STUD,
+				color = rgb(part.Color),
+				items = items,
+				widgets = widgets,
+			})
+		end
+	end
+	fs.writeFile(dumpDir .. "/panels.json", serde.encode("json", faces))
+	print("  artwork dumped to " .. dumpDir .. "/panels.json")
+end
 H.finish()

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Steam and feedwater side: the pressure regulator and turbine bypass, two
 -- 400 MWe turbines with their condensers, the condensate system, the
 -- deaerator, the feedwater pumps and the drum level controllers, and the

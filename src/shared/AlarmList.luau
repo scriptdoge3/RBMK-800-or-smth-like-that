@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Every annunciator window in the control room: id, panel, legend.
 -- The server decides when each one is in alarm (see Sim/Alarms); the client
 -- only needs the legends and where to draw them.

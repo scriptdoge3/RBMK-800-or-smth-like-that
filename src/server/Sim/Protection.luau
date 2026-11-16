@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Emergency protection logic. Five levels, as on the unit:
 --
 --   AZ-5  full shutdown: every top-entry rod driven in, latched

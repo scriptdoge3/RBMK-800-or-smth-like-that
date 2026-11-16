@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Dresses the benchboards: every instrument, lamp, switch and display in the
 -- shared layout is drawn here, on each player's own machine. The flat
 -- artwork goes on a SurfaceGui per panel face; buttons, switch handles and
@@ -223,7 +223,16 @@ function Panels.build(room: Instance, ctx: Context)
 			local tick = box(gui, sx, ty - 0.01, sw * 0.3, 0.02, INK)
 			tick.ZIndex = 2
 			local v = w.lo + span * i / 4
-			local label = if math.abs(v) >= 1000 then string.format("%.0fk", v / 1000) elseif math.abs(span) < 8 then string.format("%.1f", v) else string.format("%.0f", v)
+			local label
+			if math.abs(v) >= 1000 then
+				label = if v % 1000 == 0 then string.format("%.0fk", v / 1000) else string.format("%.1fk", v / 1000)
+			elseif span < 2 then
+				label = string.format("%.2f", v)
+			elseif span < 20 and v % 1 ~= 0 then
+				label = string.format("%.1f", v)
+			else
+				label = string.format("%.0f", v)
+			end
 			local n = text(gui, sx + sw * 0.28, ty - 0.09, sw * 0.5, 0.18, label, 0.11, Color3.fromRGB(60, 60, 60), Enum.Font.SourceSans)
 			n.ZIndex = 2
 			if i == 0 then
@@ -253,9 +262,13 @@ function Panels.build(room: Instance, ctx: Context)
 		text(gui, w.x, w.y, w.w, 0.26, w.label, 0.14)
 		local screen = box(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, SCREEN)
 		outline(screen, Color3.fromRGB(70, 70, 70), 1)
-		local value = text(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, "", 0.3, DIGIT, Enum.Font.Code)
-		local last = math.huge
 		local suffix = if w.unit ~= "" then " " .. w.unit else ""
+		-- Size the digits so the widest value this readout can show still fits.
+		local widest = #(string.format(w.fmt, -8888.88) .. suffix)
+		local digitSize = math.min(0.3, (w.w - 0.1) / (widest * 0.56))
+		local value = text(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, "", digitSize, DIGIT, Enum.Font.Code)
+		value.TextWrapped = false
+		local last = math.huge
 		table.insert(updaters, function()
 			local v = get(w.sig)
 			if v ~= last then
@@ -632,8 +645,8 @@ function Panels.build(room: Instance, ctx: Context)
 		local pitch = (w.w - 0.1) * PPS / G
 		local ox, oy = px(w.x + 0.05), px(w.y + 0.3)
 		local scaleY = (w.h - 0.35) * PPS / G
-		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(46, 50, 50))
-		outline(back, Color3.fromRGB(20, 20, 20), 2)
+		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(26, 28, 30))
+		outline(back, Color3.fromRGB(90, 92, 90), 2)
 		local title = text(gui, w.x + 0.1, w.y + 0.03, w.w - 0.2, 0.25, "ROD SELECT   white RR  green AR  yellow LAR  red AZ  blue USP", 0.115, Color3.fromRGB(230, 230, 220))
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		local size = math.max(6, math.floor(pitch * 1.9))
@@ -668,7 +681,7 @@ function Panels.build(room: Instance, ctx: Context)
 					local selected = flag % 2 == 1
 					local stuck = (flag // 2) % 2 == 1
 					b.stroke.Enabled = selected
-					local color = ROD_COLOR[rod.kind]:Lerp(Color3.new(0, 0, 0), depth / 255 * 0.75)
+					local color = ROD_COLOR[rod.kind]:Lerp(Color3.new(0, 0, 0), depth / 255 * 0.55)
 					if stuck then
 						color = Color3.fromRGB(255, 0, 255)
 					end

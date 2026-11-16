@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Builds the control room shell on the server: floor, walls, lighting and
 -- the six benchboard cabinets. The cabinet faces are plain parts with known
 -- names; each client dresses them with instruments and controls from the

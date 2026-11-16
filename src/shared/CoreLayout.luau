@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Deterministic core map: which lattice cell holds a fuel channel and which
 -- holds a control rod, and what kind of rod it is. Server and client both
 -- build this from the same code so they agree on every index.

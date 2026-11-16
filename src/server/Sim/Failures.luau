@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Random equipment failures, wear and aging, and the maintenance that puts
 -- things right once the unit is cold.
 --

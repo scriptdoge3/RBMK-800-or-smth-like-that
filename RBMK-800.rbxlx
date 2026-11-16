@@ -28,7 +28,7 @@
       <Item class="ModuleScript" referent="3">
         <Properties>
           <string name="Name">AlarmList</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Every annunciator window in the control room: id, panel, legend.
 -- The server decides when each one is in alarm (see Sim/Alarms); the client
 -- only needs the legends and where to draw them.
@@ -152,7 +152,7 @@ return AlarmList
       <Item class="ModuleScript" referent="4">
         <Properties>
           <string name="Name">Config</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Design data for the RBMK-800 unit. Everything tunable lives here.
 --
 -- The unit is a full-size RBMK core (1661 fuel channels, 211 control rods)
@@ -304,7 +304,7 @@ return Config
       <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">CoreLayout</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Deterministic core map: which lattice cell holds a fuel channel and which
 -- holds a control rod, and what kind of rod it is. Server and client both
 -- build this from the same code so they agree on every index.
@@ -573,7 +573,7 @@ return CoreLayout
       <Item class="ModuleScript" referent="6">
         <Properties>
           <string name="Name">PanelLayout</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- The control room, as data.
 --
 -- Six benchboard sections stand in a horseshoe around the operators, in the
@@ -771,8 +771,8 @@ meter("vert", 10.0, 1.0, "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f",
 meter("vert", 11.0, 1.0, "STARTUP\nRATE", "n.sur", -1, 3, "dec/min", { fmt = "%.2f", red = 2.6, amber = 1.3, tip = "Startup rate in decades per minute. 1.3 is a 20 s period (rod block), 2.6 is a 10 s period (scram)." })
 meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." })
 digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4)
-digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.15)
-digital("vert", 14.35, 1.9, "REACTIVITY", "n.rho", "%+.2f", "b", 1.15)
+digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0)
+digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35)
 digital("vert", 13.1, 2.75, "MARGIN (ORM)", "core.orm", "%.0f", "rods", 2.4)
 add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
 
@@ -804,16 +804,16 @@ toggle("bench", 13.05, 0.5, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", 
 for n = 1, 5 do
 	lamp("bench", 14.2, 0.42 + (5 - n) * 0.31, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.4, h = 0.3 })
 end
-section("bench", 10.5, 2.15, 5.3, 1.35, "REGULATORS AND MAP")
+section("bench", 10.5, 2.15, 5.3, 1.35, "")
 selector("bench", 10.6, 2.2, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
 jog("bench", 11.95, 2.2, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%")
 toggle("bench", 13.5, 2.2, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
 selector("bench", 14.5, 2.2, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
-section("bench", 10.5, 3.6, 5.3, 1.3, "PROTECTION BYPASS KEYS")
+section("bench", 10.5, 3.58, 5.3, 1.4, "PROTECTION BYPASS KEYS")
 do
 	local keys = { { "period", "PERIOD" }, { "press", "PRESS" }, { "level", "LEVEL" }, { "feed", "FEED" }, { "mcp", "MCP" }, { "turbines", "2 TG" }, { "cps", "CPS" } }
 	for i, k in keys do
-		add({ kind = "toggle", face = "bench", x = 10.55 + (i - 1) * 0.74, y = 3.72, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
+		add({ kind = "toggle", face = "bench", x = 10.55 + (i - 1) * 0.74, y = 3.84, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
 	end
 end
 
@@ -1134,7 +1134,7 @@ return PanelLayout
       <Item class="ModuleScript" referent="7">
         <Properties>
           <string name="Name">Procedures</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Operating procedures shown in the in-game binder (press P).
 -- Lines starting with "[ ]" are checklist steps the player can tick off.
 local Procedures = {}
@@ -1330,7 +1330,7 @@ return Procedures
       <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">Steam</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Saturated water / steam properties from a compact table, interpolated.
 -- Pressures are MPa absolute, temperatures degC, enthalpies J/kg, densities kg/m3.
 local Util = require(script.Parent.Util)
@@ -1427,7 +1427,7 @@ return Steam
       <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">Util</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Small helpers shared by the simulation, the layout code and the client.
 local Util = {}
 
@@ -1537,7 +1537,7 @@ return Util
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Server entry point: builds the room, runs the plant simulation, and
 -- keeps every client's control room in step with it.
 local Players = game:GetService("Players")
@@ -1737,7 +1737,7 @@ end)
       <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">RoomBuilder</string>
-          <string name="Source"><![CDATA[--!strict
+          <string name="Source"><![CDATA[--!nonstrict
 -- Builds the control room shell on the server: floor, walls, lighting and
 -- the six benchboard cabinets. The cabinet faces are plain parts with known
 -- names; each client dresses them with instruments and controls from the
@@ -1854,7 +1854,7 @@ return RoomBuilder
         <Item class="ModuleScript" referent="15">
           <Properties>
             <string name="Name">Alarms</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Annunciator logic. Each window follows the usual control-room sequence:
 -- a new alarm flashes and sounds the horn until acknowledged, then stays
 -- lit steadily until the condition clears.
@@ -3732,7 +3732,7 @@ return Core
         <Item class="ModuleScript" referent="17">
           <Properties>
             <string name="Name">Electrical</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Electrical system.
 --
 -- Each turbine-generator connects through its generator breaker (GCB) to a
@@ -4235,7 +4235,7 @@ return Electrical
         <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">Failures</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Random equipment failures, wear and aging, and the maintenance that puts
 -- things right once the unit is cold.
 --
@@ -4549,7 +4549,7 @@ return Failures
         <Item class="ModuleScript" referent="19">
           <Properties>
             <string name="Name">Plant</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- The whole unit. Owns every subsystem, steps them in order, and exposes two
 -- flat interfaces to the rest of the game:
 --
@@ -5462,7 +5462,7 @@ return Primary
         <Item class="ModuleScript" referent="21">
           <Properties>
             <string name="Name">Protection</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Emergency protection logic. Five levels, as on the unit:
 --
 --   AZ-5  full shutdown: every top-entry rod driven in, latched
@@ -6161,7 +6161,7 @@ return Rods
         <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">Safety</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Reactor auxiliaries and safety systems: the rod-channel (CPS) cooling
 -- circuit, the reactor space around the graphite stack, emergency core
 -- cooling, the suppression pool and the activity monitors.
@@ -6393,7 +6393,7 @@ return Safety
         <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">Secondary</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Steam and feedwater side: the pressure regulator and turbine bypass, two
 -- 400 MWe turbines with their condensers, the condensate system, the
 -- deaerator, the feedwater pumps and the drum level controllers, and the
@@ -7228,7 +7228,7 @@ return Secondary
         <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">Controls</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Mouse interaction with the panels and the seated "panel view" camera.
 --
 -- Every control is a region on a panel face. A ray from the camera through
@@ -7514,7 +7514,7 @@ return Controls
         <Item class="LocalScript" referent="30">
           <Properties>
             <string name="Name">Main</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Client entry point: dresses the panels, keeps them in step with the
 -- server's plant, and handles the player's input.
 local Players = game:GetService("Players")
@@ -7705,7 +7705,7 @@ end)
         <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">Panels</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- Dresses the benchboards: every instrument, lamp, switch and display in the
 -- shared layout is drawn here, on each player's own machine. The flat
 -- artwork goes on a SurfaceGui per panel face; buttons, switch handles and
@@ -7930,7 +7930,16 @@ function Panels.build(room: Instance, ctx: Context)
 			local tick = box(gui, sx, ty - 0.01, sw * 0.3, 0.02, INK)
 			tick.ZIndex = 2
 			local v = w.lo + span * i / 4
-			local label = if math.abs(v) >= 1000 then string.format("%.0fk", v / 1000) elseif math.abs(span) < 8 then string.format("%.1f", v) else string.format("%.0f", v)
+			local label
+			if math.abs(v) >= 1000 then
+				label = if v % 1000 == 0 then string.format("%.0fk", v / 1000) else string.format("%.1fk", v / 1000)
+			elseif span < 2 then
+				label = string.format("%.2f", v)
+			elseif span < 20 and v % 1 ~= 0 then
+				label = string.format("%.1f", v)
+			else
+				label = string.format("%.0f", v)
+			end
 			local n = text(gui, sx + sw * 0.28, ty - 0.09, sw * 0.5, 0.18, label, 0.11, Color3.fromRGB(60, 60, 60), Enum.Font.SourceSans)
 			n.ZIndex = 2
 			if i == 0 then
@@ -7960,9 +7969,13 @@ function Panels.build(room: Instance, ctx: Context)
 		text(gui, w.x, w.y, w.w, 0.26, w.label, 0.14)
 		local screen = box(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, SCREEN)
 		outline(screen, Color3.fromRGB(70, 70, 70), 1)
-		local value = text(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, "", 0.3, DIGIT, Enum.Font.Code)
-		local last = math.huge
 		local suffix = if w.unit ~= "" then " " .. w.unit else ""
+		-- Size the digits so the widest value this readout can show still fits.
+		local widest = #(string.format(w.fmt, -8888.88) .. suffix)
+		local digitSize = math.min(0.3, (w.w - 0.1) / (widest * 0.56))
+		local value = text(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, "", digitSize, DIGIT, Enum.Font.Code)
+		value.TextWrapped = false
+		local last = math.huge
 		table.insert(updaters, function()
 			local v = get(w.sig)
 			if v ~= last then
@@ -8339,8 +8352,8 @@ function Panels.build(room: Instance, ctx: Context)
 		local pitch = (w.w - 0.1) * PPS / G
 		local ox, oy = px(w.x + 0.05), px(w.y + 0.3)
 		local scaleY = (w.h - 0.35) * PPS / G
-		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(46, 50, 50))
-		outline(back, Color3.fromRGB(20, 20, 20), 2)
+		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(26, 28, 30))
+		outline(back, Color3.fromRGB(90, 92, 90), 2)
 		local title = text(gui, w.x + 0.1, w.y + 0.03, w.w - 0.2, 0.25, "ROD SELECT   white RR  green AR  yellow LAR  red AZ  blue USP", 0.115, Color3.fromRGB(230, 230, 220))
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		local size = math.max(6, math.floor(pitch * 1.9))
@@ -8375,7 +8388,7 @@ function Panels.build(room: Instance, ctx: Context)
 					local selected = flag % 2 == 1
 					local stuck = (flag // 2) % 2 == 1
 					b.stroke.Enabled = selected
-					local color = ROD_COLOR[rod.kind]:Lerp(Color3.new(0, 0, 0), depth / 255 * 0.75)
+					local color = ROD_COLOR[rod.kind]:Lerp(Color3.new(0, 0, 0), depth / 255 * 0.55)
 					if stuck then
 						color = Color3.fromRGB(255, 0, 255)
 					end
@@ -8605,7 +8618,7 @@ return Panels
         <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">ProcedureGui</string>
-            <string name="Source"><![CDATA[--!strict
+            <string name="Source"><![CDATA[--!nonstrict
 -- The procedures binder: press P to open or close it.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")

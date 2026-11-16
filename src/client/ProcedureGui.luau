@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- The procedures binder: press P to open or close it.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")

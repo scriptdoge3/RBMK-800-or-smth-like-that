@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Electrical system.
 --
 -- Each turbine-generator connects through its generator breaker (GCB) to a

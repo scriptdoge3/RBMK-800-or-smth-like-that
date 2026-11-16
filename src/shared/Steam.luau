@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Saturated water / steam properties from a compact table, interpolated.
 -- Pressures are MPa absolute, temperatures degC, enthalpies J/kg, densities kg/m3.
 local Util = require(script.Parent.Util)

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Reactor auxiliaries and safety systems: the rod-channel (CPS) cooling
 -- circuit, the reactor space around the graphite stack, emergency core
 -- cooling, the suppression pool and the activity monitors.

@@ -10,6 +10,11 @@ come out, a 16-second scram whose first seconds can add reactivity ("positive sc
 shutdown (AZ) rods, AZ-1 to AZ-5 protection levels, the KOM clutch-release key, xenon
 in real time, and fuel channels that burst when you starve or overheat them.
 
+![The reactor control panel](docs/panel-p3-reactor-control.png)
+
+*Panel P3 as the client code draws it (rendered outside Roblox from the same instances;
+the buttons, switch levers and knobs are 3D parts in the game).*
+
 ## Getting it into Roblox Studio
 
 Open **`RBMK-800.rbxlx`** in Roblox Studio (File > Open from File) and press Play.

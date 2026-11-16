@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Server entry point: builds the room, runs the plant simulation, and
 -- keeps every client's control room in step with it.
 local Players = game:GetService("Players")

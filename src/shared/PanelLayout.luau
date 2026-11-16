@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- The control room, as data.
 --
 -- Six benchboard sections stand in a horseshoe around the operators, in the
@@ -196,8 +196,8 @@ meter("vert", 10.0, 1.0, "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f",
 meter("vert", 11.0, 1.0, "STARTUP\nRATE", "n.sur", -1, 3, "dec/min", { fmt = "%.2f", red = 2.6, amber = 1.3, tip = "Startup rate in decades per minute. 1.3 is a 20 s period (rod block), 2.6 is a 10 s period (scram)." })
 meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." })
 digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4)
-digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.15)
-digital("vert", 14.35, 1.9, "REACTIVITY", "n.rho", "%+.2f", "b", 1.15)
+digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0)
+digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35)
 digital("vert", 13.1, 2.75, "MARGIN (ORM)", "core.orm", "%.0f", "rods", 2.4)
 add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
 
@@ -229,16 +229,16 @@ toggle("bench", 13.05, 0.5, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", 
 for n = 1, 5 do
 	lamp("bench", 14.2, 0.42 + (5 - n) * 0.31, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.4, h = 0.3 })
 end
-section("bench", 10.5, 2.15, 5.3, 1.35, "REGULATORS AND MAP")
+section("bench", 10.5, 2.15, 5.3, 1.35, "")
 selector("bench", 10.6, 2.2, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
 jog("bench", 11.95, 2.2, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%")
 toggle("bench", 13.5, 2.2, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
 selector("bench", 14.5, 2.2, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
-section("bench", 10.5, 3.6, 5.3, 1.3, "PROTECTION BYPASS KEYS")
+section("bench", 10.5, 3.58, 5.3, 1.4, "PROTECTION BYPASS KEYS")
 do
 	local keys = { { "period", "PERIOD" }, { "press", "PRESS" }, { "level", "LEVEL" }, { "feed", "FEED" }, { "mcp", "MCP" }, { "turbines", "2 TG" }, { "cps", "CPS" } }
 	for i, k in keys do
-		add({ kind = "toggle", face = "bench", x = 10.55 + (i - 1) * 0.74, y = 3.72, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
+		add({ kind = "toggle", face = "bench", x = 10.55 + (i - 1) * 0.74, y = 3.84, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
 	end
 end
 

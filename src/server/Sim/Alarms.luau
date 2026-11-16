@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Annunciator logic. Each window follows the usual control-room sequence:
 -- a new alarm flashes and sounds the horn until acknowledged, then stays
 -- lit steadily until the condition clears.

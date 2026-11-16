@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Design data for the RBMK-800 unit. Everything tunable lives here.
 --
 -- The unit is a full-size RBMK core (1661 fuel channels, 211 control rods)

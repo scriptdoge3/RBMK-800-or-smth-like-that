@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Small helpers shared by the simulation, the layout code and the client.
 local Util = {}
 

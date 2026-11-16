@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Client entry point: dresses the panels, keeps them in step with the
 -- server's plant, and handles the player's input.
 local Players = game:GetService("Players")

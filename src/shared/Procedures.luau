@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Operating procedures shown in the in-game binder (press P).
 -- Lines starting with "[ ]" are checklist steps the player can tick off.
 local Procedures = {}

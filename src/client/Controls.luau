@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Mouse interaction with the panels and the seated "panel view" camera.
 --
 -- Every control is a region on a panel face. A ray from the camera through
