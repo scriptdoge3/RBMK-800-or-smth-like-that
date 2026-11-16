@@ -469,6 +469,24 @@ if dumpDir then
 			})
 		end
 	end
+	-- Every part in the room too, for a 3D view.
+	local parts = {}
+	for _, d in room:GetDescendants() do
+		if d:IsA("BasePart") then
+			table.insert(parts, {
+				name = d.Name,
+				size = { d.Size.X, d.Size.Y, d.Size.Z },
+				cf = { d.CFrame:GetComponents() },
+				color = rgb(d.Color),
+				shape = if d:IsA("Part") then d.Shape.Name else "Block",
+				neon = d.Material == Enum.Material.Neon,
+				transparency = d.Transparency,
+				face = d:GetAttribute("Face"),
+				panel = d:GetAttribute("Panel"),
+			})
+		end
+	end
+	fs.writeFile(dumpDir .. "/parts.json", serde.encode("json", parts))
 	fs.writeFile(dumpDir .. "/panels.json", serde.encode("json", faces))
 	print("  artwork dumped to " .. dumpDir .. "/panels.json")
 end

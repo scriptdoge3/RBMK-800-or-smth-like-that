@@ -136,6 +136,27 @@ local function block(folder: Instance, face: PanelLayout.Face, x: number, y: num
 	return p
 end
 
+-- A raised rectangular frame: four bars standing around a rectangle on the face.
+local function bezel(folder: Instance, face: PanelLayout.Face, x: number, y: number, w: number, h: number, depth: number, color: Color3, thickness: number?)
+	local t = thickness or 0.05
+	block(folder, face, x + w / 2, y - t / 2, w + 2 * t, t, depth, color)
+	block(folder, face, x + w / 2, y + h + t / 2, w + 2 * t, t, depth, color)
+	block(folder, face, x - t / 2, y + h / 2, t, h, depth, color)
+	block(folder, face, x + w + t / 2, y + h / 2, t, h, depth, color)
+end
+
+-- An indicator lamp lens: a low dome that glows when lit.
+local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, diameter: number, colors: { Color3 }): (boolean) -> ()
+	cylinder(folder, face, x, y, diameter + 0.07, 0.03, Color3.fromRGB(46, 46, 48))
+	local glass = cylinder(folder, face, x, y, diameter, 0.09, colors[2])
+	return function(on: boolean)
+		glass.Color = colors[if on then 1 else 2]
+		glass.Material = if on then Enum.Material.Neon else Enum.Material.SmoothPlastic
+	end
+end
+
+local BEZEL = Color3.fromRGB(34, 35, 38)
+
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
 end
@@ -196,10 +217,10 @@ function Panels.build(room: Instance, ctx: Context)
 		end
 	end
 
-	builders.meter = function(gui, _face, part, w)
+	builders.meter = function(gui, face, part, w)
 		text(gui, w.x - 0.08, w.y, w.w + 0.16, 0.5, w.label, 0.145)
 		local sx, sy, sw, sh = w.x + 0.1, w.y + 0.52, w.w - 0.2, 1.6
-		local bezel = box(gui, sx - 0.04, sy - 0.04, sw + 0.08, sh + 0.08, Color3.fromRGB(30, 30, 32))
+		local frameBack = box(gui, sx - 0.04, sy - 0.04, sw + 0.08, sh + 0.08, Color3.fromRGB(30, 30, 32))
 		local scale = box(gui, sx, sy, sw, sh, PAPER)
 		local span = w.hi - w.lo
 		local function band(from: number, to: number, color: Color3)
@@ -241,25 +262,27 @@ function Panels.build(room: Instance, ctx: Context)
 				n.Position = UDim2.fromOffset(px(sx + sw * 0.28), px(ty))
 			end
 		end
-		local pointer = box(gui, sx - 0.03, sy, sw + 0.06, 0.045, Color3.fromRGB(210, 20, 20))
-		pointer.ZIndex = 3
+		-- The frame and the needle are real parts standing off the scale.
+		bezel(controls, face, sx, sy, sw, sh, 0.1, BEZEL, 0.05)
+		local needle = block(controls, face, sx + sw / 2, sy + sh, sw + 0.04, 0.045, 0.03, Color3.fromRGB(215, 25, 25))
 		local readout = text(gui, w.x - 0.05, w.y + 2.16, w.w + 0.1, 0.3, "", 0.15, INK, Enum.Font.Code)
-		local _ = bezel, scale
+		local _ = frameBack, scale
 		local last = math.huge
 		table.insert(updaters, function()
 			local v = get(w.sig)
 			if v ~= last then
 				last = v
 				local f = math.clamp((v - w.lo) / span, 0, 1)
-				pointer.Position = UDim2.fromOffset(px(sx - 0.03), px(sy + sh * (1 - f)) - 2)
+				needle.CFrame = blockCFrame(face, sx + sw / 2, sy + sh * (1 - f), 0.055, 0)
 				readout.Text = string.format(w.fmt, v)
 			end
 		end)
 		region(part, w, nil, valueTip(w))
 	end
 
-	builders.digital = function(gui, _face, part, w)
+	builders.digital = function(gui, face, part, w)
 		text(gui, w.x, w.y, w.w, 0.26, w.label, 0.14)
+		bezel(controls, face, w.x, w.y + 0.28, w.w, w.h - 0.3, 0.07, BEZEL, 0.04)
 		local screen = box(gui, w.x, w.y + 0.28, w.w, w.h - 0.3, SCREEN)
 		outline(screen, Color3.fromRGB(70, 70, 70), 1)
 		local suffix = if w.unit ~= "" then " " .. w.unit else ""
@@ -279,11 +302,9 @@ function Panels.build(room: Instance, ctx: Context)
 		region(part, w, nil, valueTip(w))
 	end
 
-	builders.lamp = function(gui, _face, part, w)
+	builders.lamp = function(gui, face, part, w)
 		local d = math.min(0.24, w.h - 0.06)
-		local bulb = box(gui, w.x + 0.03, w.y + (w.h - d) / 2, d, d, LAMP[w.color][2])
-		round(bulb)
-		outline(bulb, Color3.fromRGB(30, 30, 30), 1)
+		local setLens = lens(controls, face, w.x + 0.03 + d / 2, w.y + w.h / 2, d, LAMP[w.color])
 		local t = text(gui, w.x + d + 0.09, w.y, w.w - d - 0.1, w.h, w.label, 0.14)
 		t.TextXAlignment = Enum.TextXAlignment.Left
 		local lastOn: boolean? = nil
@@ -300,7 +321,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local on = isOn()
 			if on ~= lastOn then
 				lastOn = on
-				bulb.BackgroundColor3 = LAMP[w.color][if on then 1 else 2]
+				setLens(on)
 			end
 		end)
 		region(part, w, nil, function()
@@ -373,10 +394,8 @@ function Panels.build(room: Instance, ctx: Context)
 
 	builders.pump = function(gui, face, part, w)
 		text(gui, w.x - 0.04, w.y, w.w + 0.08, 0.28, w.label, 0.15)
-		local green = box(gui, w.x + 0.14, w.y + 0.32, 0.24, 0.24, LAMP.green[2])
-		round(green)
-		local red = box(gui, w.x + w.w - 0.38, w.y + 0.32, 0.24, 0.24, LAMP.red[2])
-		round(red)
+		local setGreen = lens(controls, face, w.x + 0.26, w.y + 0.44, 0.22, LAMP.green)
+		local setRed = lens(controls, face, w.x + w.w - 0.26, w.y + 0.44, 0.22, LAMP.red)
 		local cy = w.y + 0.88
 		local set = lever(face, w.x + w.w / 2, cy, false)
 		text(gui, w.x, cy + 0.3, w.w / 2, 0.2, "STOP", 0.12, Color3.fromRGB(60, 60, 60))
@@ -387,8 +406,8 @@ function Panels.build(room: Instance, ctx: Context)
 			if on ~= last then
 				last = on
 				set(on)
-				red.BackgroundColor3 = LAMP.red[if on then 1 else 2]
-				green.BackgroundColor3 = LAMP.green[if on then 2 else 1]
+				setRed(on)
+				setGreen(not on)
 			end
 		end)
 		region(part, w, function(_button: number)
@@ -468,12 +487,13 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	builders.recorder = function(gui, _face, part, w)
+	builders.recorder = function(gui, face, part, w)
 		local title = text(gui, w.x, w.y, w.w, 0.24, w.label, 0.13)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		local gx, gy, gw, gh = w.x, w.y + 0.26, w.w, w.h - 0.3
 		local paper = box(gui, gx, gy, gw, gh, PAPER)
 		outline(paper, Color3.fromRGB(40, 40, 40), 2)
+		bezel(controls, face, gx, gy, gw, gh, 0.12, BEZEL, 0.07)
 		for i = 1, 3 do
 			box(gui, gx, gy + gh * i / 4, gw, 0.012, Color3.fromRGB(190, 186, 170))
 		end
@@ -518,9 +538,16 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	builders.ann = function(gui, _face, part, w)
+	builders.ann = function(gui, face, part, w)
 		local cols, rows = 10, 3
 		local tw, th = w.w / cols, w.h / rows
+		-- Window frames: each legend sits in its own recess.
+		for c = 0, cols do
+			block(controls, face, math.clamp(c * tw, 0.04, w.w - 0.04), w.h / 2, 0.08, w.h, 0.14, BEZEL)
+		end
+		for r = 0, rows do
+			block(controls, face, w.w / 2, math.clamp(r * th, 0.04, w.h - 0.04), w.w, 0.08, 0.14, BEZEL)
+		end
 		for i, alarm in w.alarms do
 			local c, r = (i - 1) % cols, (i - 1) // cols
 			if r < rows then
@@ -549,7 +576,8 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	-- Core map: one coloured cell per lattice position.
-	builders.coremap = function(gui, _face, part, w)
+	builders.coremap = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
 		local L = CoreLayout.get()
 		local G = L.grid
 		local cell = math.floor((w.w - 0.1) * PPS / G)
@@ -639,7 +667,8 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	-- Rod select matrix: one button per rod, laid out as in the core.
-	builders.rodmatrix = function(gui, _face, part, w)
+	builders.rodmatrix = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.1, BEZEL, 0.07)
 		local L = CoreLayout.get()
 		local G = L.grid
 		local pitch = (w.w - 0.1) * PPS / G
@@ -729,7 +758,8 @@ function Panels.build(room: Instance, ctx: Context)
 		end
 	end
 
-	builders.axial = function(gui, _face, part, w)
+	builders.axial = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
 		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(16, 18, 20))
 		text(gui, w.x, w.y + 0.03, w.w, 0.26, "AXIAL", 0.17, Color3.fromRGB(220, 220, 210), Enum.Font.Code)
 		text(gui, w.x, w.y + 0.3, w.w, 0.18, "TOP", 0.12, Color3.fromRGB(150, 150, 150), Enum.Font.Code)
@@ -754,7 +784,8 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	builders.computer = function(gui, _face, part, w)
+	builders.computer = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.16, BEZEL, 0.09)
 		local screen = box(gui, w.x, w.y, w.w, w.h, SCREEN)
 		outline(screen, Color3.fromRGB(60, 60, 60), 3)
 		local left = text(gui, w.x + 0.1, w.y + 0.06, 3.5, w.h - 0.12, "", 0.165, DIGIT, Enum.Font.Code)
@@ -799,7 +830,7 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	builders.sync = function(gui, _face, part, w)
+	builders.sync = function(gui, face, part, w)
 		local frame = box(gui, w.x, w.y, w.w, w.h, Color3.new(0, 0, 0))
 		frame.BackgroundTransparency = 1
 		outline(frame, Color3.fromRGB(70, 74, 70), 2)
@@ -808,6 +839,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local cx, cy = w.x + w.w / 2, w.y + 0.36 + d / 2
 		local dial = box(gui, cx - d / 2, cy - d / 2, d, d, PAPER)
 		round(dial)
+		bezel(controls, face, cx - d / 2 - 0.06, cy - d / 2 - 0.06, d + 0.12, d + 0.12, 0.12, BEZEL, 0.07)
 		outline(dial, Color3.fromRGB(30, 30, 30), 3)
 		box(gui, cx - 0.02, cy - d / 2, 0.04, 0.2, INK)
 		text(gui, cx - d / 2 + 0.1, cy - 0.12, 0.6, 0.24, "SLOW", 0.12, Color3.fromRGB(80, 80, 80))

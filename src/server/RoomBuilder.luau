@@ -65,9 +65,38 @@ function RoomBuilder.build(): Folder
 	spawn.Neutral = true
 	spawn.Parent = room
 
+	-- Unit nameplate on the back wall, skirting, and a door.
+	local plate = part(room, "Nameplate", Vector3.new(30, 3, 0.3), CFrame.new(floorCenter + Vector3.new(0, 18.5, -45.8)), Color3.fromRGB(30, 44, 70))
+	local plateGui = Instance.new("SurfaceGui")
+	plateGui.Face = Enum.NormalId.Back
+	plateGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	plateGui.PixelsPerStud = 30
+	plateGui.LightInfluence = 0
+	plateGui.Parent = plate
+	local plateText = Instance.new("TextLabel")
+	plateText.Size = UDim2.fromScale(1, 1)
+	plateText.BackgroundTransparency = 1
+	plateText.Font = Enum.Font.SourceSansBold
+	plateText.TextSize = 64
+	plateText.TextColor3 = Color3.fromRGB(235, 235, 225)
+	plateText.Text = "UNIT 1  -  RBMK-800  -  MAIN CONTROL ROOM"
+	plateText.Parent = plateGui
+	part(room, "Door", Vector3.new(6, 11, 0.4), CFrame.new(floorCenter + Vector3.new(30, 5.5, 45.9)), Color3.fromRGB(96, 104, 112), Enum.Material.Metal)
+	part(room, "DoorFrame", Vector3.new(7, 11.6, 0.3), CFrame.new(floorCenter + Vector3.new(30, 5.8, 46.05)), Color3.fromRGB(60, 62, 66))
+	for _, z in { -45.9, 45.9 } do
+		part(room, "Skirting", Vector3.new(120, 0.8, 0.2), CFrame.new(floorCenter + Vector3.new(0, 0.4, z)), Color3.fromRGB(70, 72, 76))
+	end
+	-- Ceiling beams give the room some depth overhead.
+	for ix = -3, 3 do
+		part(room, "Beam", Vector3.new(1.2, 1.4, 92), CFrame.new(floorCenter + Vector3.new(ix * 17, height - 0.7, 0)), Color3.fromRGB(186, 186, 180)).CanCollide = false
+	end
+
 	-- Shift supervisor's desk in the middle of the horseshoe.
 	part(room, "DeskTop", Vector3.new(14, 0.4, 5), CFrame.new(0, 3.2, -6), Color3.fromRGB(110, 88, 66), Enum.Material.Wood)
 	part(room, "DeskBody", Vector3.new(13, 3, 4), CFrame.new(0, 1.5, -6), Color3.fromRGB(96, 100, 104))
+	part(room, "DeskBinder", Vector3.new(1.6, 0.25, 2.1), CFrame.new(-3.5, 3.52, -6) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(160, 40, 36))
+	part(room, "DeskPhone", Vector3.new(1.3, 0.5, 1.6), CFrame.new(4, 3.65, -6.4), Color3.fromRGB(36, 36, 40))
+	part(room, "DeskLogbook", Vector3.new(2.2, 0.15, 1.6), CFrame.new(0.5, 3.48, -5.4) * CFrame.Angles(0, -0.15, 0), Color3.fromRGB(230, 228, 214))
 
 	-- Benchboards.
 	local up = Vector3.new(0, 1, 0)
@@ -91,6 +120,22 @@ function RoomBuilder.build(): Folder
 		local bench = PanelLayout.face(p.index, "bench")
 		local benchCF = PanelLayout.faceCFrame(bench)
 		part(room, p.id .. "_slab", Vector3.new(W, depth, 1.6), benchCF * CFrame.new(0, 0, T / 2 + 0.8), CABINET_COLOR)
+		-- Hood over the annunciators, a kick rail along the bench front and
+		-- a nameplate strip under the bench lip.
+		part(room, p.id .. "_hood", Vector3.new(W + 0.2, 0.25, 2.2), frame(0, top + 0.12, -backZ + 0.75), CABINET_COLOR)
+		part(room, p.id .. "_lip", Vector3.new(W, 0.35, 0.3), frame(0, h0 - 0.12, 0.1), Color3.fromRGB(60, 62, 64))
+		local rail = part(room, p.id .. "_rail", Vector3.new(W - 1, 0.18, 0.18), frame(0, 1.0, 0.55), Color3.fromRGB(150, 150, 152), Enum.Material.Metal)
+		rail.CanCollide = false
+		for _, side in { -1, 1 } do
+			part(room, p.id .. "_post", Vector3.new(0.18, 1.0, 0.18), frame(side * (W / 2 - 0.6), 0.5, 0.55), Color3.fromRGB(150, 150, 152), Enum.Material.Metal).CanCollide = false
+		end
+		-- Operator's chair in front of the bench.
+		local seatColor = Color3.fromRGB(52, 58, 70)
+		local chair = { { Vector3.new(2.0, 0.35, 2.0), 2.0, 5.2 }, { Vector3.new(2.0, 2.2, 0.3), 3.2, 6.2 }, { Vector3.new(0.3, 1.8, 0.3), 0.95, 5.2 }, { Vector3.new(1.8, 0.2, 1.8), 0.1, 5.2 } }
+		for n, c in chair do
+			local piece = part(room, p.id .. "_chair" .. n, c[1], frame(if p.index % 2 == 0 then -3 else 3, c[2], c[3]), if n <= 2 then seatColor else Color3.fromRGB(40, 40, 42))
+			piece.CanCollide = n == 4
+		end
 		for _, faceName in { "bench", "vert", "ann" } do
 			local f = PanelLayout.face(p.index, faceName)
 			local color = if faceName == "bench" then BENCH_COLOR elseif faceName == "ann" then ANN_COLOR else PANEL_COLOR

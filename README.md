@@ -10,10 +10,12 @@ come out, a 16-second scram whose first seconds can add reactivity ("positive sc
 shutdown (AZ) rods, AZ-1 to AZ-5 protection levels, the KOM clutch-release key, xenon
 in real time, and fuel channels that burst when you starve or overheat them.
 
-![The reactor control panel](docs/panel-p3-reactor-control.png)
+![The control room from the operator's position](docs/room-operator-view.png)
+![The reactor control panel](docs/reactor-panel-3d.png)
 
-*Panel P3 as the client code draws it (rendered outside Roblox from the same instances;
-the buttons, switch levers and knobs are 3D parts in the game).*
+*Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
+the game's scripts create, so the geometry is the game's; Roblox's own lighting and
+materials will look different.*
 
 ## Getting it into Roblox Studio
 
@@ -67,6 +69,9 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
   three-element level control, safety valves.
 - **Electrical**: generator excitation and synchronising, auxiliary buses with reserve
   transfer, emergency buses and diesels, islanded "rundown" operation.
+- **Control room**: a walkable 3D room. Buttons, switch levers, key switches, knobs, lamp
+  lenses, meter needles and the bezels around every instrument are physical parts; scales,
+  legends and screens are drawn on the panel faces.
 - **Protection**: AZ-1 to AZ-5 with first-out logging and key-switch bypasses, ECCS,
   rod-channel cooling, about 85 annunciators.
 - **Failures**: random equipment faults roughly every half hour of operation, more often on
