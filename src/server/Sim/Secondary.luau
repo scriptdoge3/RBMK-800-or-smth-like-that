@@ -20,7 +20,7 @@ Secondary.__index = Secondary
 
 local NOMINAL_P = Config.Primary.NOMINAL_PRESSURE
 local RATED = Config.NOMINAL_ELECTRIC / 2 -- W per machine
-local STEAM_WORK = 684e3 -- J per kg of steam at design conditions (31% gross cycle efficiency)
+local STEAM_WORK = 698e3 -- J per kg of steam at design conditions (31% gross cycle efficiency)
 local ROTOR_ENERGY = 2.7e9 -- J at rated speed
 local WINDAGE = 6e6 -- W at rated speed
 local FEED_BUS = { "1A", "1B", "2A", "2B" }

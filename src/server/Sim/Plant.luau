@@ -254,6 +254,8 @@ function Plant.publish(self)
 		period = 999
 	end
 	S["n.period"] = period
+	-- Startup rate in decades per minute, the usual control-room form.
+	S["n.sur"] = if math.abs(period) >= 999 then 0 else Util.clamp(26.06 / period, -1, 5)
 	S["n.thermal"] = core.thermalPower / 1e6
 	S["n.heat"] = (core.loopHeat[1] + core.loopHeat[2]) / 1e6
 	S["n.rho"] = core.rho / core.beta

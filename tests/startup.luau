@@ -548,8 +548,13 @@ end
 print(string.format("  AZ-5 from %.0f%%: peak %.1f%%, 25 s later %.2f%%, rods mean depth %.1f m", before, peak, S["n.power"], S["rod.meanRR"]))
 H.check(peak < before + 2, "no power rise on AZ-5 from the design state")
 H.check(S["n.power"] < 5, "reactor shut down 25 s after AZ-5")
-for _ = 1, 3000 do
+for i = 1, 3000 do
 	plant:step(DT)
+	if i % 300 == 0 then
+		print(string.format("    +%3ds: %5.0f MWt  p=%.2f MPa  steam %4.0f (aux %3.0f) t/h  feed %4.0f t/h  lvl %4.0f/%4.0f  cv %.0f/%.0f  byp %.0f/%.0f  gcb %d%d  rpm %.0f fwT %.0f",
+			i / 10 + 25, S["n.thermal"], S["pri.press"], S["steam.total"], S["steam.aux"], S["fw.total"], S["loop.1.level"], S["loop.2.level"],
+			S["tg.1.cv"], S["tg.2.cv"], S["tg.1.bypass"], S["tg.2.bypass"], S["gen.1.gcb"], S["gen.2.gcb"], S["tg.1.rpm"], S["fw.temp"]))
+	end
 end
 print(string.format("  5 min after scram: %.0f MWt decay heat, p=%.2f MPa, levels %.0f/%.0f mm, turbines tripped %d, ruptures %d",
 	S["n.thermal"], S["pri.press"], S["loop.1.level"], S["loop.2.level"], S["tg.tripped"], S["core.ruptured"]))
