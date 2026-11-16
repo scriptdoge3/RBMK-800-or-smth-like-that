@@ -6,7 +6,8 @@
 --
 -- The look follows an American boiling-water-reactor control room of the
 -- late 1970s and early 1980s: cream boards with wood trim, an L of panels
--- meeting at a square corner, annunciator boxes along the top, a dark
+-- around a square corner with the reactor panel set across the corner
+-- itself, annunciator boxes along the top, a dark
 -- ceiling with fluorescent troffers, and an operators' desk with the things
 -- of the period on it: a green-screen terminal, an alarm teleprinter,
 -- telephones, binders and logbooks. Nothing here is later than 1985.
@@ -209,11 +210,11 @@ function RoomBuilder.build(): Folder
 			if turn < 0.01 then
 				prop(room, p.id .. "_seam", Vector3.new(0.1, PanelLayout.VERT_HEIGHT, 0.06), CFrame.fromMatrix(joint + up * (backY + PanelLayout.VERT_HEIGHT / 2) - back * (backZ - T / 2 - 0.03), right, up, back), DARK)
 			else
-				-- A square inside corner. Each cabinet is carried on, blank,
-				-- past the joint until it meets the other one: boards, bench,
+				-- An inside corner. Each cabinet is carried on, blank, past
+				-- the joint until it meets the other one: boards, bench,
 				-- annunciator box and all. Where the two benches overlap, the
 				-- higher one shows, which is exactly the mitred valley a real
-				-- corner section has.
+				-- corner joint has.
 				local half = turn / 2
 				local ext = backZ * math.tan(half)
 				local extCab = (backZ + cabinetDepth + T) * math.tan(half)
@@ -239,13 +240,45 @@ function RoomBuilder.build(): Folder
 		end
 	end
 
-	-- Operators' desk in the middle of the room, facing the back wall, with
-	-- a return at each end.
-	local deskX, deskZ = -4, -13
+	-- Behind the corner section: the triangle between its cabinet and the
+	-- square corner where the backs of the two runs meet is filled solid and
+	-- capped, so the boards read as one L with a square back corner.
+	do
+		local cabinetBack = backZ + T / 2 + cabinetDepth
+		local cOrigin, _, cBack = PanelLayout.panelFrame(PanelLayout.CORNER_PANEL)
+		local x0 = PanelLayout.CORNER_X - cabinetBack
+		local z0 = PanelLayout.BACK_WALL_Z - cabinetBack
+		-- The corner cabinet's back plane is p . cBack = k; find where it
+		-- crosses the back planes of the two runs. A little extra pushes the
+		-- long face of the filler inside the corner cabinet.
+		local k = cOrigin:Dot(cBack) - cabinetBack
+		local legX = (k - z0 * cBack.Z) / cBack.X - x0 + 0.2
+		local legZ = (k - x0 * cBack.X) / cBack.Z - z0 + 0.2
+		local function filler(name: string, y0: number, height: number, color: Color3, material: Enum.Material?)
+			-- A wedge's right angle is at its bottom back edge; stand it on end
+			-- so that edge is the vertical line of the square corner.
+			local w = Instance.new("WedgePart")
+			w.Name = name
+			w.Anchored = true
+			w.Size = Vector3.new(height, legX, legZ)
+			w.CFrame = CFrame.fromMatrix(Vector3.new(x0 + legX / 2, y0 + height / 2, z0 + legZ / 2), Vector3.new(0, 1, 0), Vector3.new(1, 0, 0), Vector3.new(0, 0, -1))
+			w.Color = color
+			w.Material = material or Enum.Material.SmoothPlastic
+			w.TopSurface = Enum.SurfaceType.Smooth
+			w.BottomSurface = Enum.SurfaceType.Smooth
+			w.Parent = room
+		end
+		filler("CornerFill", 0, top, CABINET_COLOR)
+		filler("CornerCap", top, 0.3, WOOD, Enum.Material.Wood)
+	end
+
+	-- Operators' desk in the middle of the room, facing the corner and the
+	-- reactor panel, with a return at each end.
 	local deskTop = 3.0
-	local onDesk = CFrame.new(deskX, deskTop, deskZ)
+	local deskFrame = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+	local onDesk = deskFrame * CFrame.new(0, deskTop, 0)
 	local function desk(name: string, size: Vector3, x: number, y: number, z: number, color: Color3, material: Enum.Material?): Part
-		return part(room, name, size, CFrame.new(deskX + x, y, deskZ + z), color, material)
+		return part(room, name, size, deskFrame * CFrame.new(x, y, z), color, material)
 	end
 	desk("DeskTop", Vector3.new(34, 0.3, 5), 0, deskTop - 0.15, 0, DESK)
 	desk("DeskEdge", Vector3.new(34.2, 0.34, 0.3), 0, deskTop - 0.15, 2.6, WOOD, Enum.Material.Wood).CanCollide = false
@@ -283,7 +316,7 @@ function RoomBuilder.build(): Folder
 	ashtray.Shape = Enum.PartType.Cylinder
 	ashtray.Transparency = 0.25
 	for _, x in { -8.5, 0.5, 9 } do
-		chair(room, CFrame.new(deskX + x, 0, deskZ + 5.2) * CFrame.Angles(0, (x / 9) * 0.22, 0))
+		chair(room, deskFrame * CFrame.new(x, 0, 5.2) * CFrame.Angles(0, (x / 9) * 0.22, 0))
 	end
 
 	room.Parent = workspace

@@ -599,8 +599,9 @@ return CoreLayout
           <string name="Source"><![CDATA[--!nonstrict
 -- The control room, as data.
 --
--- Six benchboard sections stand in a horseshoe around the operators, in the
--- style of a boiling-water-reactor control room: a sloping bench of controls,
+-- Six benchboard sections stand in an L around the operators, with the
+-- reactor panel in the corner, in the style of a boiling-water-reactor
+-- control room. Each section is a sloping bench of controls,
 -- a vertical board of meters and recorders behind it, and a row of
 -- annunciator windows on top. Each widget names the plant signal it shows
 -- (`sig`) and the operator command it sends (`cmd`); the server and the
@@ -618,8 +619,12 @@ PanelLayout.BENCH_SLOPE = math.rad(22)
 PanelLayout.VERT_HEIGHT = 6.6
 PanelLayout.ANN_HEIGHT = 2.2
 PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
-PanelLayout.CORNER_X = -36 -- where the left wing meets the back wall, at a right angle
-PanelLayout.WING_PANELS = 2 -- panels on the wing; the rest run along the back wall
+PanelLayout.CORNER_X = -36 -- bench front edge of the left wing, square to the back wall
+PanelLayout.CORNER_PANEL = 3 -- the reactor panel stands across the corner; the panels before it are on the wing
+-- The operators' desk faces the corner, so the reactor panel is straight ahead.
+PanelLayout.DESK_X = -12
+PanelLayout.DESK_Z = -12
+PanelLayout.DESK_YAW = math.rad(45)
 PanelLayout.PIXELS_PER_STUD = 80
 PanelLayout.FACE_THICKNESS = 0.3
 
@@ -1082,20 +1087,30 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 -- Where a panel stands: its origin is the floor point under the middle of
 -- the bench's front edge; x is the operator's right, z points back at them.
 --
--- The boards form an L, as in a classic control room: P1 and P2 stand on a
--- wing along the left wall, the run turns a square corner, and P3 to P6 fill
--- the back wall. The reactor panel, P3, is the one at the corner.
+-- The boards form an L, as in a boiling-water-reactor control room: P1 and
+-- P2 stand on a wing along the left wall, P4 to P6 along the back wall, and
+-- the two runs are square to each other. The reactor panel, P3, stands in
+-- the corner itself: a corner section set across it at 45 degrees, so the
+-- operator at the controls faces straight into the corner, with the wing on
+-- the left hand and the back wall on the right. The cabinets behind it are
+-- filled out to the square corner.
 function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
 	local W = PanelLayout.PANEL_WIDTH
 	local z = PanelLayout.BACK_WALL_Z
 	local cx = PanelLayout.CORNER_X
-	local wing = PanelLayout.WING_PANELS
-	if index <= wing then
-		-- On the wing, facing east; panel `wing` is the one next to the corner.
-		local fromCorner = (wing - index + 0.5) * W
+	local corner = PanelLayout.CORNER_PANEL
+	-- How far the corner section reaches along each run from the corner point.
+	local reach = W / math.sqrt(2)
+	if index < corner then
+		-- On the wing, facing east.
+		local fromCorner = reach + (corner - index - 0.5) * W
 		return Vector3.new(cx, 0, z + fromCorner), Vector3.new(0, 0, -1), Vector3.new(1, 0, 0)
+	elseif index == corner then
+		local d = 1 / math.sqrt(2)
+		return Vector3.new(cx + reach / 2, 0, z + reach / 2), Vector3.new(d, 0, -d), Vector3.new(d, 0, d)
 	end
-	return Vector3.new(cx + (index - wing - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
+	-- On the back wall, facing south.
+	return Vector3.new(cx + reach + (index - corner - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
 function PanelLayout.face(index: number, face: string): Face
@@ -1179,8 +1194,8 @@ Procedures.pages = {
 			"with the reactor of 1986 and the control room of an American boiling-water plant.",
 			"",
 			"The boards form an L. On the left wing: P1 auxiliaries and emergency cooling, then",
-			"P2 main circulation. At the corner, on the back wall: P3 reactor control. Along the",
-			"back wall from there: P4 feedwater, P5 turbines, P6 electrical.",
+			"P2 main circulation. In the corner itself, facing the desk: P3 reactor control. Along",
+			"the back wall from there: P4 feedwater, P5 turbines, P6 electrical.",
 			"",
 			"Walk up to a panel and press E to sit at it. A and D move along the row, W and S",
 			"switch between the bench, the vertical board and a wide view. Hover over anything",
@@ -1778,7 +1793,8 @@ end)
 --
 -- The look follows an American boiling-water-reactor control room of the
 -- late 1970s and early 1980s: cream boards with wood trim, an L of panels
--- meeting at a square corner, annunciator boxes along the top, a dark
+-- around a square corner with the reactor panel set across the corner
+-- itself, annunciator boxes along the top, a dark
 -- ceiling with fluorescent troffers, and an operators' desk with the things
 -- of the period on it: a green-screen terminal, an alarm teleprinter,
 -- telephones, binders and logbooks. Nothing here is later than 1985.
@@ -1981,11 +1997,11 @@ function RoomBuilder.build(): Folder
 			if turn < 0.01 then
 				prop(room, p.id .. "_seam", Vector3.new(0.1, PanelLayout.VERT_HEIGHT, 0.06), CFrame.fromMatrix(joint + up * (backY + PanelLayout.VERT_HEIGHT / 2) - back * (backZ - T / 2 - 0.03), right, up, back), DARK)
 			else
-				-- A square inside corner. Each cabinet is carried on, blank,
-				-- past the joint until it meets the other one: boards, bench,
+				-- An inside corner. Each cabinet is carried on, blank, past
+				-- the joint until it meets the other one: boards, bench,
 				-- annunciator box and all. Where the two benches overlap, the
 				-- higher one shows, which is exactly the mitred valley a real
-				-- corner section has.
+				-- corner joint has.
 				local half = turn / 2
 				local ext = backZ * math.tan(half)
 				local extCab = (backZ + cabinetDepth + T) * math.tan(half)
@@ -2011,13 +2027,45 @@ function RoomBuilder.build(): Folder
 		end
 	end
 
-	-- Operators' desk in the middle of the room, facing the back wall, with
-	-- a return at each end.
-	local deskX, deskZ = -4, -13
+	-- Behind the corner section: the triangle between its cabinet and the
+	-- square corner where the backs of the two runs meet is filled solid and
+	-- capped, so the boards read as one L with a square back corner.
+	do
+		local cabinetBack = backZ + T / 2 + cabinetDepth
+		local cOrigin, _, cBack = PanelLayout.panelFrame(PanelLayout.CORNER_PANEL)
+		local x0 = PanelLayout.CORNER_X - cabinetBack
+		local z0 = PanelLayout.BACK_WALL_Z - cabinetBack
+		-- The corner cabinet's back plane is p . cBack = k; find where it
+		-- crosses the back planes of the two runs. A little extra pushes the
+		-- long face of the filler inside the corner cabinet.
+		local k = cOrigin:Dot(cBack) - cabinetBack
+		local legX = (k - z0 * cBack.Z) / cBack.X - x0 + 0.2
+		local legZ = (k - x0 * cBack.X) / cBack.Z - z0 + 0.2
+		local function filler(name: string, y0: number, height: number, color: Color3, material: Enum.Material?)
+			-- A wedge's right angle is at its bottom back edge; stand it on end
+			-- so that edge is the vertical line of the square corner.
+			local w = Instance.new("WedgePart")
+			w.Name = name
+			w.Anchored = true
+			w.Size = Vector3.new(height, legX, legZ)
+			w.CFrame = CFrame.fromMatrix(Vector3.new(x0 + legX / 2, y0 + height / 2, z0 + legZ / 2), Vector3.new(0, 1, 0), Vector3.new(1, 0, 0), Vector3.new(0, 0, -1))
+			w.Color = color
+			w.Material = material or Enum.Material.SmoothPlastic
+			w.TopSurface = Enum.SurfaceType.Smooth
+			w.BottomSurface = Enum.SurfaceType.Smooth
+			w.Parent = room
+		end
+		filler("CornerFill", 0, top, CABINET_COLOR)
+		filler("CornerCap", top, 0.3, WOOD, Enum.Material.Wood)
+	end
+
+	-- Operators' desk in the middle of the room, facing the corner and the
+	-- reactor panel, with a return at each end.
 	local deskTop = 3.0
-	local onDesk = CFrame.new(deskX, deskTop, deskZ)
+	local deskFrame = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+	local onDesk = deskFrame * CFrame.new(0, deskTop, 0)
 	local function desk(name: string, size: Vector3, x: number, y: number, z: number, color: Color3, material: Enum.Material?): Part
-		return part(room, name, size, CFrame.new(deskX + x, y, deskZ + z), color, material)
+		return part(room, name, size, deskFrame * CFrame.new(x, y, z), color, material)
 	end
 	desk("DeskTop", Vector3.new(34, 0.3, 5), 0, deskTop - 0.15, 0, DESK)
 	desk("DeskEdge", Vector3.new(34.2, 0.34, 0.3), 0, deskTop - 0.15, 2.6, WOOD, Enum.Material.Wood).CanCollide = false
@@ -2055,7 +2103,7 @@ function RoomBuilder.build(): Folder
 	ashtray.Shape = Enum.PartType.Cylinder
 	ashtray.Transparency = 0.25
 	for _, x in { -8.5, 0.5, 9 } do
-		chair(room, CFrame.new(deskX + x, 0, deskZ + 5.2) * CFrame.Angles(0, (x / 9) * 0.22, 0))
+		chair(room, deskFrame * CFrame.new(x, 0, 5.2) * CFrame.Angles(0, (x / 9) * 0.22, 0))
 	end
 
 	room.Parent = workspace

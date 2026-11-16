@@ -13,6 +13,8 @@ in real time, and fuel channels that burst when you starve or overheat them.
 ![The control room](docs/room.png)
 ![The corner, with the reactor panel](docs/corner.png)
 ![The reactor control panel](docs/reactor-panel.png)
+![Plan view](docs/plan.png)
+![The operators' desk](docs/desk.png)
 
 *Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
 the game's scripts create, so the geometry is the game's; Roblox's own lighting and
@@ -44,9 +46,11 @@ The server needs a few seconds at startup to design the core ("Commissioning the
 
 The boards form an L, after a late-1970s American boiling-water-reactor control room:
 **P1** reactor auxiliaries and emergency cooling and **P2** main circulation on the left
-wing, a square corner, then along the back wall **P3** reactor control (the rod panel, at
-the corner), **P4** feedwater, **P5** turbines and **P6** electrical. An operators' desk
-stands in the middle. Every server runs one shared unit; anyone can operate any panel.
+wing, and **P4** feedwater, **P5** turbines and **P6** electrical along the back wall, the
+two runs square to each other. **P3** reactor control (rod controls, AZ-5, cartogram)
+stands in the corner itself, set across it at 45 degrees, with the cabinets behind it
+filled out to the square corner. The operators' desk faces the corner, so the reactor
+panel is straight ahead of it. Every server runs one shared unit; anyone can operate any panel.
 
 Everything in the room is dated before 1986: edgewise meters, strip-chart recorders,
 pistol-grip switches, annunciator windows, a lamp-mosaic channel cartogram, red LED

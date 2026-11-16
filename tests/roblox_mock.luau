@@ -241,20 +241,28 @@ do
 	for _, p in PanelLayout.panels do
 		local board = PanelLayout.face(p.index, "vert")
 		local bench = PanelLayout.face(p.index, "bench")
-		local toDesk = Vector3.new(-4, board.center.Y, -13) - board.center
+		local toDesk = Vector3.new(PanelLayout.DESK_X, board.center.Y, PanelLayout.DESK_Z) - board.center
 		if board.normal:Dot(toDesk.Unit) < 0.5 or bench.normal.Y < 0.8 or bench.normal:Dot(toDesk.Unit) < 0.1 then
 			inward = false
 		end
 	end
 	H.check(inward, "every board faces into the room and every bench slopes toward the operator")
-	-- The run turns one square corner, between the wing and the back wall.
-	local _, _, wingBack = PanelLayout.panelFrame(PanelLayout.WING_PANELS)
-	local _, _, wallBack = PanelLayout.panelFrame(PanelLayout.WING_PANELS + 1)
-	H.check(math.abs(wingBack:Dot(wallBack)) < 1e-6, "the wing meets the back wall at 90 degrees")
-	local o2, r2 = PanelLayout.panelFrame(PanelLayout.WING_PANELS)
-	local o3, r3 = PanelLayout.panelFrame(PanelLayout.WING_PANELS + 1)
-	H.check(((o2 + r2 * 8) - (o3 - r3 * 8)).Magnitude < 1e-6, "the two runs join edge to edge at the corner")
-	H.check(PanelLayout.panels[PanelLayout.WING_PANELS + 1].id == "P3", "the reactor panel is the one at the corner")
+	-- The wing and the back wall are square to each other, and the reactor
+	-- panel stands across the corner between them.
+	local c = PanelLayout.CORNER_PANEL
+	H.check(PanelLayout.panels[c].id == "P3", "the reactor panel is the corner section")
+	local oW, rW, bW = PanelLayout.panelFrame(c - 1)
+	local oC, rC, bC = PanelLayout.panelFrame(c)
+	local oB, rB, bB = PanelLayout.panelFrame(c + 1)
+	H.check(math.abs(bW:Dot(bB)) < 1e-6, "the wing meets the back wall at 90 degrees")
+	H.check(math.abs(bC:Dot(bW) - math.sqrt(0.5)) < 1e-6 and math.abs(bC:Dot(bB) - math.sqrt(0.5)) < 1e-6, "the corner section is set at 45 degrees to both runs")
+	local W = PanelLayout.PANEL_WIDTH
+	H.check(((oW + rW * W / 2) - (oC - rC * W / 2)).Magnitude < 1e-6, "the wing joins the corner section edge to edge")
+	H.check(((oC + rC * W / 2) - (oB - rB * W / 2)).Magnitude < 1e-6, "the corner section joins the back wall edge to edge")
+	local cornerPoint = Vector3.new(PanelLayout.CORNER_X, 0, PanelLayout.BACK_WALL_Z)
+	H.check(math.abs((oC - cornerPoint):Dot(bC) - W / 2) < 1e-6, "the corner section cuts straight across the square corner")
+	H.check(bC:Dot((Vector3.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) - oC).Unit) > 0.999, "the desk is straight in front of the reactor panel")
+	H.check(room:FindFirstChild("CornerFill") ~= nil and room.CornerFill:IsA("WedgePart"), "the corner behind the reactor panel is filled out square")
 	local u, v = PanelLayout.toFace(f, PanelLayout.toWorld(f, 3.25, 1.5, 0))
 	H.near(u, 3.24, 3.26, "face coordinates round-trip (u)")
 	H.near(v, 1.49, 1.51, "face coordinates round-trip (v)")
@@ -492,7 +500,7 @@ if dumpDir then
 				size = { d.Size.X, d.Size.Y, d.Size.Z },
 				cf = { d.CFrame:GetComponents() },
 				color = rgb(d.Color),
-				shape = if d:IsA("Part") then d.Shape.Name else "Block",
+				shape = if d:IsA("Part") then d.Shape.Name elseif d:IsA("WedgePart") then "Wedge" else "Block",
 				neon = d.Material == Enum.Material.Neon,
 				transparency = d.Transparency,
 				face = d:GetAttribute("Face"),

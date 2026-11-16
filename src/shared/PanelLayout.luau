@@ -1,8 +1,9 @@
 --!nonstrict
 -- The control room, as data.
 --
--- Six benchboard sections stand in a horseshoe around the operators, in the
--- style of a boiling-water-reactor control room: a sloping bench of controls,
+-- Six benchboard sections stand in an L around the operators, with the
+-- reactor panel in the corner, in the style of a boiling-water-reactor
+-- control room. Each section is a sloping bench of controls,
 -- a vertical board of meters and recorders behind it, and a row of
 -- annunciator windows on top. Each widget names the plant signal it shows
 -- (`sig`) and the operator command it sends (`cmd`); the server and the
@@ -20,8 +21,12 @@ PanelLayout.BENCH_SLOPE = math.rad(22)
 PanelLayout.VERT_HEIGHT = 6.6
 PanelLayout.ANN_HEIGHT = 2.2
 PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
-PanelLayout.CORNER_X = -36 -- where the left wing meets the back wall, at a right angle
-PanelLayout.WING_PANELS = 2 -- panels on the wing; the rest run along the back wall
+PanelLayout.CORNER_X = -36 -- bench front edge of the left wing, square to the back wall
+PanelLayout.CORNER_PANEL = 3 -- the reactor panel stands across the corner; the panels before it are on the wing
+-- The operators' desk faces the corner, so the reactor panel is straight ahead.
+PanelLayout.DESK_X = -12
+PanelLayout.DESK_Z = -12
+PanelLayout.DESK_YAW = math.rad(45)
 PanelLayout.PIXELS_PER_STUD = 80
 PanelLayout.FACE_THICKNESS = 0.3
 
@@ -484,20 +489,30 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 -- Where a panel stands: its origin is the floor point under the middle of
 -- the bench's front edge; x is the operator's right, z points back at them.
 --
--- The boards form an L, as in a classic control room: P1 and P2 stand on a
--- wing along the left wall, the run turns a square corner, and P3 to P6 fill
--- the back wall. The reactor panel, P3, is the one at the corner.
+-- The boards form an L, as in a boiling-water-reactor control room: P1 and
+-- P2 stand on a wing along the left wall, P4 to P6 along the back wall, and
+-- the two runs are square to each other. The reactor panel, P3, stands in
+-- the corner itself: a corner section set across it at 45 degrees, so the
+-- operator at the controls faces straight into the corner, with the wing on
+-- the left hand and the back wall on the right. The cabinets behind it are
+-- filled out to the square corner.
 function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
 	local W = PanelLayout.PANEL_WIDTH
 	local z = PanelLayout.BACK_WALL_Z
 	local cx = PanelLayout.CORNER_X
-	local wing = PanelLayout.WING_PANELS
-	if index <= wing then
-		-- On the wing, facing east; panel `wing` is the one next to the corner.
-		local fromCorner = (wing - index + 0.5) * W
+	local corner = PanelLayout.CORNER_PANEL
+	-- How far the corner section reaches along each run from the corner point.
+	local reach = W / math.sqrt(2)
+	if index < corner then
+		-- On the wing, facing east.
+		local fromCorner = reach + (corner - index - 0.5) * W
 		return Vector3.new(cx, 0, z + fromCorner), Vector3.new(0, 0, -1), Vector3.new(1, 0, 0)
+	elseif index == corner then
+		local d = 1 / math.sqrt(2)
+		return Vector3.new(cx + reach / 2, 0, z + reach / 2), Vector3.new(d, 0, -d), Vector3.new(d, 0, d)
 	end
-	return Vector3.new(cx + (index - wing - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
+	-- On the back wall, facing south.
+	return Vector3.new(cx + reach + (index - corner - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
 function PanelLayout.face(index: number, face: string): Face
