@@ -241,7 +241,7 @@ do
 	for _, p in PanelLayout.panels do
 		local board = PanelLayout.face(p.index, "vert")
 		local bench = PanelLayout.face(p.index, "bench")
-		local toDesk = Vector3.new(PanelLayout.DESK_X, board.center.Y, PanelLayout.DESK_Z) - board.center
+		local toDesk = Vector3.new(PanelLayout.DESK_X * PanelLayout.SCALE, board.center.Y, PanelLayout.DESK_Z * PanelLayout.SCALE) - board.center
 		if board.normal:Dot(toDesk.Unit) < 0.5 or bench.normal.Y < 0.8 or bench.normal:Dot(toDesk.Unit) < 0.1 then
 			inward = false
 		end
@@ -256,12 +256,12 @@ do
 	local oB, rB, bB = PanelLayout.panelFrame(c + 1)
 	H.check(math.abs(bW:Dot(bB)) < 1e-6, "the wing meets the back wall at 90 degrees")
 	H.check(math.abs(bC:Dot(bW) - math.sqrt(0.5)) < 1e-6 and math.abs(bC:Dot(bB) - math.sqrt(0.5)) < 1e-6, "the corner section is set at 45 degrees to both runs")
-	local W = PanelLayout.PANEL_WIDTH
-	H.check(((oW + rW * W / 2) - (oC - rC * W / 2)).Magnitude < 1e-6, "the wing joins the corner section edge to edge")
-	H.check(((oC + rC * W / 2) - (oB - rB * W / 2)).Magnitude < 1e-6, "the corner section joins the back wall edge to edge")
-	local cornerPoint = Vector3.new(PanelLayout.CORNER_X, 0, PanelLayout.BACK_WALL_Z)
-	H.check(math.abs((oC - cornerPoint):Dot(bC) - W / 2) < 1e-6, "the corner section cuts straight across the square corner")
-	H.check(bC:Dot((Vector3.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) - oC).Unit) > 0.999, "the desk is straight in front of the reactor panel")
+	local W = PanelLayout.PANEL_WIDTH * PanelLayout.SCALE
+	H.check(((oW + rW * W / 2) - (oC - rC * W / 2)).Magnitude < 1e-4, "the wing joins the corner section edge to edge")
+	H.check(((oC + rC * W / 2) - (oB - rB * W / 2)).Magnitude < 1e-4, "the corner section joins the back wall edge to edge")
+	local cornerPoint = Vector3.new(PanelLayout.CORNER_X, 0, PanelLayout.BACK_WALL_Z) * PanelLayout.SCALE
+	H.check(math.abs((oC - cornerPoint):Dot(bC) - W / 2) < 1e-4, "the corner section cuts straight across the square corner")
+	H.check(bC:Dot((Vector3.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * PanelLayout.SCALE - oC).Unit) > 0.999, "the desk is straight in front of the reactor panel")
 	H.check(room:FindFirstChild("CornerFill") ~= nil and room.CornerFill:IsA("WedgePart"), "the corner behind the reactor panel is filled out square")
 	local u, v = PanelLayout.toFace(f, PanelLayout.toWorld(f, 3.25, 1.5, 0))
 	H.near(u, 3.24, 3.26, "face coordinates round-trip (u)")
@@ -325,7 +325,7 @@ for _, p in PanelLayout.panels do
 		local part = room:FindFirstChild(p.id .. "_" .. faceName)
 		local face = PanelLayout.face(p.index, faceName)
 		for _, w in p.widgets do
-			if w.face == faceName and w.kind ~= "section" and w.kind ~= "label" then
+			if w.face == faceName and w.kind ~= "section" and w.kind ~= "label" and w.kind ~= "mimic" then
 				for _, frac in { 0.25, 0.75 } do
 					local u, v = w.x + w.w * frac, w.y + w.h * 0.5
 					nextHit = { Instance = part, Position = PanelLayout.toWorld(face, u, v, 0) }
@@ -446,6 +446,10 @@ if dumpDir then
 					rot = child.Rotation,
 					visible = child.Visible,
 					round = child:FindFirstChildOfClass("UICorner") ~= nil,
+					radius = (function()
+						local c = child:FindFirstChildOfClass("UICorner")
+						return if c then { c.CornerRadius.Scale, c.CornerRadius.Offset } else nil
+					end)(),
 					kids = {},
 				}
 				local stroke = child:FindFirstChildOfClass("UIStroke")
@@ -482,9 +486,9 @@ if dumpDir then
 			table.insert(faces, {
 				panel = p.id,
 				face = faceName,
-				width = part.Size.X * PanelLayout.PIXELS_PER_STUD,
-				height = part.Size.Y * PanelLayout.PIXELS_PER_STUD,
-				pps = PanelLayout.PIXELS_PER_STUD,
+				width = part.Size.X * gui.PixelsPerStud,
+				height = part.Size.Y * gui.PixelsPerStud,
+				pps = gui.PixelsPerStud,
 				color = rgb(part.Color),
 				items = items,
 				widgets = widgets,

@@ -15,6 +15,8 @@ local AlarmList = require(Shared.AlarmList)
 local Panels = {}
 
 local PPS = PanelLayout.PIXELS_PER_STUD
+-- Widgets are placed and sized in board units; parts are made in studs.
+local S = PanelLayout.SCALE
 
 local INK = Color3.fromRGB(24, 26, 28)
 local PAPER = Color3.fromRGB(236, 232, 214)
@@ -39,7 +41,16 @@ local BUTTON = {
 	white = Color3.fromRGB(235, 235, 228),
 	black = Color3.fromRGB(34, 34, 36),
 }
-local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50) }
+local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50), violet = Color3.fromRGB(120, 40, 150) }
+-- Mimic line colours: reactor water blue, steam red, feedwater and
+-- condensate green, emergency cooling orange, power black.
+local MIMIC = {
+	water = Color3.fromRGB(46, 84, 168),
+	steam = Color3.fromRGB(190, 48, 36),
+	feed = Color3.fromRGB(36, 120, 64),
+	eccs = Color3.fromRGB(222, 128, 26),
+	power = Color3.fromRGB(28, 28, 30),
+}
 local ROD_COLOR = {
 	RR = Color3.fromRGB(200, 200, 200),
 	AR = Color3.fromRGB(70, 220, 100),
@@ -93,17 +104,27 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	return t
 end
 
--- An engraved nameplate: white lettering on a black laminate strip, the way
--- every label in a real control room is made.
-local PLATE = Color3.fromRGB(22, 22, 24)
-local PLATE_TEXT = Color3.fromRGB(240, 240, 232)
-local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number): TextLabel
-	local t = text(parent, x, y, w, h, str, size, PLATE_TEXT)
+-- Engraved laminate nameplates, the way every label in a real control room
+-- is made: black lettering on white for each device, white on black for
+-- system titles and panel numbers.
+local PLATE = Color3.fromRGB(238, 236, 228)
+local PLATE_TEXT = Color3.fromRGB(22, 22, 24)
+local TITLE_PLATE = Color3.fromRGB(22, 22, 24)
+local TITLE_TEXT = Color3.fromRGB(240, 240, 232)
+local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number, dark: boolean?): TextLabel
+	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT)
 	t.BackgroundTransparency = 0
-	t.BackgroundColor3 = PLATE
+	t.BackgroundColor3 = if dark then TITLE_PLATE else PLATE
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 2)
 	c.Parent = t
+	if not dark then
+		local edge = Instance.new("UIStroke")
+		edge.Color = Color3.fromRGB(120, 116, 104)
+		edge.Thickness = 1
+		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		edge.Parent = t
+	end
 	return t
 end
 
@@ -130,7 +151,7 @@ local function basePart(folder: Instance, size: Vector3, color: Color3): Part
 	p.CastShadow = false
 	p.Material = Enum.Material.SmoothPlastic
 	p.Color = color
-	p.Size = size
+	p.Size = size * S
 	p.Parent = folder
 	return p
 end
@@ -173,6 +194,10 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 end
 
 local BEZEL = Color3.fromRGB(34, 35, 38)
+-- Annunciator windows are milky white plastic, lit from behind.
+local ANN_DARK = Color3.fromRGB(204, 200, 186)
+local ANN_DARK_TEXT = Color3.fromRGB(58, 56, 50)
+local ANN_SPARE = Color3.fromRGB(196, 192, 178)
 
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
@@ -233,13 +258,15 @@ function Panels.build(room: Instance, ctx: Context)
 		f.BackgroundTransparency = 1
 		outline(f, Color3.fromRGB(60, 54, 44), 2)
 		if w.label ~= "" then
-			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135)
+			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135, true)
 		end
 	end
 
 	builders.label = function(gui, _face, _part, w)
 		if w.title then
-			plate(gui, w.x, w.y, w.w, w.h, w.label, 0.28)
+			-- The panel number and name on a modest plate centred at the top.
+			local pw = math.min(w.w, #w.label * 0.15 + 0.8)
+			plate(gui, w.x + (w.w - pw) / 2, w.y + 0.02, pw, w.h - 0.06, w.label, 0.22, true)
 			return
 		end
 		local t = text(gui, w.x, w.y, w.w, w.h, w.label, if w.small then 0.16 else 0.18, INK)
@@ -376,7 +403,7 @@ function Panels.build(room: Instance, ctx: Context)
 		cylinder(controls, face, cx, cy, d + 0.12, 0.06, Color3.fromRGB(186, 186, 190)).Material = Enum.Material.Metal
 		region(part, w, function(_button: number)
 			ctx.click()
-			cap.CFrame = home - face.normal * 0.06
+			cap.CFrame = home - face.normal * 0.06 * S
 			task.delay(0.15, function()
 				cap.CFrame = home
 			end)
@@ -469,7 +496,7 @@ function Panels.build(room: Instance, ctx: Context)
 		cylinder(controls, face, cx, cy, 0.5, 0.12, Color3.fromRGB(40, 42, 46))
 		local pointer = block(controls, face, cx, cy, 0.09, 0.5, 0.18, Color3.fromRGB(230, 230, 225), 0)
 		-- A legend window under the knob shows the selected position.
-		local readout = plate(gui, w.x + 0.08, w.y + 0.94, w.w - 0.16, 0.27, "", 0.15)
+		local readout = plate(gui, w.x + 0.08, w.y + 0.94, w.w - 0.16, 0.27, "", 0.15, true)
 		local function index(): number
 			return math.clamp(math.floor(get(w.sig) - w.base + 1.5), 1, n)
 		end
@@ -522,7 +549,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local up = u > w.x + w.w / 2
 			local cap = if up then raise else lower
 			local home = if up then raiseHome else lowerHome
-			cap.CFrame = home - face.normal * 0.05
+			cap.CFrame = home - face.normal * 0.05 * S
 			task.delay(0.2, function()
 				cap.CFrame = home
 			end)
@@ -532,54 +559,114 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
+	-- A strip-chart recorder: a dark case with a glazed door, chart paper
+	-- ruled in ten divisions, and pens that write along a line near the top
+	-- of the window while the paper carries the trace down and away. A
+	-- legend under the window names each pen and its range.
 	builders.recorder = function(gui, face, part, w)
-		plate(gui, w.x, w.y, math.min(w.w, #w.label * 0.082 + 0.3), 0.21, w.label, 0.12)
-		local gx, gy, gw, gh = w.x, w.y + 0.26, w.w, w.h - 0.3
-		local paper = box(gui, gx, gy, gw, gh, PAPER)
-		outline(paper, Color3.fromRGB(40, 40, 40), 2)
-		bezel(controls, face, gx, gy, gw, gh, 0.12, BEZEL, 0.07)
-		for i = 1, 3 do
-			box(gui, gx, gy + gh * i / 4, gw, 0.012, Color3.fromRGB(190, 186, 170))
+		plate(gui, w.x + 0.1, w.y, w.w - 0.2, 0.22, w.label, 0.115)
+		local cx, cy, cw, ch = w.x, w.y + 0.27, w.w, w.h - 0.27
+		local case = box(gui, cx, cy, cw, ch, Color3.fromRGB(58, 60, 62))
+		outline(case, Color3.fromRGB(30, 30, 32), 2)
+		bezel(controls, face, cx, cy, cw, ch, 0.16, Color3.fromRGB(44, 46, 48), 0.07)
+		local legendH = 0.12 * #w.pens + 0.08
+		local gx, gy, gw, gh = cx + 0.12, cy + 0.1, cw - 0.24, ch - 0.22 - legendH
+		box(gui, gx, gy, gw, gh, Color3.fromRGB(240, 241, 230))
+		bezel(controls, face, gx, gy, gw, gh, 0.05, Color3.fromRGB(24, 24, 26), 0.03)
+		-- Ruling: ten value divisions, a heavier line every fifth, and time
+		-- lines across the paper.
+		for i = 0, 10 do
+			local line = box(gui, gx + gw * i / 10 - 0.006, gy, 0.012, gh, if i % 5 == 0 then Color3.fromRGB(122, 162, 126) else Color3.fromRGB(184, 206, 184))
+			line.ZIndex = 2
 		end
-		local N = 120
+		for i = 1, 7 do
+			local line = box(gui, gx, gy + gh * i / 8, gw, 0.01, Color3.fromRGB(196, 214, 196))
+			line.ZIndex = 2
+		end
+		-- Scale figures along the top edge, for the first pen's range.
+		local first = w.pens[1]
+		for i = 0, 2 do
+			local v = first.lo + (first.hi - first.lo) * i / 2
+			local label = text(gui, gx + gw * i / 2 - 0.3, gy + 0.02, 0.6, 0.12, string.format(if math.abs(v) >= 100 or v % 1 == 0 then "%.0f" else "%.1f", v), 0.09, Color3.fromRGB(70, 96, 72), Enum.Font.SourceSans)
+			label.ZIndex = 3
+		end
+		-- Glass in the door.
+		local glass = block(controls, face, gx + gw / 2, gy + gh / 2, gw, gh, 0.02, Color3.fromRGB(200, 220, 230))
+		glass.CFrame = blockCFrame(face, gx + gw / 2, gy + gh / 2, 0.12, 0)
+		glass.Material = Enum.Material.Glass
+		glass.Transparency = 0.88
+		glass.Reflectance = 0.08
+		-- Door latch.
+		cylinder(controls, face, cx + cw - 0.06, cy + ch / 2, 0.07, 0.1, Color3.fromRGB(150, 150, 150)).Material = Enum.Material.Metal
+		local penY = gy + 0.16
+		local N = 48
+		local stepY = (gh - 0.2) / N
 		local pens = {}
-		for _, pen in w.pens do
+		for k, pen in w.pens do
+			local legend = text(gui, cx + 0.12, gy + gh + 0.04 + (k - 1) * 0.12, cw - 0.24, 0.12, string.format("%s  %s  %g to %g %s", string.upper(pen.color), pen.name or "", pen.lo, pen.hi, pen.unit or ""), 0.085, Color3.fromRGB(226, 226, 218), Enum.Font.SourceSans)
+			legend.TextXAlignment = Enum.TextXAlignment.Left
+			legend.TextWrapped = false
 			local dots = table.create(N)
 			for i = 1, N do
-				local d = box(gui, gx, gy, 0.035, 0.035, PEN[pen.color])
+				local d = box(gui, gx, gy, 0.03, stepY + 0.012, PEN[pen.color])
 				d.Visible = false
+				d.ZIndex = 4
 				dots[i] = d
 			end
-			table.insert(pens, { def = pen, dots = dots, values = {} :: { number } })
+			local index = box(gui, gx, penY - 0.07, 0.05, 0.14, PEN[pen.color])
+			index.ZIndex = 5
+			table.insert(pens, { def = pen, dots = dots, index = index, values = {} :: { number } })
 		end
 		local lastSample = -math.huge
 		table.insert(updaters, function()
 			local now = os.clock()
-			if now - lastSample < 4 then
-				return
+			local sample = now - lastSample >= 5
+			if sample then
+				lastSample = now
 			end
-			lastSample = now
 			for _, pen in pens do
-				local values = pen.values
-				table.insert(values, math.clamp((get(pen.def.sig) - pen.def.lo) / (pen.def.hi - pen.def.lo), 0, 1))
-				if #values > N then
-					table.remove(values, 1)
-				end
-				local count = #values
-				for i = 1, count do
-					local d = pen.dots[i]
-					d.Visible = true
-					d.Position = UDim2.fromOffset(px(gx + gw * (N - count + i - 0.5) / N), px(gy + gh * (1 - values[i])) - 1)
+				local f = math.clamp((get(pen.def.sig) - pen.def.lo) / (pen.def.hi - pen.def.lo), 0, 1)
+				pen.index.Position = UDim2.fromOffset(px(gx + gw * f - 0.025), px(penY - 0.07))
+				if sample then
+					local values = pen.values
+					if #values == 0 then
+						-- The chart has been running all along: start with a
+						-- steady trace at the present value.
+						for _ = 1, N - 1 do
+							table.insert(values, f)
+						end
+					end
+					table.insert(values, 1, f)
+					if #values > N then
+						table.remove(values)
+					end
+					for i, v in values do
+						local d = pen.dots[i]
+						d.Visible = true
+						d.Position = UDim2.fromOffset(px(gx + gw * v - 0.015), px(penY + (i - 1) * stepY))
+					end
 				end
 			end
 		end)
 		region(part, w, nil, function()
 			local parts = { cleanLabel(w.label) }
 			for _, pen in w.pens do
-				table.insert(parts, string.format("%s pen: %.1f", pen.color, get(pen.sig)))
+				table.insert(parts, string.format("%s pen, %s: %.1f %s", pen.color, pen.name or pen.sig, get(pen.sig), pen.unit or ""))
 			end
 			return table.concat(parts, "\n")
 		end)
+	end
+
+	-- Mimic lines: coloured strips painted on the board that trace a flow
+	-- path between the switches of the equipment on it.
+	builders.mimic = function(gui, _face, _part, w)
+		local t = w.width or 0.07
+		local pts = w.pts
+		for i = 1, #pts - 1 do
+			local x1, y1, x2, y2 = pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2]
+			local seg = box(gui, math.min(x1, x2) - t / 2, math.min(y1, y2) - t / 2, math.abs(x2 - x1) + t, math.abs(y2 - y1) + t, MIMIC[w.color] or INK)
+			seg.ZIndex = 0
+		end
 	end
 
 	builders.ann = function(gui, face, part, w)
@@ -595,8 +682,8 @@ function Panels.build(room: Instance, ctx: Context)
 		for i, alarm in w.alarms do
 			local c, r = (i - 1) % cols, (i - 1) // cols
 			if r < rows then
-				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(168, 164, 150))
-				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, Color3.fromRGB(74, 72, 64))
+				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, ANN_DARK)
+				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, ANN_DARK_TEXT)
 				local index = AlarmList.index[alarm.id]
 				local urgent = alarm.id == "az5" or alarm.id == "chan.rupture" or alarm.id == "core.damage" or alarm.id == "rs.press"
 				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent }
@@ -604,7 +691,7 @@ function Panels.build(room: Instance, ctx: Context)
 		end
 		for i = #w.alarms + 1, cols * rows do
 			local c, r = (i - 1) % cols, (i - 1) // cols
-			box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(150, 146, 134))
+			box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, ANN_SPARE)
 		end
 		table.insert(regions[part], {
 			x = 0,
@@ -634,7 +721,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local oy = px(w.y) + px(0.3)
 		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
 		local _ = back
-		local title = plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "CHANNEL CARTOGRAM", 0.13)
+		local title = plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "CHANNEL CARTOGRAM", 0.13, true)
 		local frames = table.create(L.nCells)
 		local lastByte = table.create(L.nCells, -1)
 		for c = 1, L.nCells do
@@ -808,7 +895,7 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.axial = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
 		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
-		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "AXIAL", 0.13)
+		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "AXIAL", 0.13, true)
 		text(gui, w.x, w.y + 0.3, w.w, 0.18, "TOP", 0.11, Color3.fromRGB(190, 190, 180))
 		text(gui, w.x, w.y + w.h - 0.2, w.w, 0.18, "BOTTOM", 0.11, Color3.fromRGB(190, 190, 180))
 		local N = 14
@@ -935,7 +1022,7 @@ function Panels.build(room: Instance, ctx: Context)
 			gui.Name = "Artwork"
 			gui.Face = Enum.NormalId.Front
 			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-			gui.PixelsPerStud = PPS
+			gui.PixelsPerStud = PPS / S
 			gui.LightInfluence = 0
 			gui.ResetOnSpawn = false
 			gui.Adornee = part
@@ -970,8 +1057,8 @@ function Panels.build(room: Instance, ctx: Context)
 					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(240, 40, 30) else Color3.fromRGB(255, 252, 226)
 					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(10, 10, 10)
 				else
-					t.tile.BackgroundColor3 = Color3.fromRGB(168, 164, 150)
-					t.label.TextColor3 = Color3.fromRGB(74, 72, 64)
+					t.tile.BackgroundColor3 = ANN_DARK
+					t.label.TextColor3 = ANN_DARK_TEXT
 				end
 			end
 		end

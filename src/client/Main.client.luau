@@ -83,22 +83,68 @@ local function typed(gui: SurfaceGui, size: number, color: Color3): TextLabel
 	return label
 end
 local terminalText: TextLabel? = nil
+local alarmText: TextLabel? = nil
 local paperText: TextLabel? = nil
+local boardText: TextLabel? = nil
 do
 	local screenPart = room:WaitForChild("DeskScreen1", 10)
 	if screenPart then
-		terminalText = typed(surface(screenPart, 110), 15, Color3.fromRGB(110, 255, 140))
+		terminalText = typed(surface(screenPart, 330), 14, Color3.fromRGB(110, 255, 140))
 		terminalText.Text = "UNIT COMPUTER\nNOT READY"
+	end
+	local alarmPart = room:WaitForChild("DeskScreen2", 10)
+	if alarmPart then
+		alarmText = typed(surface(alarmPart, 330), 13, Color3.fromRGB(110, 255, 140))
+		alarmText.Text = "ALARM SUMMARY\nNOT READY"
 	end
 	local paperPart = room:WaitForChild("PrinterPaper", 10)
 	if paperPart then
-		paperText = typed(surface(paperPart, 70), 10, Color3.fromRGB(30, 30, 34))
+		paperText = typed(surface(paperPart, 220), 11, Color3.fromRGB(30, 30, 34))
 		paperText.TextYAlignment = Enum.TextYAlignment.Bottom
 	end
+	-- The shift status board, kept up in marker by the operators.
+	local boardPart = room:WaitForChild("StatusBoard", 10)
+	if boardPart then
+		boardText = typed(surface(boardPart, 60), 19, Color3.fromRGB(28, 40, 120))
+		boardText.Font = Enum.Font.PermanentMarker
+		boardText.Position = UDim2.fromOffset(18, 10)
+		boardText.Size = UDim2.new(1, -30, 1, -16)
+	end
+end
+-- What the shift board says the unit is doing.
+local function unitMode(g: (string) -> number): string
+	if g("core.destroyed") >= 0.5 then
+		return "REACTOR DESTROYED"
+	elseif g("n.power") < 0.05 and g("pri.temp") < 100 then
+		return "COLD SHUTDOWN"
+	elseif g("n.power") < 0.05 then
+		return "HOT SHUTDOWN"
+	elseif g("plant.gross") > 1 then
+		return "POWER OPERATION"
+	end
+	return "STARTUP"
 end
 local function refreshDesk()
 	local g = ctx.get
 	local t = math.floor(g("time"))
+	if alarmText then
+		local lines = { "ALARM SUMMARY", "" }
+		for _, tile in built.annTiles do
+			if tile.state > 0 and #lines < 13 then
+				table.insert(lines, (if tile.state == 1 then "* " else "  ") .. string.upper(string.gsub(tile.label.Text, "\n", " ")))
+			end
+		end
+		if #lines == 2 then
+			table.insert(lines, "NO ALARMS")
+		end
+		alarmText.Text = table.concat(lines, "\n")
+	end
+	if boardText then
+		boardText.Text = string.format(
+			"UNIT 1 - SHIFT STATUS\nMODE:  %s\nREACTOR:  %.0f MWt  (%.1f %%)\nGROSS:  %.0f MWe\nORM:  %.0f RODS   (MIN 26)\nDRUMS:  %.2f MPa  %.0f C\nSCRAMS THIS SHIFT:  %d",
+			unitMode(g), g("n.thermal"), g("n.power"), g("plant.gross"), g("core.orm"), g("pri.press"), g("pri.temp"), g("stats.scrams")
+		)
+	end
 	if terminalText then
 		terminalText.Text = string.format(
 			"RBMK-800 UNIT 1   %02d:%02d:%02d\n\nPOWER  %7.2f %%  %5.0f MWT\nPERIOD %7.0f S\nMARGIN %7.0f RODS\nPRESS  %7.2f MPA %4.0f C\nFLOW   %7.0f T/H\nSTEAM  %7.0f  FEED %5.0f\nGROSS  %7.0f MWE",
@@ -243,7 +289,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		local age = os.clock() - destroyedAt
 		flashOverlay.BackgroundTransparency = math.clamp(age / 2.5, 0, 1)
 		if age < 6 and camera then
-			local k = 0.5 * (1 - age / 6)
+			local k = 0.3 * (1 - age / 6)
 			camera.CFrame *= CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
 		end
 	end

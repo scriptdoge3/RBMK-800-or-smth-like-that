@@ -13,12 +13,13 @@ in real time, and fuel channels that burst when you starve or overheat them.
 ![The control room](docs/room.png)
 ![The corner, with the reactor panel](docs/corner.png)
 ![The reactor control panel](docs/reactor-panel.png)
+![The operators' console](docs/desk.png)
 ![Plan view](docs/plan.png)
-![The operators' desk](docs/desk.png)
 
 *Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
 the game's scripts create, so the geometry is the game's; Roblox's own lighting and
-materials will look different.*
+materials will look different. The blocky figures are added to the previews only, at the
+size of a standard Roblox character, to show the scale.*
 
 ## Getting it into Roblox Studio
 
@@ -49,13 +50,32 @@ The boards form an L, after a late-1970s American boiling-water-reactor control 
 wing, and **P4** feedwater, **P5** turbines and **P6** electrical along the back wall, the
 two runs square to each other. **P3** reactor control (rod controls, AZ-5, cartogram)
 stands in the corner itself, set across it at 45 degrees, with the cabinets behind it
-filled out to the square corner. The operators' desk faces the corner, so the reactor
-panel is straight ahead of it. Every server runs one shared unit; anyone can operate any panel.
+filled out to the square corner. A U-shaped operators' console faces the corner, so the
+reactor panel is straight ahead of it. Every server runs one shared unit; anyone can
+operate any panel.
 
-Everything in the room is dated before 1986: edgewise meters, strip-chart recorders,
-pistol-grip switches, annunciator windows, a lamp-mosaic channel cartogram, red LED
-readouts, a green-phosphor unit computer, and on the desk a video terminal, an alarm
-teleprinter that prints the event log, dial telephones, binders and logbooks.
+The room is life-size around a standard Roblox character: the bench front is at hip
+height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.76 m
+high and the ceiling is 3.8 m up. Everything in it is dated before 1986: edgewise
+meters, strip-chart recorders with ruled chart paper behind glass, pistol-grip switches
+with red and green lamps, white engraved nameplates, coloured mimic lines tracing the
+flow paths (reactor water blue, steam red, feedwater green, power black), backlit
+annunciator windows, a lamp-mosaic channel cartogram, red LED readouts and a
+green-phosphor unit computer. The console carries two video terminals (unit summary and
+alarm summary), dial telephones (the red one is the grid dispatcher) and binders, with
+an alarm teleprinter beside it; behind it are the shift supervisor's desk, a bookcase
+of procedures and a shift status board kept up to date in marker. The room is lit by
+fluorescent troffers in an acoustic tile ceiling, with Future lighting.
+
+Where the RBMK features are on the boards:
+
+| Feature | Where |
+| --- | --- |
+| AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | P3 bench, EMERGENCY PROTECTION |
+| Shutdown (AZ) rods, shortened rods (USP), regulators | P3 bench, group select and rod motion |
+| Void coefficient, operational reactivity margin (ORM) | P3 board, beside reactivity |
+| Channel ruptures and reactor space pressure | P1 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
+| Positive scram | watch POWER RANGE and PERIOD on P3 in the first seconds after AZ-5 |
 
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,

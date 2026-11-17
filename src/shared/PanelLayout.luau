@@ -14,9 +14,12 @@ local AlarmList = require(script.Parent.AlarmList)
 
 local PanelLayout = {}
 
+-- Sizes and positions are in board units; SCALE turns them into studs (see
+-- the geometry section at the end).
+PanelLayout.SCALE = 0.55
 PanelLayout.PANEL_WIDTH = 16
 PanelLayout.BENCH_DEPTH = 5
-PanelLayout.BENCH_FRONT_HEIGHT = 3.1
+PanelLayout.BENCH_FRONT_HEIGHT = 5
 PanelLayout.BENCH_SLOPE = math.rad(22)
 PanelLayout.VERT_HEIGHT = 6.6
 PanelLayout.ANN_HEIGHT = 2.2
@@ -24,10 +27,10 @@ PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
 PanelLayout.CORNER_X = -36 -- bench front edge of the left wing, square to the back wall
 PanelLayout.CORNER_PANEL = 3 -- the reactor panel stands across the corner; the panels before it are on the wing
 -- The operators' desk faces the corner, so the reactor panel is straight ahead.
-PanelLayout.DESK_X = -12
-PanelLayout.DESK_Z = -12
+PanelLayout.DESK_X = -15
+PanelLayout.DESK_Z = -15
 PanelLayout.DESK_YAW = math.rad(45)
-PanelLayout.PIXELS_PER_STUD = 80
+PanelLayout.PIXELS_PER_STUD = 80 -- artwork pixels per board unit
 PanelLayout.FACE_THICKNESS = 0.3
 
 export type Widget = { [string]: any }
@@ -97,6 +100,18 @@ local function recorder(face: string, x: number, y: number, w: number, h: number
 	add({ kind = "recorder", face = face, x = x, y = y, w = w, h = h, label = label, pens = pens })
 end
 
+-- A coloured flow line painted on the board through the given points.
+local function mimic(face: string, color: string, pts: { { number } })
+	add({ kind = "mimic", face = face, x = 0, y = 0, w = 0, h = 0, color = color, pts = pts })
+end
+
+-- Standard recorder size: a case about 0.42 m square.
+local REC_W, REC_H = 2.3, 2.45
+
+local function pen(sig: string, lo: number, hi: number, color: string, name: string, unit: string?)
+	return { sig = sig, lo = lo, hi = hi, color = color, name = name, unit = unit or "" }
+end
+
 local function annunciators()
 	add({ kind = "ann", face = "ann", x = 0, y = 0, w = PanelLayout.PANEL_WIDTH, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
 	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = 15.6, h = 0.42, label = current.id .. "  " .. current.title, title = true })
@@ -109,8 +124,11 @@ section("vert", 0.3, 0.7, 4.3, 3.2, "REACTOR SPACE")
 meter("vert", 0.6, 1.1, "SPACE\nPRESS", "rs.press", 0, 200, "kPa", { red = 5, tip = "Reactor space pressure. Any reading means a fuel channel is leaking into the graphite stack." })
 meter("vert", 1.6, 1.1, "GAS\nACTIVITY", "rad.gas", 0, 100, "", { red = 20 })
 meter("vert", 2.6, 1.1, "POOL\nTEMP", "pool.temp", 0, 100, "C", { red = 45 })
-digital("vert", 0.6, 4.1, "RUPTURED CHANNELS", "core.ruptured", "%.0f", "", 1.9)
-digital("vert", 2.7, 4.1, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.7)
+section("vert", 0.3, 4.05, 4.3, 2.45, "CHANNEL INTEGRITY")
+digital("vert", 0.5, 4.4, "RUPTURED CHANNELS", "core.ruptured", "%.0f", "", 1.9)
+digital("vert", 2.55, 4.4, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.85)
+digital("vert", 0.5, 5.4, "FLOW-BLOCKED CHANNELS", "core.blocked", "%.0f", "", 1.9)
+digital("vert", 2.55, 5.4, "GRAPHITE MAX", "core.graphT", "%.0f", "C", 1.85)
 section("vert", 4.9, 0.7, 4.3, 3.2, "ROD CHANNEL COOLING")
 meter("vert", 5.2, 1.1, "FLOW", "cps.flow", 0, 100, "%", { low = 50 })
 meter("vert", 6.2, 1.1, "TANK\nLEVEL", "cps.tank", 0, 100, "%", { low = 60 })
@@ -123,10 +141,12 @@ lamp("vert", 12.0, 2.0, "AUTO ARMED", "eccs.auto", "green", { w = 1.6 })
 lamp("vert", 13.8, 1.3, "PUMP 1", "eccs.pump.1.run", "red", { w = 1.2 })
 lamp("vert", 13.8, 2.0, "PUMP 2", "eccs.pump.2.run", "red", { w = 1.2 })
 lamp("vert", 13.8, 2.7, "PUMP 3", "eccs.pump.3.run", "red", { w = 1.2 })
-recorder("vert", 5.0, 4.1, 6.2, 2.3, "DRUM PRESSURE (MPa) / CIRCUIT TEMP (x50 C)", {
-	{ sig = "pri.press", lo = 0, hi = 8, color = "red" },
-	{ sig = "pri.temp", lo = 0, hi = 400, color = "blue" },
-})
+recorder("vert", 4.9, 4.05, REC_W, REC_H, "REACTOR SPACE", { pen("rs.press", 0, 200, "red", "SPACE PRESS", "kPa"), pen("rad.gas", 0, 100, "blue", "GAS ACTIVITY") })
+recorder("vert", 7.35, 4.05, REC_W, REC_H, "DRUM SEPARATORS", { pen("pri.press", 0, 8, "red", "PRESSURE", "MPa"), pen("pri.temp", 0, 400, "blue", "TEMPERATURE", "C") })
+recorder("vert", 9.8, 4.05, REC_W, REC_H, "EMERGENCY COOLING", { pen("eccs.flow", 0, 2500, "red", "INJECTION", "t/h"), pen("cps.flow", 0, 100, "blue", "CPS FLOW", "%") })
+section("vert", 12.3, 4.05, 3.4, 2.45, "FUEL TEMPERATURES")
+digital("vert", 12.5, 4.4, "HOTTEST FUEL", "core.maxFuel", "%.0f", "C", 3.0)
+digital("vert", 12.5, 5.4, "HOTTEST CLADDING", "core.maxClad", "%.0f", "C", 3.0)
 section("bench", 0.3, 0.2, 4.4, 2.0, "ROD CHANNEL COOLING")
 pump("bench", 0.6, 0.55, "PUMP 1", "cps.pump.1", "cps.pump.1.run")
 pump("bench", 1.8, 0.55, "PUMP 2", "cps.pump.2", "cps.pump.2.run")
@@ -146,9 +166,15 @@ for g = 1, 3 do
 	toggle("bench", 0.6 + (g - 1) * 1.9, 3.1, "GROUP " .. g, "srv." .. g, "srv." .. g .. ".sw", { labels = { "AUTO", "OPEN" } })
 	lamp("bench", 1.65 + (g - 1) * 1.9, 3.5, "OPEN", "srv." .. g .. ".open", "red", { w = 0.8 })
 end
-section("bench", 6.9, 2.6, 8.8, 2.2, "ANNUNCIATORS")
-button("bench", 7.3, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
-add({ kind = "label", face = "bench", x = 8.8, y = 3.0, w = 6.6, h = 1.5, label = "A flashing window is a new alarm.\nACK silences the horn and steadies the window.\nIt goes dark when the condition clears.", small = true })
+section("bench", 6.9, 2.6, 2.3, 2.2, "ANNUNCIATORS")
+button("bench", 7.45, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
+section("bench", 9.4, 2.6, 6.3, 2.2, "ACCIDENT LOCALISATION")
+digital("bench", 9.65, 3.05, "BUBBLER POOL TEMP", "pool.temp", "%.1f", "C", 2.6)
+digital("bench", 12.75, 3.05, "REACTOR SPACE PRESS", "rs.press", "%.0f", "kPa", 2.7)
+-- Relief steam from the safety valve groups runs down to the bubbler pool.
+mimic("bench", "steam", { { 1.1, 4.33 }, { 1.1, 4.9 }, { 10.95, 4.9 }, { 10.95, 3.88 } })
+mimic("bench", "steam", { { 3.0, 4.33 }, { 3.0, 4.9 } })
+mimic("bench", "steam", { { 4.9, 4.33 }, { 4.9, 4.9 } })
 
 -- ------------------------------------------------------------------ P2
 panel("P2", "MAIN CIRCULATION")
@@ -168,14 +194,15 @@ section("vert", 6.4, 0.7, 3.2, 3.2, "DRUM SEPARATORS")
 meter("vert", 6.6, 1.1, "PRESS", "pri.press", 0, 10, "MPa", { fmt = "%.2f", red = 7.35 })
 meter("vert", 7.6, 1.1, "TEMP", "pri.temp", 0, 350, "C")
 meter("vert", 8.6, 1.1, "HEATUP\nRATE", "pri.heatup", -20, 20, "C/min", { fmt = "%.1f", red = 10 })
-recorder("vert", 0.4, 4.1, 7.4, 2.3, "DRUM LEVEL A (red) / B (blue), mm", {
-	{ sig = "loop.1.level", lo = -600, hi = 600, color = "red" },
-	{ sig = "loop.2.level", lo = -600, hi = 600, color = "blue" },
-})
-recorder("vert", 8.2, 4.1, 7.4, 2.3, "TOTAL CORE FLOW (red, 0-40000 t/h) / STEAM FLOW (blue, 0-5000 t/h)", {
-	{ sig = "pri.flow", lo = 0, hi = 40000, color = "red" },
-	{ sig = "steam.total", lo = 0, hi = 5000, color = "blue" },
-})
+recorder("vert", 0.4, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
+recorder("vert", 2.85, 4.05, REC_W, REC_H, "LOOP FLOW", { pen("loop.1.flow", 0, 20000, "red", "LOOP A", "t/h"), pen("loop.2.flow", 0, 20000, "blue", "LOOP B", "t/h") })
+recorder("vert", 5.3, 4.05, REC_W, REC_H, "CORE FLOW AND STEAM", { pen("pri.flow", 0, 40000, "red", "CORE FLOW", "t/h"), pen("steam.total", 0, 5000, "blue", "STEAM", "t/h") })
+recorder("vert", 7.75, 4.05, REC_W, REC_H, "CORE INLET TEMP", { pen("loop.1.tin", 0, 300, "red", "LOOP A", "C"), pen("loop.2.tin", 0, 300, "blue", "LOOP B", "C") })
+section("vert", 10.2, 4.05, 5.5, 2.45, "CIRCULATION")
+digital("vert", 10.4, 4.4, "PUMPS RUNNING A", "loop.1.running", "%.0f", "", 2.45)
+digital("vert", 13.05, 4.4, "PUMPS RUNNING B", "loop.2.running", "%.0f", "", 2.45)
+digital("vert", 10.4, 5.4, "PUMP HEAD A", "loop.1.dp", "%.2f", "MPa", 2.45)
+digital("vert", 13.05, 5.4, "PUMP HEAD B", "loop.2.dp", "%.2f", "MPa", 2.45)
 for l = 1, 2 do
 	local x0 = if l == 1 then 0.2 else 8.1
 	section("bench", x0, 0.15, 7.7, 4.7, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
@@ -186,6 +213,13 @@ for l = 1, 2 do
 		lamp("bench", x + 0.1, 2.1, "CAVIT", key .. ".cav", "amber", { w = 1.2 })
 		digital("bench", x, 2.75, "FLOW", key .. ".flow", "%.0f", "m3/h", 1.4)
 		jog("bench", x - 0.05, 3.55, "THROTTLE", key .. ".valve", key .. ".valve", "%.0f", "%")
+	end
+	-- Pressure header: the pumps' discharge joined and led off to the core.
+	local first, last = x0 + 0.25 + 0.65, x0 + 0.25 + 3 * 1.55 + 0.65
+	mimic("bench", "water", { { first, 2.6 }, { last + 0.95, 2.6 } })
+	for i = 1, 4 do
+		local cx = x0 + 0.25 + (i - 1) * 1.55 + 0.65
+		mimic("bench", "water", { { cx, 2.46 }, { cx, 2.6 } })
 	end
 	jog("bench", x0 + 6.3, 0.6, "BLOWDOWN", "loop." .. l .. ".blowdown", "loop." .. l .. ".blowdown", "%.0f", "%")
 	toggle("bench", x0 + 6.5, 2.2, "LETDOWN\nAUTO", "loop." .. l .. ".letdownAuto", "loop." .. l .. ".letdownAuto")
@@ -205,7 +239,8 @@ meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", 
 digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4)
 digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0)
 digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35)
-digital("vert", 13.1, 2.75, "MARGIN (ORM)", "core.orm", "%.0f", "rods", 2.4)
+digital("vert", 13.1, 2.75, "MARGIN, RODS", "core.orm", "%.0f", "", 1.15)
+digital("vert", 14.35, 2.75, "VOID COEF, beta", "core.void", "%+.2f", "", 1.2)
 add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
 
 add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.25, w = 4.5, h = 4.5, label = "ROD SELECT" })
@@ -269,10 +304,15 @@ meter("vert", 11.8, 1.1, "DRUM A", "loop.1.level", -600, 600, "mm")
 meter("vert", 12.8, 1.1, "DRUM B", "loop.2.level", -600, 600, "mm")
 meter("vert", 13.8, 1.1, "VALVE A", "lvl.1.valve", 0, 100, "%")
 meter("vert", 14.8, 1.1, "VALVE B", "lvl.2.valve", 0, 100, "%")
-recorder("vert", 0.4, 4.1, 15.2, 2.3, "TOTAL FEEDWATER (red) / TOTAL STEAM (blue), 0-5000 t/h", {
-	{ sig = "fw.total", lo = 0, hi = 5000, color = "red" },
-	{ sig = "steam.total", lo = 0, hi = 5000, color = "blue" },
-})
+recorder("vert", 0.4, 4.05, REC_W, REC_H, "FEEDWATER FLOW", { pen("loop.1.feed", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.feed", 0, 2500, "blue", "DRUMS B", "t/h") })
+recorder("vert", 2.85, 4.05, REC_W, REC_H, "STEAM FLOW", { pen("loop.1.steam", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.steam", 0, 2500, "blue", "DRUMS B", "t/h") })
+recorder("vert", 5.3, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
+recorder("vert", 7.75, 4.05, REC_W, REC_H, "DEAERATOR", { pen("da.level", 0, 100, "red", "LEVEL", "%"), pen("da.temp", 0, 200, "blue", "TEMPERATURE", "C") })
+section("vert", 10.2, 4.05, 5.5, 2.45, "FEEDWATER TOTALS")
+digital("vert", 10.4, 4.4, "TOTAL FEEDWATER", "fw.total", "%.0f", "t/h", 2.45)
+digital("vert", 13.05, 4.4, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.45)
+digital("vert", 10.4, 5.4, "FEED PUMPS RUNNING", "fw.running", "%.0f", "", 2.45)
+digital("vert", 13.05, 5.4, "CONDENSATE FLOW", "cond.flow", "%.0f", "t/h", 2.45)
 section("bench", 0.2, 0.15, 5.0, 2.3, "MAIN FEEDWATER PUMPS")
 for i = 1, 4 do
 	pump("bench", 0.45 + (i - 1) * 1.2, 0.5, "FWP-" .. i, "fw.pump." .. i, "fw.pump." .. i .. ".run")
@@ -293,6 +333,15 @@ for l = 1, 2 do
 	toggle("bench", x0 + 0.3, 3.05, "CONTROLLER", "lvl." .. l .. ".auto", "lvl." .. l .. ".auto", { labels = { "MAN", "AUTO" } })
 	jog("bench", x0 + 1.5, 3.05, "FEED VALVE", "lvl." .. l .. ".valve", "lvl." .. l .. ".valve", "%.0f", "%")
 	digital("bench", x0 + 3.3, 3.25, "LEVEL", "loop." .. l .. ".level", "%.0f", "mm", 1.4)
+end
+-- Feedwater train: condensate pumps to the deaerator, feed pumps to the
+-- drum level control valves.
+mimic("bench", "feed", { { 0.95, 2.52 }, { 13.85, 2.52 } })
+for _, x in { 0.95, 2.15, 3.35, 4.55, 6.15, 7.35, 8.55, 11.45, 12.65, 13.85 } do
+	mimic("bench", "feed", { { x, 2.05 }, { x, 2.52 } })
+end
+for _, x in { 3.0, 8.2, 14.5 } do
+	mimic("bench", "feed", { { x, 2.52 }, { x, 2.6 } })
 end
 section("bench", 10.7, 2.6, 5.1, 2.25, "DEAERATOR")
 toggle("bench", 10.95, 3.05, "PEGGING\nSTEAM", "da.peg", "da.peg")
@@ -321,10 +370,10 @@ digital("vert", 0.3, 4.15, "STEAM PRESSURE", "pri.press", "%.2f", "MPa", 2.2)
 digital("vert", 2.6, 4.15, "PRESSURE SETPOINT", "ehc.pressSet", "%.2f", "MPa", 2.2)
 digital("vert", 0.3, 5.05, "STEAM DEMAND", "ehc.demand", "%.0f", "%", 2.2)
 digital("vert", 2.6, 5.05, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.2)
-recorder("vert", 5.1, 4.1, 10.6, 2.3, "TURBINE 1 SPEED (red) / TURBINE 2 SPEED (blue), 0-2000 rpm", {
-	{ sig = "tg.1.rpm", lo = 0, hi = 2000, color = "red" },
-	{ sig = "tg.2.rpm", lo = 0, hi = 2000, color = "blue" },
-})
+recorder("vert", 5.1, 4.05, REC_W, REC_H, "TURBINE SPEED", { pen("tg.1.rpm", 0, 2000, "red", "TG-1", "rpm"), pen("tg.2.rpm", 0, 2000, "blue", "TG-2", "rpm") })
+recorder("vert", 7.6, 4.05, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0, 450, "red", "GEN 1", "MW"), pen("gen.2.mw", 0, 450, "blue", "GEN 2", "MW") })
+recorder("vert", 10.1, 4.05, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
+recorder("vert", 12.6, 4.05, REC_W, REC_H, "SHELL METAL TEMP", { pen("tg.1.metal", 0, 300, "red", "TG-1", "C"), pen("tg.2.metal", 0, 300, "blue", "TG-2", "C") })
 section("bench", 6.9, 0.15, 2.2, 4.7, "PRESSURE REG")
 toggle("bench", 7.5, 0.5, "REGULATOR", "ehc.pressAuto", "ehc.pressAuto", { labels = { "OUT", "IN" } })
 jog("bench", 7.25, 2.0, "PRESS SET", "ehc.press", "ehc.pressSet", "%.2f", "")
@@ -391,7 +440,9 @@ do
 		lamp("vert", x, 5.6, "BKR", "dg." .. i .. ".bkr", "red", { w = 0.8 })
 	end
 end
-recorder("vert", 9.5, 4.1, 6.2, 2.3, "GROSS GENERATION, 0-900 MW", { { sig = "plant.gross", lo = 0, hi = 900, color = "red" } })
+recorder("vert", 9.5, 4.05, REC_W, REC_H, "UNIT OUTPUT", { pen("plant.gross", 0, 900, "red", "GROSS", "MW"), pen("plant.net", 0, 900, "blue", "NET", "MW") })
+recorder("vert", 11.95, 4.05, REC_W, REC_H, "FREQUENCY", { pen("grid.hz", 58, 62, "red", "GRID", "Hz"), pen("gen.1.hz", 58, 62, "blue", "GEN 1", "Hz") })
+meter("vert", 14.6, 4.05, "AUX\nLOAD", "plant.aux", 0, 80, "MW")
 for k = 1, 2 do
 	local x0 = if k == 1 then 0.15 else 5.0
 	local key = "gen." .. k
@@ -400,6 +451,18 @@ for k = 1, 2 do
 	jog("bench", x0 + 1.12, 0.6, "VOLTAGE", key .. ".volt", key .. ".kv", "%.1f", "kV")
 	toggle("bench", x0 + 2.65, 0.6, "GEN\nBREAKER", key .. ".gcb", key .. ".gcb", { labels = { "TRIP", "CLOSE" } })
 	toggle("bench", x0 + 3.68, 0.6, "YARD\nBREAKER", key .. ".yard", key .. ".yard", { labels = { "TRIP", "CLOSE" } })
+end
+-- One-line diagram: each generator through its breaker and the yard
+-- breaker to the grid, and each auxiliary bus fed from its normal or its
+-- reserve breaker.
+for k = 1, 2 do
+	local x0 = if k == 1 then 0.15 else 5.0
+	mimic("bench", "power", { { x0 + 3.15, 1.88 }, { x0 + 3.15, 2.2 }, { x0 + 4.66, 2.2 } })
+	mimic("bench", "power", { { x0 + 4.18, 1.88 }, { x0 + 4.18, 2.2 } })
+end
+for i = 1, 4 do
+	local x = 0.3 + (i - 1) * 3.05
+	mimic("bench", "power", { { x + 0.5, 4.33 }, { x + 0.5, 4.6 }, { x + 1.5, 4.6 }, { x + 1.5, 4.33 } })
 end
 section("bench", 9.85, 0.15, 2.65, 2.3, "SYNCHRONISING")
 selector("bench", 9.95, 0.6, "SCOPE", "sync.select", "sync.select", { "OFF", "GEN 1", "GEN 2" }, 0, 1.25)
@@ -484,10 +547,16 @@ PanelLayout.commands = commandSet
 PanelLayout.holdCommands = holdSet
 
 -- ------------------------------------------------------------------ geometry
-export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number }
+-- Everything above, and the room built around it, is drawn in board units.
+-- SCALE turns board units into studs: at 0.55 the boards, desk and chairs
+-- come out life-size beside a standard Roblox character (about 1.75 m tall
+-- at 5.3 studs), with a bench front at hip height and the top of the
+-- annunciators a little under three metres up.
+export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number, scale: number }
 
--- Where a panel stands: its origin is the floor point under the middle of
--- the bench's front edge; x is the operator's right, z points back at them.
+-- Where a panel stands, in board units: its origin is the floor point under
+-- the middle of the bench's front edge; x is the operator's right, z points
+-- back at them.
 --
 -- The boards form an L, as in a boiling-water-reactor control room: P1 and
 -- P2 stand on a wing along the left wall, P4 to P6 along the back wall, and
@@ -496,7 +565,7 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 -- operator at the controls faces straight into the corner, with the wing on
 -- the left hand and the back wall on the right. The cabinets behind it are
 -- filled out to the square corner.
-function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
+function PanelLayout.designFrame(index: number): (Vector3, Vector3, Vector3)
 	local W = PanelLayout.PANEL_WIDTH
 	local z = PanelLayout.BACK_WALL_Z
 	local cx = PanelLayout.CORNER_X
@@ -515,8 +584,15 @@ function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
 	return Vector3.new(cx + reach + (index - corner - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
-function PanelLayout.face(index: number, face: string): Face
-	local origin, right, back = PanelLayout.panelFrame(index)
+-- The same, in studs.
+function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
+	local origin, right, back = PanelLayout.designFrame(index)
+	return origin * PanelLayout.SCALE, right, back
+end
+
+-- A panel face in board units, as the room builder lays it out.
+function PanelLayout.designFace(index: number, face: string): Face
+	local origin, right, back = PanelLayout.designFrame(index)
 	local up = Vector3.new(0, 1, 0)
 	local s = PanelLayout.BENCH_SLOPE
 	local depth = PanelLayout.BENCH_DEPTH
@@ -534,6 +610,7 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = up * math.cos(s) + back * math.sin(s),
 			width = PanelLayout.PANEL_WIDTH,
 			height = depth,
+			scale = 1,
 		}
 	elseif face == "vert" then
 		return {
@@ -543,6 +620,7 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = back,
 			width = PanelLayout.PANEL_WIDTH,
 			height = PanelLayout.VERT_HEIGHT,
+			scale = 1,
 		}
 	else
 		return {
@@ -552,18 +630,28 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = back,
 			width = PanelLayout.PANEL_WIDTH,
 			height = PanelLayout.ANN_HEIGHT,
+			scale = 1,
 		}
 	end
 end
 
--- World position of a point on a face, `lift` studs proud of the surface.
+-- A panel face in the world. Its width and height stay in board units, the
+-- units every widget is placed in; `scale` turns them into studs.
+function PanelLayout.face(index: number, face: string): Face
+	local f = PanelLayout.designFace(index, face)
+	f.center *= PanelLayout.SCALE
+	f.scale = PanelLayout.SCALE
+	return f
+end
+
+-- World position of a point on a face, `lift` board units proud of the surface.
 function PanelLayout.toWorld(f: Face, x: number, y: number, lift: number?): Vector3
-	return f.center + f.right * (x - f.width / 2) + f.up * (f.height / 2 - y) + f.normal * (PanelLayout.FACE_THICKNESS / 2 + (lift or 0))
+	return f.center + (f.right * (x - f.width / 2) + f.up * (f.height / 2 - y) + f.normal * (PanelLayout.FACE_THICKNESS / 2 + (lift or 0))) * f.scale
 end
 
 -- Face coordinates of a world point (the inverse of toWorld).
 function PanelLayout.toFace(f: Face, p: Vector3): (number, number)
-	local d = p - f.center
+	local d = (p - f.center) / f.scale
 	return d:Dot(f.right) + f.width / 2, f.height / 2 - d:Dot(f.up)
 end
 

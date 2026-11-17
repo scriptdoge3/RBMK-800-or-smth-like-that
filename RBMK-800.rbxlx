@@ -3,28 +3,30 @@
     <Properties>
       <string name="Name">Lighting</string>
       <Color3 name="Ambient">
-        <R>0.46</R>
-        <G>0.43</G>
-        <B>0.38</B>
+        <R>0.34</R>
+        <G>0.32</G>
+        <B>0.29</B>
       </Color3>
-      <float name="Brightness">1.5</float>
+      <float name="Brightness">1</float>
       <float name="ClockTime">12</float>
-      <float name="EnvironmentDiffuseScale">0.2</float>
-      <float name="EnvironmentSpecularScale">0.3</float>
-      <float name="ExposureCompensation">0.15</float>
-      <bool name="GlobalShadows">false</bool>
+      <float name="EnvironmentDiffuseScale">0.15</float>
+      <float name="EnvironmentSpecularScale">0.35</float>
+      <float name="ExposureCompensation">0.1</float>
+      <bool name="GlobalShadows">true</bool>
       <Color3 name="OutdoorAmbient">
-        <R>0.3</R>
-        <G>0.3</G>
-        <B>0.3</B>
+        <R>0.2</R>
+        <G>0.2</G>
+        <B>0.2</B>
       </Color3>
+      <float name="ShadowSoftness">0.6</float>
+      <token name="Technology">4</token>
     </Properties>
     <Item class="BloomEffect" referent="1">
       <Properties>
         <string name="Name">Bloom</string>
-        <float name="Intensity">0.35</float>
-        <float name="Size">20</float>
-        <float name="Threshold">1.6</float>
+        <float name="Intensity">0.25</float>
+        <float name="Size">18</float>
+        <float name="Threshold">1.8</float>
       </Properties>
     </Item>
     <Item class="ColorCorrectionEffect" referent="2">
@@ -612,9 +614,12 @@ local AlarmList = require(script.Parent.AlarmList)
 
 local PanelLayout = {}
 
+-- Sizes and positions are in board units; SCALE turns them into studs (see
+-- the geometry section at the end).
+PanelLayout.SCALE = 0.55
 PanelLayout.PANEL_WIDTH = 16
 PanelLayout.BENCH_DEPTH = 5
-PanelLayout.BENCH_FRONT_HEIGHT = 3.1
+PanelLayout.BENCH_FRONT_HEIGHT = 5
 PanelLayout.BENCH_SLOPE = math.rad(22)
 PanelLayout.VERT_HEIGHT = 6.6
 PanelLayout.ANN_HEIGHT = 2.2
@@ -622,10 +627,10 @@ PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
 PanelLayout.CORNER_X = -36 -- bench front edge of the left wing, square to the back wall
 PanelLayout.CORNER_PANEL = 3 -- the reactor panel stands across the corner; the panels before it are on the wing
 -- The operators' desk faces the corner, so the reactor panel is straight ahead.
-PanelLayout.DESK_X = -12
-PanelLayout.DESK_Z = -12
+PanelLayout.DESK_X = -15
+PanelLayout.DESK_Z = -15
 PanelLayout.DESK_YAW = math.rad(45)
-PanelLayout.PIXELS_PER_STUD = 80
+PanelLayout.PIXELS_PER_STUD = 80 -- artwork pixels per board unit
 PanelLayout.FACE_THICKNESS = 0.3
 
 export type Widget = { [string]: any }
@@ -695,6 +700,18 @@ local function recorder(face: string, x: number, y: number, w: number, h: number
 	add({ kind = "recorder", face = face, x = x, y = y, w = w, h = h, label = label, pens = pens })
 end
 
+-- A coloured flow line painted on the board through the given points.
+local function mimic(face: string, color: string, pts: { { number } })
+	add({ kind = "mimic", face = face, x = 0, y = 0, w = 0, h = 0, color = color, pts = pts })
+end
+
+-- Standard recorder size: a case about 0.42 m square.
+local REC_W, REC_H = 2.3, 2.45
+
+local function pen(sig: string, lo: number, hi: number, color: string, name: string, unit: string?)
+	return { sig = sig, lo = lo, hi = hi, color = color, name = name, unit = unit or "" }
+end
+
 local function annunciators()
 	add({ kind = "ann", face = "ann", x = 0, y = 0, w = PanelLayout.PANEL_WIDTH, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
 	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = 15.6, h = 0.42, label = current.id .. "  " .. current.title, title = true })
@@ -707,8 +724,11 @@ section("vert", 0.3, 0.7, 4.3, 3.2, "REACTOR SPACE")
 meter("vert", 0.6, 1.1, "SPACE\nPRESS", "rs.press", 0, 200, "kPa", { red = 5, tip = "Reactor space pressure. Any reading means a fuel channel is leaking into the graphite stack." })
 meter("vert", 1.6, 1.1, "GAS\nACTIVITY", "rad.gas", 0, 100, "", { red = 20 })
 meter("vert", 2.6, 1.1, "POOL\nTEMP", "pool.temp", 0, 100, "C", { red = 45 })
-digital("vert", 0.6, 4.1, "RUPTURED CHANNELS", "core.ruptured", "%.0f", "", 1.9)
-digital("vert", 2.7, 4.1, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.7)
+section("vert", 0.3, 4.05, 4.3, 2.45, "CHANNEL INTEGRITY")
+digital("vert", 0.5, 4.4, "RUPTURED CHANNELS", "core.ruptured", "%.0f", "", 1.9)
+digital("vert", 2.55, 4.4, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.85)
+digital("vert", 0.5, 5.4, "FLOW-BLOCKED CHANNELS", "core.blocked", "%.0f", "", 1.9)
+digital("vert", 2.55, 5.4, "GRAPHITE MAX", "core.graphT", "%.0f", "C", 1.85)
 section("vert", 4.9, 0.7, 4.3, 3.2, "ROD CHANNEL COOLING")
 meter("vert", 5.2, 1.1, "FLOW", "cps.flow", 0, 100, "%", { low = 50 })
 meter("vert", 6.2, 1.1, "TANK\nLEVEL", "cps.tank", 0, 100, "%", { low = 60 })
@@ -721,10 +741,12 @@ lamp("vert", 12.0, 2.0, "AUTO ARMED", "eccs.auto", "green", { w = 1.6 })
 lamp("vert", 13.8, 1.3, "PUMP 1", "eccs.pump.1.run", "red", { w = 1.2 })
 lamp("vert", 13.8, 2.0, "PUMP 2", "eccs.pump.2.run", "red", { w = 1.2 })
 lamp("vert", 13.8, 2.7, "PUMP 3", "eccs.pump.3.run", "red", { w = 1.2 })
-recorder("vert", 5.0, 4.1, 6.2, 2.3, "DRUM PRESSURE (MPa) / CIRCUIT TEMP (x50 C)", {
-	{ sig = "pri.press", lo = 0, hi = 8, color = "red" },
-	{ sig = "pri.temp", lo = 0, hi = 400, color = "blue" },
-})
+recorder("vert", 4.9, 4.05, REC_W, REC_H, "REACTOR SPACE", { pen("rs.press", 0, 200, "red", "SPACE PRESS", "kPa"), pen("rad.gas", 0, 100, "blue", "GAS ACTIVITY") })
+recorder("vert", 7.35, 4.05, REC_W, REC_H, "DRUM SEPARATORS", { pen("pri.press", 0, 8, "red", "PRESSURE", "MPa"), pen("pri.temp", 0, 400, "blue", "TEMPERATURE", "C") })
+recorder("vert", 9.8, 4.05, REC_W, REC_H, "EMERGENCY COOLING", { pen("eccs.flow", 0, 2500, "red", "INJECTION", "t/h"), pen("cps.flow", 0, 100, "blue", "CPS FLOW", "%") })
+section("vert", 12.3, 4.05, 3.4, 2.45, "FUEL TEMPERATURES")
+digital("vert", 12.5, 4.4, "HOTTEST FUEL", "core.maxFuel", "%.0f", "C", 3.0)
+digital("vert", 12.5, 5.4, "HOTTEST CLADDING", "core.maxClad", "%.0f", "C", 3.0)
 section("bench", 0.3, 0.2, 4.4, 2.0, "ROD CHANNEL COOLING")
 pump("bench", 0.6, 0.55, "PUMP 1", "cps.pump.1", "cps.pump.1.run")
 pump("bench", 1.8, 0.55, "PUMP 2", "cps.pump.2", "cps.pump.2.run")
@@ -744,9 +766,15 @@ for g = 1, 3 do
 	toggle("bench", 0.6 + (g - 1) * 1.9, 3.1, "GROUP " .. g, "srv." .. g, "srv." .. g .. ".sw", { labels = { "AUTO", "OPEN" } })
 	lamp("bench", 1.65 + (g - 1) * 1.9, 3.5, "OPEN", "srv." .. g .. ".open", "red", { w = 0.8 })
 end
-section("bench", 6.9, 2.6, 8.8, 2.2, "ANNUNCIATORS")
-button("bench", 7.3, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
-add({ kind = "label", face = "bench", x = 8.8, y = 3.0, w = 6.6, h = 1.5, label = "A flashing window is a new alarm.\nACK silences the horn and steadies the window.\nIt goes dark when the condition clears.", small = true })
+section("bench", 6.9, 2.6, 2.3, 2.2, "ANNUNCIATORS")
+button("bench", 7.45, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
+section("bench", 9.4, 2.6, 6.3, 2.2, "ACCIDENT LOCALISATION")
+digital("bench", 9.65, 3.05, "BUBBLER POOL TEMP", "pool.temp", "%.1f", "C", 2.6)
+digital("bench", 12.75, 3.05, "REACTOR SPACE PRESS", "rs.press", "%.0f", "kPa", 2.7)
+-- Relief steam from the safety valve groups runs down to the bubbler pool.
+mimic("bench", "steam", { { 1.1, 4.33 }, { 1.1, 4.9 }, { 10.95, 4.9 }, { 10.95, 3.88 } })
+mimic("bench", "steam", { { 3.0, 4.33 }, { 3.0, 4.9 } })
+mimic("bench", "steam", { { 4.9, 4.33 }, { 4.9, 4.9 } })
 
 -- ------------------------------------------------------------------ P2
 panel("P2", "MAIN CIRCULATION")
@@ -766,14 +794,15 @@ section("vert", 6.4, 0.7, 3.2, 3.2, "DRUM SEPARATORS")
 meter("vert", 6.6, 1.1, "PRESS", "pri.press", 0, 10, "MPa", { fmt = "%.2f", red = 7.35 })
 meter("vert", 7.6, 1.1, "TEMP", "pri.temp", 0, 350, "C")
 meter("vert", 8.6, 1.1, "HEATUP\nRATE", "pri.heatup", -20, 20, "C/min", { fmt = "%.1f", red = 10 })
-recorder("vert", 0.4, 4.1, 7.4, 2.3, "DRUM LEVEL A (red) / B (blue), mm", {
-	{ sig = "loop.1.level", lo = -600, hi = 600, color = "red" },
-	{ sig = "loop.2.level", lo = -600, hi = 600, color = "blue" },
-})
-recorder("vert", 8.2, 4.1, 7.4, 2.3, "TOTAL CORE FLOW (red, 0-40000 t/h) / STEAM FLOW (blue, 0-5000 t/h)", {
-	{ sig = "pri.flow", lo = 0, hi = 40000, color = "red" },
-	{ sig = "steam.total", lo = 0, hi = 5000, color = "blue" },
-})
+recorder("vert", 0.4, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
+recorder("vert", 2.85, 4.05, REC_W, REC_H, "LOOP FLOW", { pen("loop.1.flow", 0, 20000, "red", "LOOP A", "t/h"), pen("loop.2.flow", 0, 20000, "blue", "LOOP B", "t/h") })
+recorder("vert", 5.3, 4.05, REC_W, REC_H, "CORE FLOW AND STEAM", { pen("pri.flow", 0, 40000, "red", "CORE FLOW", "t/h"), pen("steam.total", 0, 5000, "blue", "STEAM", "t/h") })
+recorder("vert", 7.75, 4.05, REC_W, REC_H, "CORE INLET TEMP", { pen("loop.1.tin", 0, 300, "red", "LOOP A", "C"), pen("loop.2.tin", 0, 300, "blue", "LOOP B", "C") })
+section("vert", 10.2, 4.05, 5.5, 2.45, "CIRCULATION")
+digital("vert", 10.4, 4.4, "PUMPS RUNNING A", "loop.1.running", "%.0f", "", 2.45)
+digital("vert", 13.05, 4.4, "PUMPS RUNNING B", "loop.2.running", "%.0f", "", 2.45)
+digital("vert", 10.4, 5.4, "PUMP HEAD A", "loop.1.dp", "%.2f", "MPa", 2.45)
+digital("vert", 13.05, 5.4, "PUMP HEAD B", "loop.2.dp", "%.2f", "MPa", 2.45)
 for l = 1, 2 do
 	local x0 = if l == 1 then 0.2 else 8.1
 	section("bench", x0, 0.15, 7.7, 4.7, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
@@ -784,6 +813,13 @@ for l = 1, 2 do
 		lamp("bench", x + 0.1, 2.1, "CAVIT", key .. ".cav", "amber", { w = 1.2 })
 		digital("bench", x, 2.75, "FLOW", key .. ".flow", "%.0f", "m3/h", 1.4)
 		jog("bench", x - 0.05, 3.55, "THROTTLE", key .. ".valve", key .. ".valve", "%.0f", "%")
+	end
+	-- Pressure header: the pumps' discharge joined and led off to the core.
+	local first, last = x0 + 0.25 + 0.65, x0 + 0.25 + 3 * 1.55 + 0.65
+	mimic("bench", "water", { { first, 2.6 }, { last + 0.95, 2.6 } })
+	for i = 1, 4 do
+		local cx = x0 + 0.25 + (i - 1) * 1.55 + 0.65
+		mimic("bench", "water", { { cx, 2.46 }, { cx, 2.6 } })
 	end
 	jog("bench", x0 + 6.3, 0.6, "BLOWDOWN", "loop." .. l .. ".blowdown", "loop." .. l .. ".blowdown", "%.0f", "%")
 	toggle("bench", x0 + 6.5, 2.2, "LETDOWN\nAUTO", "loop." .. l .. ".letdownAuto", "loop." .. l .. ".letdownAuto")
@@ -803,7 +839,8 @@ meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", 
 digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4)
 digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0)
 digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35)
-digital("vert", 13.1, 2.75, "MARGIN (ORM)", "core.orm", "%.0f", "rods", 2.4)
+digital("vert", 13.1, 2.75, "MARGIN, RODS", "core.orm", "%.0f", "", 1.15)
+digital("vert", 14.35, 2.75, "VOID COEF, beta", "core.void", "%+.2f", "", 1.2)
 add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
 
 add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.25, w = 4.5, h = 4.5, label = "ROD SELECT" })
@@ -867,10 +904,15 @@ meter("vert", 11.8, 1.1, "DRUM A", "loop.1.level", -600, 600, "mm")
 meter("vert", 12.8, 1.1, "DRUM B", "loop.2.level", -600, 600, "mm")
 meter("vert", 13.8, 1.1, "VALVE A", "lvl.1.valve", 0, 100, "%")
 meter("vert", 14.8, 1.1, "VALVE B", "lvl.2.valve", 0, 100, "%")
-recorder("vert", 0.4, 4.1, 15.2, 2.3, "TOTAL FEEDWATER (red) / TOTAL STEAM (blue), 0-5000 t/h", {
-	{ sig = "fw.total", lo = 0, hi = 5000, color = "red" },
-	{ sig = "steam.total", lo = 0, hi = 5000, color = "blue" },
-})
+recorder("vert", 0.4, 4.05, REC_W, REC_H, "FEEDWATER FLOW", { pen("loop.1.feed", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.feed", 0, 2500, "blue", "DRUMS B", "t/h") })
+recorder("vert", 2.85, 4.05, REC_W, REC_H, "STEAM FLOW", { pen("loop.1.steam", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.steam", 0, 2500, "blue", "DRUMS B", "t/h") })
+recorder("vert", 5.3, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
+recorder("vert", 7.75, 4.05, REC_W, REC_H, "DEAERATOR", { pen("da.level", 0, 100, "red", "LEVEL", "%"), pen("da.temp", 0, 200, "blue", "TEMPERATURE", "C") })
+section("vert", 10.2, 4.05, 5.5, 2.45, "FEEDWATER TOTALS")
+digital("vert", 10.4, 4.4, "TOTAL FEEDWATER", "fw.total", "%.0f", "t/h", 2.45)
+digital("vert", 13.05, 4.4, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.45)
+digital("vert", 10.4, 5.4, "FEED PUMPS RUNNING", "fw.running", "%.0f", "", 2.45)
+digital("vert", 13.05, 5.4, "CONDENSATE FLOW", "cond.flow", "%.0f", "t/h", 2.45)
 section("bench", 0.2, 0.15, 5.0, 2.3, "MAIN FEEDWATER PUMPS")
 for i = 1, 4 do
 	pump("bench", 0.45 + (i - 1) * 1.2, 0.5, "FWP-" .. i, "fw.pump." .. i, "fw.pump." .. i .. ".run")
@@ -891,6 +933,15 @@ for l = 1, 2 do
 	toggle("bench", x0 + 0.3, 3.05, "CONTROLLER", "lvl." .. l .. ".auto", "lvl." .. l .. ".auto", { labels = { "MAN", "AUTO" } })
 	jog("bench", x0 + 1.5, 3.05, "FEED VALVE", "lvl." .. l .. ".valve", "lvl." .. l .. ".valve", "%.0f", "%")
 	digital("bench", x0 + 3.3, 3.25, "LEVEL", "loop." .. l .. ".level", "%.0f", "mm", 1.4)
+end
+-- Feedwater train: condensate pumps to the deaerator, feed pumps to the
+-- drum level control valves.
+mimic("bench", "feed", { { 0.95, 2.52 }, { 13.85, 2.52 } })
+for _, x in { 0.95, 2.15, 3.35, 4.55, 6.15, 7.35, 8.55, 11.45, 12.65, 13.85 } do
+	mimic("bench", "feed", { { x, 2.05 }, { x, 2.52 } })
+end
+for _, x in { 3.0, 8.2, 14.5 } do
+	mimic("bench", "feed", { { x, 2.52 }, { x, 2.6 } })
 end
 section("bench", 10.7, 2.6, 5.1, 2.25, "DEAERATOR")
 toggle("bench", 10.95, 3.05, "PEGGING\nSTEAM", "da.peg", "da.peg")
@@ -919,10 +970,10 @@ digital("vert", 0.3, 4.15, "STEAM PRESSURE", "pri.press", "%.2f", "MPa", 2.2)
 digital("vert", 2.6, 4.15, "PRESSURE SETPOINT", "ehc.pressSet", "%.2f", "MPa", 2.2)
 digital("vert", 0.3, 5.05, "STEAM DEMAND", "ehc.demand", "%.0f", "%", 2.2)
 digital("vert", 2.6, 5.05, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.2)
-recorder("vert", 5.1, 4.1, 10.6, 2.3, "TURBINE 1 SPEED (red) / TURBINE 2 SPEED (blue), 0-2000 rpm", {
-	{ sig = "tg.1.rpm", lo = 0, hi = 2000, color = "red" },
-	{ sig = "tg.2.rpm", lo = 0, hi = 2000, color = "blue" },
-})
+recorder("vert", 5.1, 4.05, REC_W, REC_H, "TURBINE SPEED", { pen("tg.1.rpm", 0, 2000, "red", "TG-1", "rpm"), pen("tg.2.rpm", 0, 2000, "blue", "TG-2", "rpm") })
+recorder("vert", 7.6, 4.05, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0, 450, "red", "GEN 1", "MW"), pen("gen.2.mw", 0, 450, "blue", "GEN 2", "MW") })
+recorder("vert", 10.1, 4.05, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
+recorder("vert", 12.6, 4.05, REC_W, REC_H, "SHELL METAL TEMP", { pen("tg.1.metal", 0, 300, "red", "TG-1", "C"), pen("tg.2.metal", 0, 300, "blue", "TG-2", "C") })
 section("bench", 6.9, 0.15, 2.2, 4.7, "PRESSURE REG")
 toggle("bench", 7.5, 0.5, "REGULATOR", "ehc.pressAuto", "ehc.pressAuto", { labels = { "OUT", "IN" } })
 jog("bench", 7.25, 2.0, "PRESS SET", "ehc.press", "ehc.pressSet", "%.2f", "")
@@ -989,7 +1040,9 @@ do
 		lamp("vert", x, 5.6, "BKR", "dg." .. i .. ".bkr", "red", { w = 0.8 })
 	end
 end
-recorder("vert", 9.5, 4.1, 6.2, 2.3, "GROSS GENERATION, 0-900 MW", { { sig = "plant.gross", lo = 0, hi = 900, color = "red" } })
+recorder("vert", 9.5, 4.05, REC_W, REC_H, "UNIT OUTPUT", { pen("plant.gross", 0, 900, "red", "GROSS", "MW"), pen("plant.net", 0, 900, "blue", "NET", "MW") })
+recorder("vert", 11.95, 4.05, REC_W, REC_H, "FREQUENCY", { pen("grid.hz", 58, 62, "red", "GRID", "Hz"), pen("gen.1.hz", 58, 62, "blue", "GEN 1", "Hz") })
+meter("vert", 14.6, 4.05, "AUX\nLOAD", "plant.aux", 0, 80, "MW")
 for k = 1, 2 do
 	local x0 = if k == 1 then 0.15 else 5.0
 	local key = "gen." .. k
@@ -998,6 +1051,18 @@ for k = 1, 2 do
 	jog("bench", x0 + 1.12, 0.6, "VOLTAGE", key .. ".volt", key .. ".kv", "%.1f", "kV")
 	toggle("bench", x0 + 2.65, 0.6, "GEN\nBREAKER", key .. ".gcb", key .. ".gcb", { labels = { "TRIP", "CLOSE" } })
 	toggle("bench", x0 + 3.68, 0.6, "YARD\nBREAKER", key .. ".yard", key .. ".yard", { labels = { "TRIP", "CLOSE" } })
+end
+-- One-line diagram: each generator through its breaker and the yard
+-- breaker to the grid, and each auxiliary bus fed from its normal or its
+-- reserve breaker.
+for k = 1, 2 do
+	local x0 = if k == 1 then 0.15 else 5.0
+	mimic("bench", "power", { { x0 + 3.15, 1.88 }, { x0 + 3.15, 2.2 }, { x0 + 4.66, 2.2 } })
+	mimic("bench", "power", { { x0 + 4.18, 1.88 }, { x0 + 4.18, 2.2 } })
+end
+for i = 1, 4 do
+	local x = 0.3 + (i - 1) * 3.05
+	mimic("bench", "power", { { x + 0.5, 4.33 }, { x + 0.5, 4.6 }, { x + 1.5, 4.6 }, { x + 1.5, 4.33 } })
 end
 section("bench", 9.85, 0.15, 2.65, 2.3, "SYNCHRONISING")
 selector("bench", 9.95, 0.6, "SCOPE", "sync.select", "sync.select", { "OFF", "GEN 1", "GEN 2" }, 0, 1.25)
@@ -1082,10 +1147,16 @@ PanelLayout.commands = commandSet
 PanelLayout.holdCommands = holdSet
 
 -- ------------------------------------------------------------------ geometry
-export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number }
+-- Everything above, and the room built around it, is drawn in board units.
+-- SCALE turns board units into studs: at 0.55 the boards, desk and chairs
+-- come out life-size beside a standard Roblox character (about 1.75 m tall
+-- at 5.3 studs), with a bench front at hip height and the top of the
+-- annunciators a little under three metres up.
+export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number, scale: number }
 
--- Where a panel stands: its origin is the floor point under the middle of
--- the bench's front edge; x is the operator's right, z points back at them.
+-- Where a panel stands, in board units: its origin is the floor point under
+-- the middle of the bench's front edge; x is the operator's right, z points
+-- back at them.
 --
 -- The boards form an L, as in a boiling-water-reactor control room: P1 and
 -- P2 stand on a wing along the left wall, P4 to P6 along the back wall, and
@@ -1094,7 +1165,7 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 -- operator at the controls faces straight into the corner, with the wing on
 -- the left hand and the back wall on the right. The cabinets behind it are
 -- filled out to the square corner.
-function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
+function PanelLayout.designFrame(index: number): (Vector3, Vector3, Vector3)
 	local W = PanelLayout.PANEL_WIDTH
 	local z = PanelLayout.BACK_WALL_Z
 	local cx = PanelLayout.CORNER_X
@@ -1113,8 +1184,15 @@ function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
 	return Vector3.new(cx + reach + (index - corner - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
-function PanelLayout.face(index: number, face: string): Face
-	local origin, right, back = PanelLayout.panelFrame(index)
+-- The same, in studs.
+function PanelLayout.panelFrame(index: number): (Vector3, Vector3, Vector3)
+	local origin, right, back = PanelLayout.designFrame(index)
+	return origin * PanelLayout.SCALE, right, back
+end
+
+-- A panel face in board units, as the room builder lays it out.
+function PanelLayout.designFace(index: number, face: string): Face
+	local origin, right, back = PanelLayout.designFrame(index)
 	local up = Vector3.new(0, 1, 0)
 	local s = PanelLayout.BENCH_SLOPE
 	local depth = PanelLayout.BENCH_DEPTH
@@ -1132,6 +1210,7 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = up * math.cos(s) + back * math.sin(s),
 			width = PanelLayout.PANEL_WIDTH,
 			height = depth,
+			scale = 1,
 		}
 	elseif face == "vert" then
 		return {
@@ -1141,6 +1220,7 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = back,
 			width = PanelLayout.PANEL_WIDTH,
 			height = PanelLayout.VERT_HEIGHT,
+			scale = 1,
 		}
 	else
 		return {
@@ -1150,18 +1230,28 @@ function PanelLayout.face(index: number, face: string): Face
 			normal = back,
 			width = PanelLayout.PANEL_WIDTH,
 			height = PanelLayout.ANN_HEIGHT,
+			scale = 1,
 		}
 	end
 end
 
--- World position of a point on a face, `lift` studs proud of the surface.
+-- A panel face in the world. Its width and height stay in board units, the
+-- units every widget is placed in; `scale` turns them into studs.
+function PanelLayout.face(index: number, face: string): Face
+	local f = PanelLayout.designFace(index, face)
+	f.center *= PanelLayout.SCALE
+	f.scale = PanelLayout.SCALE
+	return f
+end
+
+-- World position of a point on a face, `lift` board units proud of the surface.
 function PanelLayout.toWorld(f: Face, x: number, y: number, lift: number?): Vector3
-	return f.center + f.right * (x - f.width / 2) + f.up * (f.height / 2 - y) + f.normal * (PanelLayout.FACE_THICKNESS / 2 + (lift or 0))
+	return f.center + (f.right * (x - f.width / 2) + f.up * (f.height / 2 - y) + f.normal * (PanelLayout.FACE_THICKNESS / 2 + (lift or 0))) * f.scale
 end
 
 -- Face coordinates of a world point (the inverse of toWorld).
 function PanelLayout.toFace(f: Face, p: Vector3): (number, number)
-	local d = p - f.center
+	local d = (p - f.center) / f.scale
 	return d:Dot(f.right) + f.width / 2, f.height / 2 - d:Dot(f.up)
 end
 
@@ -1786,32 +1876,45 @@ end)
         <Properties>
           <string name="Name">RoomBuilder</string>
           <string name="Source"><![CDATA[--!nonstrict
--- Builds the control room shell on the server: floor, walls, lighting, the
--- run of benchboard cabinets and the operators' desk. The cabinet faces are
--- plain parts with known names; each client dresses them with instruments
--- and controls from the shared layout.
+-- Builds the control room shell on the server: floor, walls, ceiling, the
+-- run of benchboard cabinets and the operators' console. The cabinet faces
+-- are plain parts with known names; each client dresses them with
+-- instruments and controls from the shared layout.
 --
 -- The look follows an American boiling-water-reactor control room of the
--- late 1970s and early 1980s: cream boards with wood trim, an L of panels
--- around a square corner with the reactor panel set across the corner
--- itself, annunciator boxes along the top, a dark
--- ceiling with fluorescent troffers, and an operators' desk with the things
--- of the period on it: a green-screen terminal, an alarm teleprinter,
--- telephones, binders and logbooks. Nothing here is later than 1985.
+-- late 1970s and early 1980s: cream boards with wood trim in an L around a
+-- square corner, the reactor panel set across the corner itself, annunciator
+-- windows along the top, a red carpet, an acoustic tile ceiling with
+-- fluorescent troffers, and a U-shaped operators' console facing the reactor
+-- panel with the things of the period on it: video terminals, an alarm
+-- teleprinter, telephones, binders and logbooks. Nothing here is later than
+-- 1985.
+--
+-- Everything is laid out in board units (see PanelLayout) and scaled to
+-- studs at the end, so the room comes out life-size around a standard
+-- character: bench front at hip height, desks at 0.76 m, ceiling at 3.8 m.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
 local PanelLayout = require(Shared.PanelLayout)
 
 local RoomBuilder = {}
 
+-- Board units per metre.
+local M = 5.5
+
 local PANEL_COLOR = Color3.fromRGB(226, 212, 172)
 local BENCH_COLOR = Color3.fromRGB(224, 209, 168)
 local CABINET_COLOR = Color3.fromRGB(208, 194, 156)
+-- The front of the bench base is a brown laminate, as in the period.
+local BASE_COLOR = Color3.fromRGB(150, 104, 70)
 local ANN_COLOR = Color3.fromRGB(44, 40, 38)
 local WOOD = Color3.fromRGB(116, 62, 42)
 local DARK = Color3.fromRGB(40, 38, 38)
-local CARPET = Color3.fromRGB(104, 44, 40)
-local DESK = Color3.fromRGB(214, 200, 164)
-local CRT = Color3.fromRGB(205, 198, 178)
+local CARPET = Color3.fromRGB(122, 40, 38)
+local WALL = Color3.fromRGB(214, 206, 186)
+local TILE = Color3.fromRGB(232, 230, 222)
+local LAMINATE = Color3.fromRGB(222, 210, 178)
+local CONSOLE = Color3.fromRGB(204, 192, 160)
+local STEEL = Color3.fromRGB(150, 152, 150)
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
 	local p = Instance.new("Part")
@@ -1833,85 +1936,165 @@ local function prop(parent: Instance, name: string, size: Vector3, cf: CFrame, c
 	return p
 end
 
--- A swivel chair: seat, back, column and a five-star base.
+local function cylinderProp(parent: Instance, name: string, diameter: number, length: number, cf: CFrame, color: Color3, material: Enum.Material?): Part
+	-- A cylinder's axis is its X axis.
+	local p = prop(parent, name, Vector3.new(length, diameter, diameter), cf, color, material)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+-- Text on the front of a part.
+local function sign(target: BasePart, str: string, textSize: number, color: Color3, pixelsPerUnit: number?)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = pixelsPerUnit or 30
+	gui.LightInfluence = 0.6
+	gui.Parent = target
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.SourceSansBold
+	t.TextSize = textSize
+	t.TextColor3 = color
+	t.TextWrapped = true
+	t.Text = str
+	t.Parent = gui
+	return t
+end
+
+-- An office swivel chair: upholstered seat and back, arms, a gas column and
+-- a five-star base. `at` is the floor point under the seat; the sitter
+-- faces -Z.
 local function chair(parent: Instance, at: CFrame)
-	local fabric = Color3.fromRGB(70, 74, 86)
-	prop(parent, "ChairSeat", Vector3.new(2.1, 0.4, 2.1), at * CFrame.new(0, 2.0, 0), fabric, Enum.Material.Fabric)
-	prop(parent, "ChairBack", Vector3.new(2.0, 2.4, 0.35), at * CFrame.new(0, 3.5, 1.05) * CFrame.Angles(math.rad(-8), 0, 0), fabric, Enum.Material.Fabric)
-	prop(parent, "ChairArm", Vector3.new(0.25, 0.2, 1.6), at * CFrame.new(-1.15, 2.75, 0.1), DARK)
-	prop(parent, "ChairArm", Vector3.new(0.25, 0.2, 1.6), at * CFrame.new(1.15, 2.75, 0.1), DARK)
-	prop(parent, "ChairColumn", Vector3.new(0.3, 1.5, 0.3), at * CFrame.new(0, 1.05, 0), Color3.fromRGB(60, 60, 64), Enum.Material.Metal)
+	local fabric = Color3.fromRGB(64, 70, 84)
+	local seatY = 0.47 * M
+	prop(parent, "ChairSeat", Vector3.new(0.48 * M, 0.08 * M, 0.46 * M), at * CFrame.new(0, seatY - 0.04 * M, 0), fabric, Enum.Material.Fabric)
+	prop(parent, "ChairBack", Vector3.new(0.44 * M, 0.5 * M, 0.07 * M), at * CFrame.new(0, seatY + 0.33 * M, 0.25 * M) * CFrame.Angles(math.rad(-10), 0, 0), fabric, Enum.Material.Fabric)
+	for _, side in { -1, 1 } do
+		prop(parent, "ChairArm", Vector3.new(0.05 * M, 0.04 * M, 0.3 * M), at * CFrame.new(side * 0.26 * M, seatY + 0.2 * M, 0.02 * M), DARK)
+		prop(parent, "ChairArmPost", Vector3.new(0.04 * M, 0.2 * M, 0.04 * M), at * CFrame.new(side * 0.26 * M, seatY + 0.1 * M, 0.08 * M), DARK)
+	end
+	prop(parent, "ChairColumn", Vector3.new(0.06 * M, seatY - 0.1 * M, 0.06 * M), at * CFrame.new(0, (seatY - 0.1 * M) / 2 + 0.05 * M, 0), Color3.fromRGB(70, 70, 74), Enum.Material.Metal)
 	for k = 0, 4 do
-		prop(parent, "ChairLeg", Vector3.new(0.25, 0.18, 1.3), at * CFrame.new(0, 0.2, 0) * CFrame.Angles(0, k * math.pi * 2 / 5, 0) * CFrame.new(0, 0, 0.65), DARK)
+		prop(parent, "ChairLeg", Vector3.new(0.05 * M, 0.04 * M, 0.32 * M), at * CFrame.new(0, 0.06 * M, 0) * CFrame.Angles(0, k * math.pi * 2 / 5, 0) * CFrame.new(0, 0, 0.16 * M), DARK)
+		prop(parent, "ChairCaster", Vector3.new(0.05 * M, 0.05 * M, 0.05 * M), at * CFrame.new(0, 0.025 * M, 0) * CFrame.Angles(0, k * math.pi * 2 / 5, 0) * CFrame.new(0, 0, 0.3 * M), DARK)
 	end
 end
 
--- A late-1970s video terminal: one moulded case with the keyboard built in
--- and a small green-phosphor tube. The client puts live data on the screen.
+-- A late-1970s video terminal: a moulded case with a small green-phosphor
+-- tube and a separate keyboard. The client puts live data on the screen.
+-- `at` is the desk-top point under the middle of the case; it faces +Z.
 local function terminal(parent: Instance, at: CFrame, index: number)
-	local case = Color3.fromRGB(198, 190, 168)
-	prop(parent, "TerminalCase", Vector3.new(3.4, 2.6, 2.6), at * CFrame.new(0, 1.6, -0.3), case)
-	prop(parent, "TerminalKeys", Vector3.new(3.4, 0.6, 1.8), at * CFrame.new(0, 0.3, 1.5), case)
-	prop(parent, "TerminalKeyboard", Vector3.new(2.8, 0.12, 1.2), at * CFrame.new(0, 0.66, 1.55) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(60, 58, 54))
-	prop(parent, "TerminalBezel", Vector3.new(2.7, 2.0, 0.12), at * CFrame.new(0, 1.7, 1.02), Color3.fromRGB(46, 44, 42))
-	local screen = prop(parent, "DeskScreen" .. index, Vector3.new(2.3, 1.6, 0.1), at * CFrame.new(0, 1.7, 1.06) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(8, 20, 12))
+	local case = Color3.fromRGB(206, 198, 176)
+	prop(parent, "TerminalCase", Vector3.new(0.46 * M, 0.34 * M, 0.42 * M), at * CFrame.new(0, 0.2 * M, -0.05 * M), case)
+	prop(parent, "TerminalFoot", Vector3.new(0.3 * M, 0.03 * M, 0.3 * M), at * CFrame.new(0, 0.015 * M, -0.05 * M), Color3.fromRGB(120, 116, 106))
+	prop(parent, "TerminalBezel", Vector3.new(0.38 * M, 0.27 * M, 0.02 * M), at * CFrame.new(0, 0.21 * M, 0.165 * M), Color3.fromRGB(46, 44, 42))
+	local screen = prop(parent, "DeskScreen" .. index, Vector3.new(0.3 * M, 0.21 * M, 0.01 * M), at * CFrame.new(0, 0.21 * M, 0.178 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(8, 22, 12))
 	screen:SetAttribute("DeskScreen", index)
+	prop(parent, "Keyboard", Vector3.new(0.46 * M, 0.04 * M, 0.18 * M), at * CFrame.new(0, 0.025 * M, 0.34 * M) * CFrame.Angles(math.rad(5), 0, 0), case)
+	prop(parent, "Keys", Vector3.new(0.4 * M, 0.012 * M, 0.13 * M), at * CFrame.new(0, 0.05 * M, 0.34 * M) * CFrame.Angles(math.rad(5), 0, 0), Color3.fromRGB(70, 66, 60))
 end
 
--- The alarm typer: a teleprinter that prints every event on fan-fold paper.
--- The client prints the unit's event log on the sheet.
+-- A desk telephone: a squat body, a rotary dial and the handset across the
+-- cradle. `at` is the desk-top point under it; it faces +Z.
+local function telephone(parent: Instance, at: CFrame, color: Color3)
+	prop(parent, "Phone", Vector3.new(0.2 * M, 0.08 * M, 0.22 * M), at * CFrame.new(0, 0.04 * M, 0), color)
+	cylinderProp(parent, "PhoneDial", 0.11 * M, 0.01 * M, at * CFrame.new(0, 0.085 * M, 0.04 * M) * CFrame.Angles(0, 0, math.pi / 2) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(226, 224, 214))
+	prop(parent, "PhoneHandset", Vector3.new(0.22 * M, 0.05 * M, 0.06 * M), at * CFrame.new(0, 0.11 * M, -0.06 * M), color)
+	prop(parent, "PhoneCord", Vector3.new(0.02 * M, 0.02 * M, 0.12 * M), at * CFrame.new(-0.12 * M, 0.06 * M, -0.08 * M), color)
+end
+
+-- The alarm typer: a floor-standing teleprinter that prints every event on
+-- fan-fold paper. `at` is the floor point under it; the keyboard faces +Z.
 local function teleprinter(parent: Instance, at: CFrame)
 	local case = Color3.fromRGB(150, 156, 150)
-	prop(parent, "PrinterBody", Vector3.new(4.2, 1.3, 3.2), at * CFrame.new(0, 0.65, 0), case)
-	prop(parent, "PrinterCover", Vector3.new(4.2, 0.5, 1.4), at * CFrame.new(0, 1.5, -0.9), Color3.fromRGB(70, 74, 72))
-	prop(parent, "PrinterPlaten", Vector3.new(3.6, 0.3, 0.3), at * CFrame.new(0, 1.42, -0.1), Color3.fromRGB(30, 30, 32))
-	prop(parent, "PrinterKeys", Vector3.new(3.4, 0.2, 1.0), at * CFrame.new(0, 1.36, 0.95) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(52, 54, 52))
+	local h = 0.72 * M
+	prop(parent, "PrinterStand", Vector3.new(0.7 * M, h, 0.55 * M), at * CFrame.new(0, h / 2, 0), Color3.fromRGB(96, 100, 98))
+	prop(parent, "PrinterBody", Vector3.new(0.72 * M, 0.16 * M, 0.6 * M), at * CFrame.new(0, h + 0.08 * M, 0), case)
+	prop(parent, "PrinterCover", Vector3.new(0.68 * M, 0.08 * M, 0.26 * M), at * CFrame.new(0, h + 0.2 * M, -0.14 * M), Color3.fromRGB(70, 74, 72))
+	prop(parent, "PrinterKeys", Vector3.new(0.56 * M, 0.02 * M, 0.18 * M), at * CFrame.new(0, h + 0.17 * M, 0.18 * M) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(52, 54, 52))
 	-- The sheet rises out of the platen and leans back over the cover.
-	local paper = prop(parent, "PrinterPaper", Vector3.new(3.3, 2.6, 0.04), at * CFrame.new(0, 2.6, -0.55) * CFrame.Angles(math.rad(-14), math.pi, 0), Color3.fromRGB(240, 238, 224))
+	local paper = prop(parent, "PrinterPaper", Vector3.new(0.58 * M, 0.42 * M, 0.005 * M), at * CFrame.new(0, h + 0.44 * M, -0.12 * M) * CFrame.Angles(math.rad(-12), math.pi, 0), Color3.fromRGB(240, 238, 224))
 	paper:SetAttribute("PrinterPaper", true)
-	prop(parent, "PaperStack", Vector3.new(3.4, 0.5, 2.4), at * CFrame.new(0, 0.25, -3.2), Color3.fromRGB(236, 234, 220))
+	prop(parent, "PaperStack", Vector3.new(0.6 * M, 0.12 * M, 0.42 * M), at * CFrame.new(0, 0.06 * M, -0.05 * M), Color3.fromRGB(236, 234, 220))
+end
+
+-- A row of upright binders on a surface, `at` under the first one; the
+-- spines face +Z.
+local function binders(parent: Instance, at: CFrame, count: number, seed: number)
+	local colors = { Color3.fromRGB(30, 54, 110), Color3.fromRGB(150, 30, 30), Color3.fromRGB(28, 28, 30), Color3.fromRGB(30, 90, 60), Color3.fromRGB(96, 60, 30), Color3.fromRGB(40, 40, 46), Color3.fromRGB(200, 200, 190) }
+	local x = 0
+	for i = 1, count do
+		local w = (0.05 + ((i * 7 + seed) % 4) * 0.012) * M
+		local h = (0.29 + ((i * 3 + seed) % 2) * 0.03) * M
+		prop(parent, "Binder", Vector3.new(w, h, 0.26 * M), at * CFrame.new(x + w / 2, h / 2, 0), colors[(i * 5 + seed) % #colors + 1])
+		x += w + 0.004 * M
+	end
+end
+
+-- Scale every part, light and sign in the room by `k` about the origin.
+local function scaleRoom(room: Instance, k: number)
+	for _, d in room:GetDescendants() do
+		if d:IsA("BasePart") then
+			local cf = d.CFrame
+			d.Size *= k
+			d.CFrame = cf - cf.Position + cf.Position * k
+		elseif d:IsA("SurfaceLight") or d:IsA("PointLight") or d:IsA("SpotLight") then
+			d.Range *= k
+		elseif d:IsA("SurfaceGui") and d.SizingMode == Enum.SurfaceGuiSizingMode.PixelsPerStud then
+			d.PixelsPerStud /= k
+		end
+	end
 end
 
 function RoomBuilder.build(): Folder
 	local room = Instance.new("Folder")
 	room.Name = "ControlRoom"
 
-	-- Shell.
-	local centre = Vector3.new(-2, 0, -9)
-	local width, length, height = 92, 80, 18
-	part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(centre + Vector3.new(0, -0.5, 0)), CARPET, Enum.Material.Fabric)
-	part(room, "Ceiling", Vector3.new(width, 1, length), CFrame.new(centre + Vector3.new(0, height + 0.5, 0)), Color3.fromRGB(62, 60, 58))
-	local wallColor = Color3.fromRGB(206, 196, 172)
-	local north, south = centre.Z - length / 2, centre.Z + length / 2
-	local west, east = centre.X - width / 2, centre.X + width / 2
-	part(room, "WallNorth", Vector3.new(width, height, 1), CFrame.new(centre.X, height / 2, north - 0.5), wallColor)
-	part(room, "WallSouth", Vector3.new(width, height, 1), CFrame.new(centre.X, height / 2, south + 0.5), wallColor)
-	part(room, "WallWest", Vector3.new(1, height, length), CFrame.new(west - 0.5, height / 2, centre.Z), wallColor)
-	part(room, "WallEast", Vector3.new(1, height, length), CFrame.new(east + 0.5, height / 2, centre.Z), wallColor)
-	for _, z in { north + 0.1, south - 0.1 } do
-		prop(room, "Skirting", Vector3.new(width, 0.9, 0.2), CFrame.new(centre.X, 0.45, z), WOOD, Enum.Material.Wood)
+	-- Shell: about 15 by 14 metres and 3.8 metres to the ceiling tiles.
+	local west, east, north, south = -50, 34, -50, 28
+	local width, length, height = east - west, south - north, 3.8 * M
+	local cx, cz = (west + east) / 2, (north + south) / 2
+	part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), CARPET, Enum.Material.Carpet)
+	part(room, "Ceiling", Vector3.new(width, 1, length), CFrame.new(cx, height + 0.5, cz), TILE, Enum.Material.Plaster)
+	part(room, "WallNorth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, north - 0.5), WALL, Enum.Material.Plaster)
+	part(room, "WallSouth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, south + 0.5), WALL, Enum.Material.Plaster)
+	part(room, "WallWest", Vector3.new(1, height, length), CFrame.new(west - 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
+	part(room, "WallEast", Vector3.new(1, height, length), CFrame.new(east + 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
+	for _, z in { north + 0.06, south - 0.06 } do
+		prop(room, "Skirting", Vector3.new(width, 0.6, 0.12), CFrame.new(cx, 0.3, z), WOOD, Enum.Material.Wood)
 	end
-	for _, x in { west + 0.1, east - 0.1 } do
-		prop(room, "Skirting", Vector3.new(0.2, 0.9, length), CFrame.new(x, 0.45, centre.Z), WOOD, Enum.Material.Wood)
+	for _, x in { west + 0.06, east - 0.06 } do
+		prop(room, "Skirting", Vector3.new(0.12, 0.6, length), CFrame.new(x, 0.3, cz), WOOD, Enum.Material.Wood)
 	end
-	-- Suspended ceiling grid with fluorescent troffers.
-	for ix = -2, 2 do
-		prop(room, "CeilingRib", Vector3.new(0.5, 0.5, length), CFrame.new(centre.X + ix * 18, height - 0.25, centre.Z), Color3.fromRGB(44, 42, 40))
+
+	-- Suspended ceiling: two-foot acoustic tiles in a white T-bar grid, with
+	-- two-by-four fluorescent troffers.
+	local tileSize = 0.61 * M
+	local grid = Color3.fromRGB(214, 214, 208)
+	for x = west + tileSize, east - 0.1, tileSize do
+		prop(room, "CeilingGrid", Vector3.new(0.12, 0.08, length), CFrame.new(x, height - 0.04, cz), grid)
 	end
-	for iz = -2, 2 do
-		prop(room, "CeilingRib", Vector3.new(width, 0.5, 0.5), CFrame.new(centre.X, height - 0.25, centre.Z + iz * 16), Color3.fromRGB(44, 42, 40))
+	for z = north + tileSize, south - 0.1, tileSize do
+		prop(room, "CeilingGrid", Vector3.new(width, 0.08, 0.12), CFrame.new(cx, height - 0.04, z), grid)
 	end
-	for ix = -2, 2 do
-		for iz = -2, 1 do
-			local light = prop(room, "Light", Vector3.new(9, 0.25, 4.5), CFrame.new(centre.X + ix * 18, height - 0.14, centre.Z + iz * 16 + 8), Color3.fromRGB(255, 244, 214), Enum.Material.Neon)
-			local glow = Instance.new("SurfaceLight")
-			glow.Face = Enum.NormalId.Bottom
-			glow.Angle = 150
-			glow.Range = 34
-			glow.Brightness = 1.6
-			glow.Color = Color3.fromRGB(255, 240, 210)
-			glow.Shadows = false
-			glow.Parent = light
+	for ix = 0, 6 do
+		for iz = 0, 5 do
+			local x = west + tileSize * (1.5 + ix * 4)
+			local z = north + tileSize * (2 + iz * 4)
+			if x < east - tileSize and z < south - tileSize then
+				prop(room, "TrofferFrame", Vector3.new(tileSize + 0.1, 0.1, 2 * tileSize + 0.1), CFrame.new(x, height - 0.05, z), Color3.fromRGB(236, 236, 230))
+				local light = prop(room, "Light", Vector3.new(tileSize - 0.4, 0.06, 2 * tileSize - 0.4), CFrame.new(x, height - 0.1, z), Color3.fromRGB(255, 248, 232), Enum.Material.Neon)
+				local glow = Instance.new("SurfaceLight")
+				glow.Face = Enum.NormalId.Bottom
+				glow.Angle = 140
+				glow.Range = 34
+				glow.Brightness = 1.15
+				glow.Color = Color3.fromRGB(255, 246, 228)
+				glow.Shadows = false
+				glow.Parent = light
+			end
 		end
 	end
 
@@ -1919,37 +2102,28 @@ function RoomBuilder.build(): Folder
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(8, 0.2, 8)
-	spawn.CFrame = CFrame.new(4, 0.1, 14)
+	spawn.CFrame = CFrame.new(14, 0.1, 18)
 	spawn.Transparency = 1
 	spawn.CanCollide = false
 	spawn.Neutral = true
 	spawn.Parent = room
 
-	-- Unit nameplate and a door on the south wall.
-	local plate = part(room, "Nameplate", Vector3.new(34, 2.6, 0.3), CFrame.new(centre.X, height - 2.4, south - 0.2), Color3.fromRGB(24, 24, 26))
-	local plateGui = Instance.new("SurfaceGui")
-	plateGui.Face = Enum.NormalId.Front
-	plateGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	plateGui.PixelsPerStud = 30
-	plateGui.LightInfluence = 0
-	plateGui.Parent = plate
-	local plateText = Instance.new("TextLabel")
-	plateText.Size = UDim2.fromScale(1, 1)
-	plateText.BackgroundTransparency = 1
-	plateText.Font = Enum.Font.SourceSansBold
-	plateText.TextSize = 56
-	plateText.TextColor3 = Color3.fromRGB(240, 240, 230)
-	plateText.Text = "UNIT 1    RBMK-800    MAIN CONTROL ROOM"
-	plateText.Parent = plateGui
-	part(room, "Door", Vector3.new(6, 11, 0.4), CFrame.new(east - 12, 5.5, south - 0.2), Color3.fromRGB(126, 96, 70), Enum.Material.Wood)
-	prop(room, "DoorFrame", Vector3.new(7, 11.6, 0.3), CFrame.new(east - 12, 5.8, south - 0.05), DARK)
-	-- A plain round wall clock over the door.
-	local clock = prop(room, "WallClock", Vector3.new(0.3, 3, 3), CFrame.new(east - 12, 14, south - 0.2) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(240, 238, 228))
-	clock.Shape = Enum.PartType.Cylinder
-	local rim = prop(room, "WallClockRim", Vector3.new(0.2, 3.3, 3.3), CFrame.new(east - 12, 14, south - 0.12) * CFrame.Angles(0, math.pi / 2, 0), DARK)
-	rim.Shape = Enum.PartType.Cylinder
-	prop(room, "ClockHand", Vector3.new(0.12, 1.2, 0.05), CFrame.new(east - 12, 14.5, south - 0.38), DARK)
-	prop(room, "ClockHand", Vector3.new(0.9, 0.12, 0.05), CFrame.new(east - 12.4, 14, south - 0.38), DARK)
+	-- The door, a sign over it, and a clock above the boards.
+	local doorX = 22
+	part(room, "Door", Vector3.new(0.9 * M, 2.1 * M, 0.25), CFrame.new(doorX, 1.05 * M, south - 0.12), Color3.fromRGB(126, 96, 70), Enum.Material.Wood)
+	prop(room, "DoorFrame", Vector3.new(1.0 * M, 2.16 * M, 0.15), CFrame.new(doorX, 1.08 * M, south - 0.04), DARK)
+	cylinderProp(room, "DoorHandle", 0.05 * M, 0.1 * M, CFrame.new(doorX - 0.36 * M, 1.0 * M, south - 0.3) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(190, 180, 150), Enum.Material.Metal)
+	local doorSign = prop(room, "DoorSign", Vector3.new(1.4 * M, 0.25 * M, 0.08), CFrame.new(doorX, 2.4 * M, south - 0.1) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(24, 24, 26))
+	sign(doorSign, "UNIT 1 MAIN CONTROL ROOM", 22, Color3.fromRGB(240, 240, 230))
+	local clockX, clockY, clockZ = -6, 3.25 * M, north + 0.1
+	cylinderProp(room, "WallClockRim", 0.4 * M, 0.06 * M, CFrame.new(clockX, clockY, clockZ) * CFrame.Angles(0, math.pi / 2, 0), DARK)
+	cylinderProp(room, "WallClock", 0.36 * M, 0.08 * M, CFrame.new(clockX, clockY, clockZ + 0.02) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(242, 240, 230))
+	for i = 0, 11 do
+		local a = i * math.pi / 6
+		prop(room, "ClockMark", Vector3.new(0.03 * M, if i % 3 == 0 then 0.04 * M else 0.025 * M, 0.02), CFrame.new(clockX + math.sin(a) * 0.15 * M, clockY + math.cos(a) * 0.15 * M, clockZ + 0.27) * CFrame.Angles(0, 0, -a), DARK)
+	end
+	prop(room, "ClockHand", Vector3.new(0.02 * M, 0.12 * M, 0.02), CFrame.new(clockX, clockY + 0.05 * M, clockZ + 0.3), DARK)
+	prop(room, "ClockHand", Vector3.new(0.09 * M, 0.02 * M, 0.02), CFrame.new(clockX + 0.04 * M, clockY, clockZ + 0.3), DARK)
 
 	-- Benchboards.
 	local up = Vector3.new(0, 1, 0)
@@ -1964,16 +2138,16 @@ function RoomBuilder.build(): Folder
 	local cabinetDepth = 3.2
 	local n = #PanelLayout.panels
 	for _, p in PanelLayout.panels do
-		local origin, right, back = PanelLayout.panelFrame(p.index)
+		local origin, right, back = PanelLayout.designFrame(p.index)
 		local function frame(x: number, y: number, z: number): CFrame
 			return CFrame.fromMatrix(origin + right * x + up * y + back * z, right, up, back)
 		end
 		-- Cabinet: a base under the bench, a tall box behind it, and a
 		-- slab under the sloping bench that closes the gap at the sides.
-		part(room, p.id .. "_base", Vector3.new(W, h0 - 0.5, backZ - 0.3), frame(0, 0.5 + (h0 - 0.5) / 2, -backZ / 2 - 0.15), CABINET_COLOR)
+		part(room, p.id .. "_base", Vector3.new(W, h0 - 0.5, backZ - 0.3), frame(0, 0.5 + (h0 - 0.5) / 2, -backZ / 2 - 0.15), BASE_COLOR, Enum.Material.Wood)
 		part(room, p.id .. "_kick", Vector3.new(W, 0.5, backZ - 0.6), frame(0, 0.25, -backZ / 2 - 0.3), WOOD, Enum.Material.Wood)
 		part(room, p.id .. "_cabinet", Vector3.new(W, top, cabinetDepth), frame(0, top / 2, -backZ - cabinetDepth / 2 - T / 2), CABINET_COLOR)
-		local bench = PanelLayout.face(p.index, "bench")
+		local bench = PanelLayout.designFace(p.index, "bench")
 		part(room, p.id .. "_slab", Vector3.new(W, depth, 1.6), PanelLayout.faceCFrame(bench) * CFrame.new(0, 0, T / 2 + 0.8), CABINET_COLOR)
 		-- Wood trim: a lip along the bench front and a cap over the annunciators.
 		part(room, p.id .. "_lip", Vector3.new(W, 0.4, 0.45), frame(0, h0 - 0.1, 0.12), WOOD, Enum.Material.Wood)
@@ -1981,7 +2155,7 @@ function RoomBuilder.build(): Folder
 		-- A dark reveal between the board and the annunciator box.
 		prop(room, p.id .. "_reveal", Vector3.new(W, 0.12, 0.2), frame(0, backY + PanelLayout.VERT_HEIGHT, -backZ + T / 2 + 0.06), DARK)
 		for _, faceName in { "bench", "vert", "ann" } do
-			local f = PanelLayout.face(p.index, faceName)
+			local f = PanelLayout.designFace(p.index, faceName)
 			local color = if faceName == "bench" then BENCH_COLOR elseif faceName == "ann" then ANN_COLOR else PANEL_COLOR
 			local facePart = part(room, p.id .. "_" .. faceName, Vector3.new(f.width, f.height, T), PanelLayout.faceCFrame(f), color)
 			facePart:SetAttribute("Panel", p.id)
@@ -1991,7 +2165,7 @@ function RoomBuilder.build(): Folder
 		-- Joint with the next panel: a seam strip where the run is straight,
 		-- a corner filler where it turns.
 		if p.index < n then
-			local nOrigin, nRight, nBack = PanelLayout.panelFrame(p.index + 1)
+			local nOrigin, nRight, nBack = PanelLayout.designFrame(p.index + 1)
 			local joint = origin + right * (W / 2)
 			local turn = math.acos(math.clamp(back:Dot(nBack), -1, 1))
 			if turn < 0.01 then
@@ -2015,7 +2189,7 @@ function RoomBuilder.build(): Folder
 					part(room, tag .. "Board", Vector3.new(ext, PanelLayout.VERT_HEIGHT, T), at(ext / 2, backY + PanelLayout.VERT_HEIGHT / 2, -backZ), PANEL_COLOR)
 					part(room, tag .. "Ann", Vector3.new(ext, PanelLayout.ANN_HEIGHT, T), at(ext / 2, backY + PanelLayout.VERT_HEIGHT + PanelLayout.ANN_HEIGHT / 2, -backZ), ANN_COLOR)
 					prop(room, tag .. "Reveal", Vector3.new(ext, 0.12, 0.2), at(ext / 2, backY + PanelLayout.VERT_HEIGHT, -backZ + T / 2 + 0.06), DARK)
-					part(room, tag .. "Base", Vector3.new(ext, h0 - 0.1, backZ), at(ext / 2, (h0 - 0.1) / 2, -backZ / 2), CABINET_COLOR)
+					part(room, tag .. "Base", Vector3.new(ext, h0 - 0.1, backZ), at(ext / 2, (h0 - 0.1) / 2, -backZ / 2), BASE_COLOR, Enum.Material.Wood)
 					prop(room, tag .. "Cap", Vector3.new(extCab, 0.3, cabinetDepth + 1.4), at(extCab / 2, top + 0.15, -backZ - cabinetDepth / 2 + 0.55), WOOD, Enum.Material.Wood)
 					-- Bench carried on at the same slope.
 					local slopeUp = up * math.sin(s) - b * math.cos(s)
@@ -2032,7 +2206,7 @@ function RoomBuilder.build(): Folder
 	-- capped, so the boards read as one L with a square back corner.
 	do
 		local cabinetBack = backZ + T / 2 + cabinetDepth
-		local cOrigin, _, cBack = PanelLayout.panelFrame(PanelLayout.CORNER_PANEL)
+		local cOrigin, _, cBack = PanelLayout.designFrame(PanelLayout.CORNER_PANEL)
 		local x0 = PanelLayout.CORNER_X - cabinetBack
 		local z0 = PanelLayout.BACK_WALL_Z - cabinetBack
 		-- The corner cabinet's back plane is p . cBack = k; find where it
@@ -2041,14 +2215,14 @@ function RoomBuilder.build(): Folder
 		local k = cOrigin:Dot(cBack) - cabinetBack
 		local legX = (k - z0 * cBack.Z) / cBack.X - x0 + 0.2
 		local legZ = (k - x0 * cBack.X) / cBack.Z - z0 + 0.2
-		local function filler(name: string, y0: number, height: number, color: Color3, material: Enum.Material?)
+		local function filler(name: string, y0: number, fillHeight: number, color: Color3, material: Enum.Material?)
 			-- A wedge's right angle is at its bottom back edge; stand it on end
 			-- so that edge is the vertical line of the square corner.
 			local w = Instance.new("WedgePart")
 			w.Name = name
 			w.Anchored = true
-			w.Size = Vector3.new(height, legX, legZ)
-			w.CFrame = CFrame.fromMatrix(Vector3.new(x0 + legX / 2, y0 + height / 2, z0 + legZ / 2), Vector3.new(0, 1, 0), Vector3.new(1, 0, 0), Vector3.new(0, 0, -1))
+			w.Size = Vector3.new(fillHeight, legX, legZ)
+			w.CFrame = CFrame.fromMatrix(Vector3.new(x0 + legX / 2, y0 + fillHeight / 2, z0 + legZ / 2), Vector3.new(0, 1, 0), Vector3.new(1, 0, 0), Vector3.new(0, 0, -1))
 			w.Color = color
 			w.Material = material or Enum.Material.SmoothPlastic
 			w.TopSurface = Enum.SurfaceType.Smooth
@@ -2059,53 +2233,123 @@ function RoomBuilder.build(): Folder
 		filler("CornerCap", top, 0.3, WOOD, Enum.Material.Wood)
 	end
 
-	-- Operators' desk in the middle of the room, facing the corner and the
-	-- reactor panel, with a return at each end.
-	local deskTop = 3.0
-	local deskFrame = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
-	local onDesk = deskFrame * CFrame.new(0, deskTop, 0)
+	-- The operators' console: a U of desks in the middle of the room, open
+	-- toward the operators and facing the corner, so the reactor panel is
+	-- straight ahead. A raised shelf along the far edge carries the
+	-- telephones and binders; the terminals sit on the desk in front of it.
+	local console = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+	local deskH = 0.76 * M
+	local deskD = 0.8 * M
+	local deskL = 4.4 * M
+	local returnL = 1.8 * M
 	local function desk(name: string, size: Vector3, x: number, y: number, z: number, color: Color3, material: Enum.Material?): Part
-		return part(room, name, size, deskFrame * CFrame.new(x, y, z), color, material)
+		return part(room, name, size, console * CFrame.new(x, y, z), color, material)
 	end
-	desk("DeskTop", Vector3.new(34, 0.3, 5), 0, deskTop - 0.15, 0, DESK)
-	desk("DeskEdge", Vector3.new(34.2, 0.34, 0.3), 0, deskTop - 0.15, 2.6, WOOD, Enum.Material.Wood).CanCollide = false
-	desk("DeskModesty", Vector3.new(34, deskTop - 0.3, 0.4), 0, (deskTop - 0.3) / 2, -2.2, DESK)
+	local slab = 0.035 * M
+	desk("DeskTop", Vector3.new(deskL, slab, deskD), 0, deskH - slab / 2, 0, LAMINATE)
+	desk("DeskEdge", Vector3.new(deskL + 0.02 * M, slab + 0.01 * M, 0.03 * M), 0, deskH - slab / 2, deskD / 2, WOOD, Enum.Material.Wood).CanCollide = false
+	desk("DeskModesty", Vector3.new(deskL, deskH - slab, 0.05 * M), 0, (deskH - slab) / 2, -deskD / 2 + 0.025 * M, CONSOLE)
+	local riserH, riserD = 0.16 * M, 0.26 * M
+	desk("DeskRiser", Vector3.new(deskL, riserH, riserD), 0, deskH + riserH / 2, -deskD / 2 + riserD / 2, CONSOLE)
+	desk("DeskRiserTop", Vector3.new(deskL + 0.02 * M, 0.025 * M, riserD + 0.02 * M), 0, deskH + riserH + 0.0125 * M, -deskD / 2 + riserD / 2, LAMINATE)
 	for _, side in { -1, 1 } do
-		desk("DeskReturn", Vector3.new(5, 0.3, 9), side * 14.5, deskTop - 0.15, 7, DESK)
-		desk("DeskPedestal", Vector3.new(4.6, deskTop - 0.3, 3), side * 14.5, (deskTop - 0.3) / 2, 9.8, DESK)
+		local rx = side * (deskL / 2 - deskD / 2)
+		local rz = deskD / 2 + returnL / 2
+		desk("DeskReturn", Vector3.new(deskD, slab, returnL), rx, deskH - slab / 2, rz, LAMINATE)
+		desk("DeskReturnEdge", Vector3.new(0.03 * M, slab + 0.01 * M, returnL), rx - side * deskD / 2, deskH - slab / 2, rz, WOOD, Enum.Material.Wood).CanCollide = false
+		desk("DeskReturnSide", Vector3.new(0.05 * M, deskH - slab, returnL + deskD), rx + side * (deskD / 2 - 0.025 * M), (deskH - slab) / 2, rz - deskD / 2, CONSOLE)
+		-- A drawer pedestal at the end of each return.
+		local pz = deskD / 2 + returnL - 0.25 * M
+		desk("DeskPedestal", Vector3.new(deskD - 0.06 * M, deskH - slab - 0.04 * M, 0.45 * M), rx, (deskH - slab) / 2, pz, CONSOLE)
 		for d = 0, 2 do
-			desk("DrawerPull", Vector3.new(1.4, 0.12, 0.12), side * 14.5, 0.6 + d * 0.8, 11.35, DARK).CanCollide = false
+			desk("DrawerFront", Vector3.new(deskD - 0.12 * M, 0.2 * M, 0.02 * M), rx - side * 0.01, 0.13 * M + d * 0.22 * M, pz - 0.235 * M, LAMINATE).CanCollide = false
+			desk("DrawerPull", Vector3.new(0.12 * M, 0.02 * M, 0.03 * M), rx - side * 0.01, 0.18 * M + d * 0.22 * M, pz - 0.25 * M, STEEL, Enum.Material.Metal).CanCollide = false
 		end
-		desk("DeskPedestal", Vector3.new(3, deskTop - 0.3, 4.4), side * 9, (deskTop - 0.3) / 2, 0, DESK)
 	end
-	terminal(room, onDesk * CFrame.new(-1.5, 0, -0.9), 1)
-	teleprinter(room, onDesk * CFrame.new(-14.3, 0, 7.4) * CFrame.Angles(0, math.pi / 2, 0))
-	-- Desk telephones: squat bodies with the handset across the cradle.
-	for i, x in { -7.5, 6.5, 12.5 } do
-		local turn = CFrame.Angles(0, (i - 2) * 0.25, 0)
-		local body = if i == 2 then Color3.fromRGB(150, 30, 28) else Color3.fromRGB(28, 28, 30)
-		prop(room, "Phone", Vector3.new(1.6, 0.5, 1.8), onDesk * CFrame.new(x, 0.25, 0.5) * turn, body)
-		prop(room, "PhoneDial", Vector3.new(0.16, 0.9, 0.9), onDesk * CFrame.new(x, 0.5, 0.75) * turn * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(210, 208, 196)).Shape = Enum.PartType.Cylinder
-		prop(room, "PhoneHandset", Vector3.new(1.9, 0.32, 0.42), onDesk * CFrame.new(x, 0.72, -0.05) * turn, body)
+	local onDesk = console * CFrame.new(0, deskH, 0)
+	local onRiser = console * CFrame.new(0, deskH + riserH + 0.025 * M, -deskD / 2 + riserD / 2)
+	-- Two terminals: the unit computer and the alarm summary.
+	terminal(room, onDesk * CFrame.new(-0.85 * M, 0, -0.02 * M) * CFrame.Angles(0, 0.06, 0), 1)
+	terminal(room, onDesk * CFrame.new(0.85 * M, 0, -0.02 * M) * CFrame.Angles(0, -0.06, 0), 2)
+	-- Telephones on the shelf: the plant phones in black, the grid
+	-- dispatcher's line in red.
+	telephone(room, onRiser * CFrame.new(-1.75 * M, 0, 0), Color3.fromRGB(28, 28, 30))
+	telephone(room, onRiser * CFrame.new(0, 0, 0), Color3.fromRGB(150, 30, 28))
+	telephone(room, onRiser * CFrame.new(1.45 * M, 0, 0), Color3.fromRGB(28, 28, 30))
+	binders(room, onRiser * CFrame.new(-1.45 * M, 0, 0), 9, 1)
+	binders(room, onRiser * CFrame.new(0.35 * M, 0, 0), 7, 4)
+	prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), onDesk * CFrame.new(0.1 * M, 0.015 * M, 0.2 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(36, 60, 44))
+	prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), console * CFrame.new(-(deskL / 2 - deskD / 2), deskH + 0.015 * M, deskD / 2 + 0.6 * M) * CFrame.Angles(0, -0.2, 0), Color3.fromRGB(110, 32, 30))
+	prop(room, "Papers", Vector3.new(0.21 * M, 0.006 * M, 0.3 * M), onDesk * CFrame.new(-1.6 * M, 0.003 * M, 0.15 * M) * CFrame.Angles(0, -0.12, 0), Color3.fromRGB(240, 238, 226))
+	prop(room, "Papers", Vector3.new(0.21 * M, 0.006 * M, 0.3 * M), console * CFrame.new(deskL / 2 - deskD / 2, deskH + 0.003 * M, deskD / 2 + 0.9 * M) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(240, 238, 226))
+	prop(room, "Clipboard", Vector3.new(0.23 * M, 0.01 * M, 0.32 * M), onDesk * CFrame.new(1.65 * M, 0.005 * M, 0.18 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(150, 110, 70), Enum.Material.Wood)
+	cylinderProp(room, "Mug", 0.08 * M, 0.1 * M, onDesk * CFrame.new(0.42 * M, 0.05 * M, 0.25 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(230, 230, 226))
+	cylinderProp(room, "Ashtray", 0.13 * M, 0.025 * M, console * CFrame.new(deskL / 2 - deskD / 2, deskH + 0.0125 * M, deskD / 2 + 1.3 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(120, 86, 40), Enum.Material.Glass).Transparency = 0.2
+	for _, x in { -0.85 * M, 0.85 * M, 0 } do
+		chair(room, console * CFrame.new(x, 0, deskD / 2 + 0.55 * M) * CFrame.Angles(0, -x / M * 0.15, 0))
 	end
-	local binderColors = { Color3.fromRGB(30, 54, 110), Color3.fromRGB(150, 30, 30), Color3.fromRGB(28, 28, 30), Color3.fromRGB(30, 90, 60), Color3.fromRGB(96, 60, 30), Color3.fromRGB(40, 40, 46) }
-	for i, color in binderColors do
-		prop(room, "Binder", Vector3.new(0.5, 2.1, 1.7), onDesk * CFrame.new(13.6 + i * 0.52, 1.05, -1.3), color)
-	end
-	prop(room, "Bookend", Vector3.new(0.12, 1.6, 1.5), onDesk * CFrame.new(13.75, 0.8, -1.3), DARK)
-	prop(room, "Logbook", Vector3.new(2.4, 0.18, 1.8), onDesk * CFrame.new(3.4, 0.09, 1.0) * CFrame.Angles(0, 0.12, 0), Color3.fromRGB(36, 60, 44))
-	prop(room, "Logbook", Vector3.new(2.4, 0.18, 1.8), onDesk * CFrame.new(9.6, 0.09, 1.1) * CFrame.Angles(0, -0.2, 0), Color3.fromRGB(110, 32, 30))
-	prop(room, "Papers", Vector3.new(1.7, 0.05, 2.2), onDesk * CFrame.new(-5.2, 0.03, 1.2) * CFrame.Angles(0, -0.12, 0), Color3.fromRGB(240, 238, 226))
-	prop(room, "Papers", Vector3.new(1.7, 0.05, 2.2), onDesk * CFrame.new(5.9, 0.03, 0.2) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(240, 238, 226))
-	prop(room, "Clipboard", Vector3.new(1.6, 0.08, 2.2), onDesk * CFrame.new(-10.6, 0.04, 1.0) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(150, 110, 70), Enum.Material.Wood)
-	prop(room, "Mug", Vector3.new(0.5, 0.6, 0.5), onDesk * CFrame.new(1.6, 0.3, 1.6), Color3.fromRGB(230, 230, 226))
-	local ashtray = prop(room, "Ashtray", Vector3.new(0.18, 0.9, 0.9), onDesk * CFrame.new(11.2, 0.1, 1.5) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(120, 86, 40))
-	ashtray.Shape = Enum.PartType.Cylinder
-	ashtray.Transparency = 0.25
-	for _, x in { -8.5, 0.5, 9 } do
-		chair(room, deskFrame * CFrame.new(x, 0, 5.2) * CFrame.Angles(0, (x / 9) * 0.22, 0))
+	teleprinter(room, console * CFrame.new(-(deskL / 2 + 0.55 * M), 0, deskD / 2 + 0.6 * M) * CFrame.Angles(0, -math.pi / 2, 0))
+
+	-- The shift supervisor's desk behind the console, facing the boards.
+	do
+		local ss = CFrame.new(10, 0, 10) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+		local L, D = 1.6 * M, 0.75 * M
+		part(room, "SupervisorDesk", Vector3.new(L, slab, D), ss * CFrame.new(0, deskH - slab / 2, 0), LAMINATE)
+		part(room, "SupervisorModesty", Vector3.new(L, deskH - slab, 0.04 * M), ss * CFrame.new(0, (deskH - slab) / 2, -D / 2 + 0.02 * M), CONSOLE)
+		for _, side in { -1, 1 } do
+			part(room, "SupervisorPedestal", Vector3.new(0.42 * M, deskH - slab, D), ss * CFrame.new(side * (L / 2 - 0.21 * M), (deskH - slab) / 2, 0), CONSOLE)
+		end
+		local top2 = ss * CFrame.new(0, deskH, 0)
+		telephone(room, top2 * CFrame.new(0.55 * M, 0, -0.12 * M), Color3.fromRGB(28, 28, 30))
+		prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), top2 * CFrame.new(-0.1 * M, 0.015 * M, 0.05 * M) * CFrame.Angles(0, 0.15, 0), Color3.fromRGB(30, 54, 110))
+		prop(room, "InTray", Vector3.new(0.26 * M, 0.06 * M, 0.34 * M), top2 * CFrame.new(-0.55 * M, 0.03 * M, -0.1 * M), Color3.fromRGB(60, 60, 64))
+		prop(room, "LampBase", Vector3.new(0.14 * M, 0.03 * M, 0.14 * M), top2 * CFrame.new(-0.3 * M, 0.015 * M, -0.25 * M), DARK)
+		prop(room, "LampArm", Vector3.new(0.02 * M, 0.38 * M, 0.02 * M), top2 * CFrame.new(-0.3 * M, 0.2 * M, -0.25 * M), DARK)
+		prop(room, "LampShade", Vector3.new(0.18 * M, 0.08 * M, 0.12 * M), top2 * CFrame.new(-0.3 * M, 0.38 * M, -0.18 * M) * CFrame.Angles(math.rad(25), 0, 0), Color3.fromRGB(40, 70, 50))
+		chair(room, ss * CFrame.new(0, 0, D / 2 + 0.45 * M))
 	end
 
+	-- Along the south wall: a bookcase of procedures and two file cabinets.
+	do
+		local bx, bz = -32, south - 0.2 * M
+		local bw, bh, bd = 1.8 * M, 1.95 * M, 0.35 * M
+		local case = CFrame.new(bx, 0, bz) * CFrame.Angles(0, math.pi, 0)
+		part(room, "BookcaseBack", Vector3.new(bw, bh, 0.03 * M), case * CFrame.new(0, bh / 2, bd / 2 - 0.015 * M), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+		for _, side in { -1, 1 } do
+			part(room, "BookcaseSide", Vector3.new(0.03 * M, bh, bd), case * CFrame.new(side * (bw / 2 - 0.015 * M), bh / 2, 0), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+		end
+		for shelf = 0, 5 do
+			local y = 0.08 * M + shelf * 0.37 * M
+			part(room, "BookcaseShelf", Vector3.new(bw, 0.025 * M, bd), case * CFrame.new(0, y, 0), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+			if shelf < 5 then
+				binders(room, case * CFrame.new(-bw / 2 + 0.04 * M, y + 0.0125 * M, 0.02 * M), 14 + shelf % 3, shelf * 3)
+			end
+		end
+		for i = 0, 1 do
+			local fx = bx + bw / 2 + 0.6 * M + i * 0.5 * M
+			local cab = CFrame.new(fx, 0, south - 0.36 * M) * CFrame.Angles(0, math.pi, 0)
+			part(room, "FileCabinet", Vector3.new(0.46 * M, 1.33 * M, 0.7 * M), cab * CFrame.new(0, 0.665 * M, 0), Color3.fromRGB(140, 140, 132), Enum.Material.Metal)
+			for d = 0, 3 do
+				prop(room, "FilePull", Vector3.new(0.12 * M, 0.03 * M, 0.03 * M), cab * CFrame.new(0, 0.25 * M + d * 0.31 * M, -0.36 * M), STEEL, Enum.Material.Metal)
+			end
+		end
+	end
+
+	-- On the east wall: the shift status board and a fire extinguisher by
+	-- the door.
+	do
+		local board = prop(room, "StatusBoard", Vector3.new(2.4 * M, 1.2 * M, 0.05 * M), CFrame.new(east - 0.2, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(246, 246, 240))
+		board:SetAttribute("StatusBoard", true)
+		prop(room, "StatusBoardFrame", Vector3.new(2.46 * M, 1.26 * M, 0.03 * M), CFrame.new(east - 0.08, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), STEEL, Enum.Material.Metal)
+		prop(room, "MarkerTray", Vector3.new(1.0 * M, 0.03 * M, 0.06 * M), CFrame.new(east - 0.35, 0.93 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), STEEL, Enum.Material.Metal)
+		local ex = CFrame.new(doorX - 1.0 * M, 0, south - 0.15 * M)
+		cylinderProp(room, "Extinguisher", 0.16 * M, 0.5 * M, ex * CFrame.new(0, 0.65 * M, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(190, 24, 20))
+		prop(room, "ExtinguisherHead", Vector3.new(0.06 * M, 0.1 * M, 0.06 * M), ex * CFrame.new(0, 0.95 * M, 0), DARK)
+		local fireSign = prop(room, "FireSign", Vector3.new(0.3 * M, 0.15 * M, 0.02 * M), ex * CFrame.new(0, 1.3 * M, 0.12 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(190, 24, 20))
+		sign(fireSign, "FIRE", 18, Color3.fromRGB(255, 255, 255))
+	end
+
+	scaleRoom(room, PanelLayout.SCALE)
 	room.Parent = workspace
 	return room
 end
@@ -7511,7 +7755,7 @@ local PanelLayout = require(Shared.PanelLayout)
 
 local Controls = {}
 
-local REACH = 70 -- studs
+local REACH = 40 -- studs
 local HOLD_REFRESH = 0.25
 local VIEWS = { "bench", "board", "wide" }
 
@@ -7625,15 +7869,19 @@ function Controls.start(built: any, ctx: any)
 		end
 		local origin, _, back = PanelLayout.panelFrame(viewing)
 		local up = Vector3.new(0, 1, 0)
+		-- A point above the floor and in front of the bench, in board units.
+		local function at(height: number, out: number): Vector3
+			return origin + (up * height + back * out) * PanelLayout.SCALE
+		end
 		local mode = VIEWS[view]
 		if mode == "bench" then
 			local bench = PanelLayout.face(viewing, "bench")
-			targetCF = CFrame.lookAt(origin + up * 9.4 + back * 2.6, bench.center)
+			targetCF = CFrame.lookAt(at(11.3, 2.6), bench.center)
 		elseif mode == "board" then
 			local board = PanelLayout.face(viewing, "vert")
-			targetCF = CFrame.lookAt(origin + up * 8.6 + back * 6.4, board.center)
+			targetCF = CFrame.lookAt(at(10.5, 6.4), board.center)
 		else
-			targetCF = CFrame.lookAt(origin + up * 9.5 + back * 14, origin + up * 7.2)
+			targetCF = CFrame.lookAt(at(11.4, 14), at(9.1, 0))
 		end
 	end
 
@@ -7643,10 +7891,10 @@ function Controls.start(built: any, ctx: any)
 		if not root then
 			return nil
 		end
-		local best, bestD = nil, 26
+		local best, bestD = nil, 26 * PanelLayout.SCALE
 		for _, p in PanelLayout.panels do
 			local origin, _, back = PanelLayout.panelFrame(p.index)
-			local d = (root.Position - (origin + back * 4)).Magnitude
+			local d = (root.Position - (origin + back * 4 * PanelLayout.SCALE)).Magnitude
 			if d < bestD then
 				best, bestD = p.index, d
 			end
@@ -7866,22 +8114,68 @@ local function typed(gui: SurfaceGui, size: number, color: Color3): TextLabel
 	return label
 end
 local terminalText: TextLabel? = nil
+local alarmText: TextLabel? = nil
 local paperText: TextLabel? = nil
+local boardText: TextLabel? = nil
 do
 	local screenPart = room:WaitForChild("DeskScreen1", 10)
 	if screenPart then
-		terminalText = typed(surface(screenPart, 110), 15, Color3.fromRGB(110, 255, 140))
+		terminalText = typed(surface(screenPart, 330), 14, Color3.fromRGB(110, 255, 140))
 		terminalText.Text = "UNIT COMPUTER\nNOT READY"
+	end
+	local alarmPart = room:WaitForChild("DeskScreen2", 10)
+	if alarmPart then
+		alarmText = typed(surface(alarmPart, 330), 13, Color3.fromRGB(110, 255, 140))
+		alarmText.Text = "ALARM SUMMARY\nNOT READY"
 	end
 	local paperPart = room:WaitForChild("PrinterPaper", 10)
 	if paperPart then
-		paperText = typed(surface(paperPart, 70), 10, Color3.fromRGB(30, 30, 34))
+		paperText = typed(surface(paperPart, 220), 11, Color3.fromRGB(30, 30, 34))
 		paperText.TextYAlignment = Enum.TextYAlignment.Bottom
 	end
+	-- The shift status board, kept up in marker by the operators.
+	local boardPart = room:WaitForChild("StatusBoard", 10)
+	if boardPart then
+		boardText = typed(surface(boardPart, 60), 19, Color3.fromRGB(28, 40, 120))
+		boardText.Font = Enum.Font.PermanentMarker
+		boardText.Position = UDim2.fromOffset(18, 10)
+		boardText.Size = UDim2.new(1, -30, 1, -16)
+	end
+end
+-- What the shift board says the unit is doing.
+local function unitMode(g: (string) -> number): string
+	if g("core.destroyed") >= 0.5 then
+		return "REACTOR DESTROYED"
+	elseif g("n.power") < 0.05 and g("pri.temp") < 100 then
+		return "COLD SHUTDOWN"
+	elseif g("n.power") < 0.05 then
+		return "HOT SHUTDOWN"
+	elseif g("plant.gross") > 1 then
+		return "POWER OPERATION"
+	end
+	return "STARTUP"
 end
 local function refreshDesk()
 	local g = ctx.get
 	local t = math.floor(g("time"))
+	if alarmText then
+		local lines = { "ALARM SUMMARY", "" }
+		for _, tile in built.annTiles do
+			if tile.state > 0 and #lines < 13 then
+				table.insert(lines, (if tile.state == 1 then "* " else "  ") .. string.upper(string.gsub(tile.label.Text, "\n", " ")))
+			end
+		end
+		if #lines == 2 then
+			table.insert(lines, "NO ALARMS")
+		end
+		alarmText.Text = table.concat(lines, "\n")
+	end
+	if boardText then
+		boardText.Text = string.format(
+			"UNIT 1 - SHIFT STATUS\nMODE:  %s\nREACTOR:  %.0f MWt  (%.1f %%)\nGROSS:  %.0f MWe\nORM:  %.0f RODS   (MIN 26)\nDRUMS:  %.2f MPa  %.0f C\nSCRAMS THIS SHIFT:  %d",
+			unitMode(g), g("n.thermal"), g("n.power"), g("plant.gross"), g("core.orm"), g("pri.press"), g("pri.temp"), g("stats.scrams")
+		)
+	end
 	if terminalText then
 		terminalText.Text = string.format(
 			"RBMK-800 UNIT 1   %02d:%02d:%02d\n\nPOWER  %7.2f %%  %5.0f MWT\nPERIOD %7.0f S\nMARGIN %7.0f RODS\nPRESS  %7.2f MPA %4.0f C\nFLOW   %7.0f T/H\nSTEAM  %7.0f  FEED %5.0f\nGROSS  %7.0f MWE",
@@ -8026,7 +8320,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		local age = os.clock() - destroyedAt
 		flashOverlay.BackgroundTransparency = math.clamp(age / 2.5, 0, 1)
 		if age < 6 and camera then
-			local k = 0.5 * (1 - age / 6)
+			local k = 0.3 * (1 - age / 6)
 			camera.CFrame *= CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
 		end
 	end
@@ -8054,6 +8348,8 @@ local AlarmList = require(Shared.AlarmList)
 local Panels = {}
 
 local PPS = PanelLayout.PIXELS_PER_STUD
+-- Widgets are placed and sized in board units; parts are made in studs.
+local S = PanelLayout.SCALE
 
 local INK = Color3.fromRGB(24, 26, 28)
 local PAPER = Color3.fromRGB(236, 232, 214)
@@ -8078,7 +8374,16 @@ local BUTTON = {
 	white = Color3.fromRGB(235, 235, 228),
 	black = Color3.fromRGB(34, 34, 36),
 }
-local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50) }
+local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50), violet = Color3.fromRGB(120, 40, 150) }
+-- Mimic line colours: reactor water blue, steam red, feedwater and
+-- condensate green, emergency cooling orange, power black.
+local MIMIC = {
+	water = Color3.fromRGB(46, 84, 168),
+	steam = Color3.fromRGB(190, 48, 36),
+	feed = Color3.fromRGB(36, 120, 64),
+	eccs = Color3.fromRGB(222, 128, 26),
+	power = Color3.fromRGB(28, 28, 30),
+}
 local ROD_COLOR = {
 	RR = Color3.fromRGB(200, 200, 200),
 	AR = Color3.fromRGB(70, 220, 100),
@@ -8132,17 +8437,27 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	return t
 end
 
--- An engraved nameplate: white lettering on a black laminate strip, the way
--- every label in a real control room is made.
-local PLATE = Color3.fromRGB(22, 22, 24)
-local PLATE_TEXT = Color3.fromRGB(240, 240, 232)
-local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number): TextLabel
-	local t = text(parent, x, y, w, h, str, size, PLATE_TEXT)
+-- Engraved laminate nameplates, the way every label in a real control room
+-- is made: black lettering on white for each device, white on black for
+-- system titles and panel numbers.
+local PLATE = Color3.fromRGB(238, 236, 228)
+local PLATE_TEXT = Color3.fromRGB(22, 22, 24)
+local TITLE_PLATE = Color3.fromRGB(22, 22, 24)
+local TITLE_TEXT = Color3.fromRGB(240, 240, 232)
+local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number, dark: boolean?): TextLabel
+	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT)
 	t.BackgroundTransparency = 0
-	t.BackgroundColor3 = PLATE
+	t.BackgroundColor3 = if dark then TITLE_PLATE else PLATE
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 2)
 	c.Parent = t
+	if not dark then
+		local edge = Instance.new("UIStroke")
+		edge.Color = Color3.fromRGB(120, 116, 104)
+		edge.Thickness = 1
+		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		edge.Parent = t
+	end
 	return t
 end
 
@@ -8169,7 +8484,7 @@ local function basePart(folder: Instance, size: Vector3, color: Color3): Part
 	p.CastShadow = false
 	p.Material = Enum.Material.SmoothPlastic
 	p.Color = color
-	p.Size = size
+	p.Size = size * S
 	p.Parent = folder
 	return p
 end
@@ -8212,6 +8527,10 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 end
 
 local BEZEL = Color3.fromRGB(34, 35, 38)
+-- Annunciator windows are milky white plastic, lit from behind.
+local ANN_DARK = Color3.fromRGB(204, 200, 186)
+local ANN_DARK_TEXT = Color3.fromRGB(58, 56, 50)
+local ANN_SPARE = Color3.fromRGB(196, 192, 178)
 
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
@@ -8272,13 +8591,15 @@ function Panels.build(room: Instance, ctx: Context)
 		f.BackgroundTransparency = 1
 		outline(f, Color3.fromRGB(60, 54, 44), 2)
 		if w.label ~= "" then
-			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135)
+			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135, true)
 		end
 	end
 
 	builders.label = function(gui, _face, _part, w)
 		if w.title then
-			plate(gui, w.x, w.y, w.w, w.h, w.label, 0.28)
+			-- The panel number and name on a modest plate centred at the top.
+			local pw = math.min(w.w, #w.label * 0.15 + 0.8)
+			plate(gui, w.x + (w.w - pw) / 2, w.y + 0.02, pw, w.h - 0.06, w.label, 0.22, true)
 			return
 		end
 		local t = text(gui, w.x, w.y, w.w, w.h, w.label, if w.small then 0.16 else 0.18, INK)
@@ -8415,7 +8736,7 @@ function Panels.build(room: Instance, ctx: Context)
 		cylinder(controls, face, cx, cy, d + 0.12, 0.06, Color3.fromRGB(186, 186, 190)).Material = Enum.Material.Metal
 		region(part, w, function(_button: number)
 			ctx.click()
-			cap.CFrame = home - face.normal * 0.06
+			cap.CFrame = home - face.normal * 0.06 * S
 			task.delay(0.15, function()
 				cap.CFrame = home
 			end)
@@ -8508,7 +8829,7 @@ function Panels.build(room: Instance, ctx: Context)
 		cylinder(controls, face, cx, cy, 0.5, 0.12, Color3.fromRGB(40, 42, 46))
 		local pointer = block(controls, face, cx, cy, 0.09, 0.5, 0.18, Color3.fromRGB(230, 230, 225), 0)
 		-- A legend window under the knob shows the selected position.
-		local readout = plate(gui, w.x + 0.08, w.y + 0.94, w.w - 0.16, 0.27, "", 0.15)
+		local readout = plate(gui, w.x + 0.08, w.y + 0.94, w.w - 0.16, 0.27, "", 0.15, true)
 		local function index(): number
 			return math.clamp(math.floor(get(w.sig) - w.base + 1.5), 1, n)
 		end
@@ -8561,7 +8882,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local up = u > w.x + w.w / 2
 			local cap = if up then raise else lower
 			local home = if up then raiseHome else lowerHome
-			cap.CFrame = home - face.normal * 0.05
+			cap.CFrame = home - face.normal * 0.05 * S
 			task.delay(0.2, function()
 				cap.CFrame = home
 			end)
@@ -8571,54 +8892,114 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
+	-- A strip-chart recorder: a dark case with a glazed door, chart paper
+	-- ruled in ten divisions, and pens that write along a line near the top
+	-- of the window while the paper carries the trace down and away. A
+	-- legend under the window names each pen and its range.
 	builders.recorder = function(gui, face, part, w)
-		plate(gui, w.x, w.y, math.min(w.w, #w.label * 0.082 + 0.3), 0.21, w.label, 0.12)
-		local gx, gy, gw, gh = w.x, w.y + 0.26, w.w, w.h - 0.3
-		local paper = box(gui, gx, gy, gw, gh, PAPER)
-		outline(paper, Color3.fromRGB(40, 40, 40), 2)
-		bezel(controls, face, gx, gy, gw, gh, 0.12, BEZEL, 0.07)
-		for i = 1, 3 do
-			box(gui, gx, gy + gh * i / 4, gw, 0.012, Color3.fromRGB(190, 186, 170))
+		plate(gui, w.x + 0.1, w.y, w.w - 0.2, 0.22, w.label, 0.115)
+		local cx, cy, cw, ch = w.x, w.y + 0.27, w.w, w.h - 0.27
+		local case = box(gui, cx, cy, cw, ch, Color3.fromRGB(58, 60, 62))
+		outline(case, Color3.fromRGB(30, 30, 32), 2)
+		bezel(controls, face, cx, cy, cw, ch, 0.16, Color3.fromRGB(44, 46, 48), 0.07)
+		local legendH = 0.12 * #w.pens + 0.08
+		local gx, gy, gw, gh = cx + 0.12, cy + 0.1, cw - 0.24, ch - 0.22 - legendH
+		box(gui, gx, gy, gw, gh, Color3.fromRGB(240, 241, 230))
+		bezel(controls, face, gx, gy, gw, gh, 0.05, Color3.fromRGB(24, 24, 26), 0.03)
+		-- Ruling: ten value divisions, a heavier line every fifth, and time
+		-- lines across the paper.
+		for i = 0, 10 do
+			local line = box(gui, gx + gw * i / 10 - 0.006, gy, 0.012, gh, if i % 5 == 0 then Color3.fromRGB(122, 162, 126) else Color3.fromRGB(184, 206, 184))
+			line.ZIndex = 2
 		end
-		local N = 120
+		for i = 1, 7 do
+			local line = box(gui, gx, gy + gh * i / 8, gw, 0.01, Color3.fromRGB(196, 214, 196))
+			line.ZIndex = 2
+		end
+		-- Scale figures along the top edge, for the first pen's range.
+		local first = w.pens[1]
+		for i = 0, 2 do
+			local v = first.lo + (first.hi - first.lo) * i / 2
+			local label = text(gui, gx + gw * i / 2 - 0.3, gy + 0.02, 0.6, 0.12, string.format(if math.abs(v) >= 100 or v % 1 == 0 then "%.0f" else "%.1f", v), 0.09, Color3.fromRGB(70, 96, 72), Enum.Font.SourceSans)
+			label.ZIndex = 3
+		end
+		-- Glass in the door.
+		local glass = block(controls, face, gx + gw / 2, gy + gh / 2, gw, gh, 0.02, Color3.fromRGB(200, 220, 230))
+		glass.CFrame = blockCFrame(face, gx + gw / 2, gy + gh / 2, 0.12, 0)
+		glass.Material = Enum.Material.Glass
+		glass.Transparency = 0.88
+		glass.Reflectance = 0.08
+		-- Door latch.
+		cylinder(controls, face, cx + cw - 0.06, cy + ch / 2, 0.07, 0.1, Color3.fromRGB(150, 150, 150)).Material = Enum.Material.Metal
+		local penY = gy + 0.16
+		local N = 48
+		local stepY = (gh - 0.2) / N
 		local pens = {}
-		for _, pen in w.pens do
+		for k, pen in w.pens do
+			local legend = text(gui, cx + 0.12, gy + gh + 0.04 + (k - 1) * 0.12, cw - 0.24, 0.12, string.format("%s  %s  %g to %g %s", string.upper(pen.color), pen.name or "", pen.lo, pen.hi, pen.unit or ""), 0.085, Color3.fromRGB(226, 226, 218), Enum.Font.SourceSans)
+			legend.TextXAlignment = Enum.TextXAlignment.Left
+			legend.TextWrapped = false
 			local dots = table.create(N)
 			for i = 1, N do
-				local d = box(gui, gx, gy, 0.035, 0.035, PEN[pen.color])
+				local d = box(gui, gx, gy, 0.03, stepY + 0.012, PEN[pen.color])
 				d.Visible = false
+				d.ZIndex = 4
 				dots[i] = d
 			end
-			table.insert(pens, { def = pen, dots = dots, values = {} :: { number } })
+			local index = box(gui, gx, penY - 0.07, 0.05, 0.14, PEN[pen.color])
+			index.ZIndex = 5
+			table.insert(pens, { def = pen, dots = dots, index = index, values = {} :: { number } })
 		end
 		local lastSample = -math.huge
 		table.insert(updaters, function()
 			local now = os.clock()
-			if now - lastSample < 4 then
-				return
+			local sample = now - lastSample >= 5
+			if sample then
+				lastSample = now
 			end
-			lastSample = now
 			for _, pen in pens do
-				local values = pen.values
-				table.insert(values, math.clamp((get(pen.def.sig) - pen.def.lo) / (pen.def.hi - pen.def.lo), 0, 1))
-				if #values > N then
-					table.remove(values, 1)
-				end
-				local count = #values
-				for i = 1, count do
-					local d = pen.dots[i]
-					d.Visible = true
-					d.Position = UDim2.fromOffset(px(gx + gw * (N - count + i - 0.5) / N), px(gy + gh * (1 - values[i])) - 1)
+				local f = math.clamp((get(pen.def.sig) - pen.def.lo) / (pen.def.hi - pen.def.lo), 0, 1)
+				pen.index.Position = UDim2.fromOffset(px(gx + gw * f - 0.025), px(penY - 0.07))
+				if sample then
+					local values = pen.values
+					if #values == 0 then
+						-- The chart has been running all along: start with a
+						-- steady trace at the present value.
+						for _ = 1, N - 1 do
+							table.insert(values, f)
+						end
+					end
+					table.insert(values, 1, f)
+					if #values > N then
+						table.remove(values)
+					end
+					for i, v in values do
+						local d = pen.dots[i]
+						d.Visible = true
+						d.Position = UDim2.fromOffset(px(gx + gw * v - 0.015), px(penY + (i - 1) * stepY))
+					end
 				end
 			end
 		end)
 		region(part, w, nil, function()
 			local parts = { cleanLabel(w.label) }
 			for _, pen in w.pens do
-				table.insert(parts, string.format("%s pen: %.1f", pen.color, get(pen.sig)))
+				table.insert(parts, string.format("%s pen, %s: %.1f %s", pen.color, pen.name or pen.sig, get(pen.sig), pen.unit or ""))
 			end
 			return table.concat(parts, "\n")
 		end)
+	end
+
+	-- Mimic lines: coloured strips painted on the board that trace a flow
+	-- path between the switches of the equipment on it.
+	builders.mimic = function(gui, _face, _part, w)
+		local t = w.width or 0.07
+		local pts = w.pts
+		for i = 1, #pts - 1 do
+			local x1, y1, x2, y2 = pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2]
+			local seg = box(gui, math.min(x1, x2) - t / 2, math.min(y1, y2) - t / 2, math.abs(x2 - x1) + t, math.abs(y2 - y1) + t, MIMIC[w.color] or INK)
+			seg.ZIndex = 0
+		end
 	end
 
 	builders.ann = function(gui, face, part, w)
@@ -8634,8 +9015,8 @@ function Panels.build(room: Instance, ctx: Context)
 		for i, alarm in w.alarms do
 			local c, r = (i - 1) % cols, (i - 1) // cols
 			if r < rows then
-				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(168, 164, 150))
-				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, Color3.fromRGB(74, 72, 64))
+				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, ANN_DARK)
+				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.15, ANN_DARK_TEXT)
 				local index = AlarmList.index[alarm.id]
 				local urgent = alarm.id == "az5" or alarm.id == "chan.rupture" or alarm.id == "core.damage" or alarm.id == "rs.press"
 				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent }
@@ -8643,7 +9024,7 @@ function Panels.build(room: Instance, ctx: Context)
 		end
 		for i = #w.alarms + 1, cols * rows do
 			local c, r = (i - 1) % cols, (i - 1) // cols
-			box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, Color3.fromRGB(150, 146, 134))
+			box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, ANN_SPARE)
 		end
 		table.insert(regions[part], {
 			x = 0,
@@ -8673,7 +9054,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local oy = px(w.y) + px(0.3)
 		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
 		local _ = back
-		local title = plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "CHANNEL CARTOGRAM", 0.13)
+		local title = plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "CHANNEL CARTOGRAM", 0.13, true)
 		local frames = table.create(L.nCells)
 		local lastByte = table.create(L.nCells, -1)
 		for c = 1, L.nCells do
@@ -8847,7 +9228,7 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.axial = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
 		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(14, 14, 16))
-		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "AXIAL", 0.13)
+		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "AXIAL", 0.13, true)
 		text(gui, w.x, w.y + 0.3, w.w, 0.18, "TOP", 0.11, Color3.fromRGB(190, 190, 180))
 		text(gui, w.x, w.y + w.h - 0.2, w.w, 0.18, "BOTTOM", 0.11, Color3.fromRGB(190, 190, 180))
 		local N = 14
@@ -8974,7 +9355,7 @@ function Panels.build(room: Instance, ctx: Context)
 			gui.Name = "Artwork"
 			gui.Face = Enum.NormalId.Front
 			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-			gui.PixelsPerStud = PPS
+			gui.PixelsPerStud = PPS / S
 			gui.LightInfluence = 0
 			gui.ResetOnSpawn = false
 			gui.Adornee = part
@@ -9009,8 +9390,8 @@ function Panels.build(room: Instance, ctx: Context)
 					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(240, 40, 30) else Color3.fromRGB(255, 252, 226)
 					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(10, 10, 10)
 				else
-					t.tile.BackgroundColor3 = Color3.fromRGB(168, 164, 150)
-					t.label.TextColor3 = Color3.fromRGB(74, 72, 64)
+					t.tile.BackgroundColor3 = ANN_DARK
+					t.label.TextColor3 = ANN_DARK_TEXT
 				end
 			end
 		end

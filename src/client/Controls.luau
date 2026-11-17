@@ -14,7 +14,7 @@ local PanelLayout = require(Shared.PanelLayout)
 
 local Controls = {}
 
-local REACH = 70 -- studs
+local REACH = 40 -- studs
 local HOLD_REFRESH = 0.25
 local VIEWS = { "bench", "board", "wide" }
 
@@ -128,15 +128,19 @@ function Controls.start(built: any, ctx: any)
 		end
 		local origin, _, back = PanelLayout.panelFrame(viewing)
 		local up = Vector3.new(0, 1, 0)
+		-- A point above the floor and in front of the bench, in board units.
+		local function at(height: number, out: number): Vector3
+			return origin + (up * height + back * out) * PanelLayout.SCALE
+		end
 		local mode = VIEWS[view]
 		if mode == "bench" then
 			local bench = PanelLayout.face(viewing, "bench")
-			targetCF = CFrame.lookAt(origin + up * 9.4 + back * 2.6, bench.center)
+			targetCF = CFrame.lookAt(at(11.3, 2.6), bench.center)
 		elseif mode == "board" then
 			local board = PanelLayout.face(viewing, "vert")
-			targetCF = CFrame.lookAt(origin + up * 8.6 + back * 6.4, board.center)
+			targetCF = CFrame.lookAt(at(10.5, 6.4), board.center)
 		else
-			targetCF = CFrame.lookAt(origin + up * 9.5 + back * 14, origin + up * 7.2)
+			targetCF = CFrame.lookAt(at(11.4, 14), at(9.1, 0))
 		end
 	end
 
@@ -146,10 +150,10 @@ function Controls.start(built: any, ctx: any)
 		if not root then
 			return nil
 		end
-		local best, bestD = nil, 26
+		local best, bestD = nil, 26 * PanelLayout.SCALE
 		for _, p in PanelLayout.panels do
 			local origin, _, back = PanelLayout.panelFrame(p.index)
-			local d = (root.Position - (origin + back * 4)).Magnitude
+			local d = (root.Position - (origin + back * 4 * PanelLayout.SCALE)).Magnitude
 			if d < bestD then
 				best, bestD = p.index, d
 			end
