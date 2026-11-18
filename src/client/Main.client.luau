@@ -102,11 +102,11 @@ do
 		paperText = typed(surface(paperPart, 220), 11, Color3.fromRGB(30, 30, 34))
 		paperText.TextYAlignment = Enum.TextYAlignment.Bottom
 	end
-	-- The shift status board, kept up in marker by the operators.
+	-- The shift chalkboard, kept up by the operators.
 	local boardPart = room:WaitForChild("StatusBoard", 10)
 	if boardPart then
-		boardText = typed(surface(boardPart, 60), 19, Color3.fromRGB(28, 40, 120))
-		boardText.Font = Enum.Font.PermanentMarker
+		boardText = typed(surface(boardPart, 60), 20, Color3.fromRGB(236, 236, 226))
+		boardText.Font = Enum.Font.PatrickHand
 		boardText.Position = UDim2.fromOffset(18, 10)
 		boardText.Size = UDim2.new(1, -30, 1, -16)
 	end

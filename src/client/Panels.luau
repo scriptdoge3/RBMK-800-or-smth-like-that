@@ -338,7 +338,7 @@ function Panels.build(room: Instance, ctx: Context)
 	builders.section = function(gui, _face, _part, w)
 		local f = box(gui, w.x, w.y, w.w, w.h, Color3.new(0, 0, 0))
 		f.BackgroundTransparency = 1
-		outline(f, Color3.fromRGB(60, 54, 44), 2)
+		outline(f, Color3.fromRGB(44, 48, 46), 2)
 		if w.label ~= "" then
 			plate(gui, w.x + 0.06, w.y + 0.04, math.min(w.w - 0.12, #w.label * 0.098 + 0.3), 0.2, w.label, 0.135, true)
 		end

@@ -39,8 +39,10 @@ export type Panel = { id: string, title: string, index: number, widgets: { Widge
 local panels: { Panel } = {}
 local current: Panel
 
+-- Panels carry GE-style numbers on their title plates: H11-P601 and on.
 local function panel(id: string, title: string)
-	current = { id = id, title = title, index = #panels + 1, widgets = {} }
+	local index = #panels + 1
+	current = { id = id, title = title, index = index, number = "H11-P60" .. index, widgets = {} }
 	table.insert(panels, current)
 end
 
@@ -118,7 +120,7 @@ end
 
 local function annunciators()
 	add({ kind = "ann", face = "ann", x = 0, y = 0, w = PanelLayout.PANEL_WIDTH, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
-	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = 15.6, h = 0.42, label = current.id .. "  " .. current.title, title = true })
+	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = 15.6, h = 0.42, label = current.number .. "   " .. current.title, title = true })
 end
 
 -- ------------------------------------------------------------------ P1

@@ -45,41 +45,52 @@ The server needs a few seconds at startup to design the core ("Commissioning the
 | Mouse wheel | While seated: zoom. |
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
-The boards form an L, after a late-1970s American boiling-water-reactor control room:
-**P1** reactor auxiliaries and emergency cooling and **P2** main circulation on the left
-wing, and **P4** feedwater, **P5** turbines and **P6** electrical along the back wall, the
-two runs square to each other. **P3** reactor control (rod controls, AZ-5, cartogram)
+The room is set in 1979: an RBMK built in the United States, with an American control
+room of the period, laid out and equipped the way General Electric boiling-water-reactor
+plants were. The boards form an L, numbered GE-style: **H11-P601** reactor auxiliaries
+and emergency cooling and **H11-P602** main circulation on the left wing, and **H11-P604**
+feedwater, **H11-P605** turbines and **H11-P606** electrical along the back wall, the two
+runs square to each other. **H11-P603** reactor control (rod controls, AZ-5, cartogram)
 stands in the corner itself, set across it at 45 degrees, with the cabinets behind it
-filled out to the square corner. A U-shaped operators' console faces the corner, so the
-reactor panel is straight ahead of it. Every server runs one shared unit; anyone can
-operate any panel.
+filled out to the square corner. The operators' desks face the corner, so the reactor
+panel is straight ahead. RBMK terms (AZ-5, KOM, ORM, cartogram) are kept. Every server
+runs one shared unit; anyone can operate any panel.
 
 The room is life-size around a standard Roblox character: the bench front is at hip
-height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.76 m
-high and the ceiling is 3.8 m up. Everything in it is dated before 1986: edgewise
-meters graduated in twenty divisions with the unit on the dial, strip-chart recorders
-with ruled chart paper behind glass, pistol-grip control switches with red and green
-indicating lamps (white on mode switches), key-operated bypass switches, raise/lower
-pushbuttons with small position indicators, white engraved nameplates, coloured mimic
-lines tracing the flow paths (reactor water blue, steam red, feedwater green, power
-black), backlit annunciator windows, a lamp-mosaic channel cartogram, an orange
-bargraph for the axial power shape, seven-segment digital panel meters where a number
-matters (power, period, reactivity, margin, rod positions, setpoints) and a
-green-phosphor unit computer. Hover over any meter for its exact reading. The console carries two video terminals (unit summary and
-alarm summary), dial telephones (the red one is the grid dispatcher) and binders, with
-an alarm teleprinter beside it; behind it are the shift supervisor's desk, a bookcase
-of procedures and a shift status board kept up to date in marker. The room is lit by
-fluorescent troffers in an acoustic tile ceiling, with Future lighting.
+height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.74 m
+high and the ceiling is 3.8 m up. Nothing in it is later than 1979:
+
+- **Boards**: pale gray-green benchboards with a black rubber bumper and kick strip;
+  edgewise meters graduated in twenty divisions with the unit on the dial; strip-chart
+  recorders with ruled paper behind glass; pistol-grip control switches with red and
+  green indicating lamps (white on mode switches); key-operated bypass switches;
+  raise/lower pushbuttons with small position indicators; white engraved nameplates;
+  coloured mimic lines (reactor water blue, steam red, feedwater green, power black);
+  backlit annunciator windows; a lamp-mosaic channel cartogram; an orange bargraph for
+  the axial power shape; seven-segment digital panel meters only where a number matters
+  (power, period, reactivity, margin, rod positions, setpoints); and a green-phosphor
+  process computer display. Hover over any meter for its exact reading.
+- **Room**: waxed vinyl tile floor with a black rubber cove base, walnut paneling on the
+  back wall, an acoustic tile ceiling with fluorescent troffers, a lit exit sign and an
+  electric wall clock.
+- **Furniture**: two steel operators' desks with key telephones (the red one is the
+  direct line to the grid dispatcher), logbooks and binders; the plant process
+  computer's console with two green CRTs (unit summary and alarm summary); a GE TermiNet
+  alarm typer printing the event log; a floor-standing ashtray; the shift supervisor's
+  desk; steel shelving of procedures; file cabinets; and a chalkboard where the shift
+  status is kept up to date.
+
+The place is set up for Roblox's Future lighting.
 
 Where the RBMK features are on the boards:
 
 | Feature | Where |
 | --- | --- |
-| AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | P3 bench, EMERGENCY PROTECTION |
-| Shutdown (AZ) rods, shortened rods (USP), regulators | P3 bench, group select and rod motion |
-| Void coefficient, operational reactivity margin (ORM) | P3 board, beside reactivity |
-| Channel ruptures and reactor space pressure | P1 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
-| Positive scram | watch POWER RANGE and PERIOD on P3 in the first seconds after AZ-5 |
+| AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | P603 bench, EMERGENCY PROTECTION |
+| Shutdown (AZ) rods, shortened rods (USP), regulators | P603 bench, group select and rod motion |
+| Void coefficient, operational reactivity margin (ORM) | P603 board, beside reactivity |
+| Channel ruptures and reactor space pressure | P601 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
+| Positive scram | watch POWER RANGE and PERIOD on P603 in the first seconds after AZ-5 |
 
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,

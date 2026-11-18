@@ -4,14 +4,16 @@
 -- are plain parts with known names; each client dresses them with
 -- instruments and controls from the shared layout.
 --
--- The look follows an American boiling-water-reactor control room of the
--- late 1970s and early 1980s: cream boards with wood trim in an L around a
--- square corner, the reactor panel set across the corner itself, annunciator
--- windows along the top, a red carpet, an acoustic tile ceiling with
--- fluorescent troffers, and a U-shaped operators' console facing the reactor
--- panel with the things of the period on it: video terminals, an alarm
--- teleprinter, telephones, binders and logbooks. Nothing here is later than
--- 1985.
+-- The look is an American-built control room of 1979, laid out and
+-- furnished like a General Electric boiling-water-reactor plant of the day
+-- and adapted to the RBMK: pale gray-green benchboards with black rubber
+-- trim in an L around a square corner, the reactor panel set across the
+-- corner itself, annunciator windows along the top, a waxed vinyl tile
+-- floor, an acoustic tile ceiling with fluorescent troffers, and steel
+-- office furniture: two operators' desks with key telephones, the process
+-- computer's console with its two CRTs, a GE TermiNet alarm typer, the
+-- shift supervisor's desk, steel shelving of procedures and a chalkboard.
+-- Nothing in the room is later than 1979.
 --
 -- Everything is laid out in board units (see PanelLayout) and scaled to
 -- studs at the end, so the room comes out life-size around a standard
@@ -24,20 +26,25 @@ local RoomBuilder = {}
 -- Board units per metre.
 local M = 5.5
 
-local PANEL_COLOR = Color3.fromRGB(226, 212, 172)
-local BENCH_COLOR = Color3.fromRGB(224, 209, 168)
-local CABINET_COLOR = Color3.fromRGB(208, 194, 156)
--- The front of the bench base is a brown laminate, as in the period.
-local BASE_COLOR = Color3.fromRGB(150, 104, 70)
-local ANN_COLOR = Color3.fromRGB(44, 40, 38)
-local WOOD = Color3.fromRGB(116, 62, 42)
+-- Benchboards in the pale gray-green GE used in the 1970s, with a black
+-- rubber bumper along the bench and a black kick strip.
+local PANEL_COLOR = Color3.fromRGB(178, 191, 180)
+local BENCH_COLOR = Color3.fromRGB(184, 196, 186)
+local CABINET_COLOR = Color3.fromRGB(162, 175, 165)
+local BASE_COLOR = Color3.fromRGB(150, 163, 153)
+local CAP_COLOR = Color3.fromRGB(122, 134, 126)
+local RUBBER = Color3.fromRGB(34, 34, 36)
+local ANN_COLOR = Color3.fromRGB(44, 44, 44)
+local WOOD = Color3.fromRGB(104, 70, 46)
 local DARK = Color3.fromRGB(40, 38, 38)
-local CARPET = Color3.fromRGB(122, 40, 38)
-local WALL = Color3.fromRGB(214, 206, 186)
+local FLOOR_TILE = Color3.fromRGB(186, 180, 164)
+local WALL = Color3.fromRGB(226, 222, 208)
 local TILE = Color3.fromRGB(232, 230, 222)
-local LAMINATE = Color3.fromRGB(222, 210, 178)
-local CONSOLE = Color3.fromRGB(204, 192, 160)
+-- Steel office furniture: gray enamel with tan laminate tops.
+local LAMINATE = Color3.fromRGB(204, 188, 150)
+local DESK_STEEL = Color3.fromRGB(128, 132, 128)
 local STEEL = Color3.fromRGB(150, 152, 150)
+local CHROME = Color3.fromRGB(196, 198, 200)
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
 	local p = Instance.new("Part")
@@ -89,8 +96,8 @@ end
 -- An office swivel chair: upholstered seat and back, arms, a gas column and
 -- a five-star base. `at` is the floor point under the seat; the sitter
 -- faces -Z.
-local function chair(parent: Instance, at: CFrame)
-	local fabric = Color3.fromRGB(64, 70, 84)
+local function chair(parent: Instance, at: CFrame, fabric: Color3?)
+	fabric = fabric or Color3.fromRGB(176, 92, 36)
 	local seatY = 0.47 * M
 	prop(parent, "ChairSeat", Vector3.new(0.48 * M, 0.08 * M, 0.46 * M), at * CFrame.new(0, seatY - 0.04 * M, 0), fabric, Enum.Material.Fabric)
 	prop(parent, "ChairBack", Vector3.new(0.44 * M, 0.5 * M, 0.07 * M), at * CFrame.new(0, seatY + 0.33 * M, 0.25 * M) * CFrame.Angles(math.rad(-10), 0, 0), fabric, Enum.Material.Fabric)
@@ -98,44 +105,86 @@ local function chair(parent: Instance, at: CFrame)
 		prop(parent, "ChairArm", Vector3.new(0.05 * M, 0.04 * M, 0.3 * M), at * CFrame.new(side * 0.26 * M, seatY + 0.2 * M, 0.02 * M), DARK)
 		prop(parent, "ChairArmPost", Vector3.new(0.04 * M, 0.2 * M, 0.04 * M), at * CFrame.new(side * 0.26 * M, seatY + 0.1 * M, 0.08 * M), DARK)
 	end
-	prop(parent, "ChairColumn", Vector3.new(0.06 * M, seatY - 0.1 * M, 0.06 * M), at * CFrame.new(0, (seatY - 0.1 * M) / 2 + 0.05 * M, 0), Color3.fromRGB(70, 70, 74), Enum.Material.Metal)
+	prop(parent, "ChairColumn", Vector3.new(0.06 * M, seatY - 0.1 * M, 0.06 * M), at * CFrame.new(0, (seatY - 0.1 * M) / 2 + 0.05 * M, 0), CHROME, Enum.Material.Metal)
 	for k = 0, 4 do
 		prop(parent, "ChairLeg", Vector3.new(0.05 * M, 0.04 * M, 0.32 * M), at * CFrame.new(0, 0.06 * M, 0) * CFrame.Angles(0, k * math.pi * 2 / 5, 0) * CFrame.new(0, 0, 0.16 * M), DARK)
 		prop(parent, "ChairCaster", Vector3.new(0.05 * M, 0.05 * M, 0.05 * M), at * CFrame.new(0, 0.025 * M, 0) * CFrame.Angles(0, k * math.pi * 2 / 5, 0) * CFrame.new(0, 0, 0.3 * M), DARK)
 	end
 end
 
--- A late-1970s video terminal: a moulded case with a small green-phosphor
--- tube and a separate keyboard. The client puts live data on the screen.
--- `at` is the desk-top point under the middle of the case; it faces +Z.
-local function terminal(parent: Instance, at: CFrame, index: number)
-	local case = Color3.fromRGB(206, 198, 176)
-	prop(parent, "TerminalCase", Vector3.new(0.46 * M, 0.34 * M, 0.42 * M), at * CFrame.new(0, 0.2 * M, -0.05 * M), case)
-	prop(parent, "TerminalFoot", Vector3.new(0.3 * M, 0.03 * M, 0.3 * M), at * CFrame.new(0, 0.015 * M, -0.05 * M), Color3.fromRGB(120, 116, 106))
-	prop(parent, "TerminalBezel", Vector3.new(0.38 * M, 0.27 * M, 0.02 * M), at * CFrame.new(0, 0.21 * M, 0.165 * M), Color3.fromRGB(46, 44, 42))
-	local screen = prop(parent, "DeskScreen" .. index, Vector3.new(0.3 * M, 0.21 * M, 0.01 * M), at * CFrame.new(0, 0.21 * M, 0.178 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(8, 22, 12))
-	screen:SetAttribute("DeskScreen", index)
-	prop(parent, "Keyboard", Vector3.new(0.46 * M, 0.04 * M, 0.18 * M), at * CFrame.new(0, 0.025 * M, 0.34 * M) * CFrame.Angles(math.rad(5), 0, 0), case)
-	prop(parent, "Keys", Vector3.new(0.4 * M, 0.012 * M, 0.13 * M), at * CFrame.new(0, 0.05 * M, 0.34 * M) * CFrame.Angles(math.rad(5), 0, 0), Color3.fromRGB(70, 66, 60))
+-- The process computer's operator console: a gray steel desk-height
+-- cabinet with a sloping keyboard shelf and a hood carrying two
+-- green-phosphor CRTs. The client puts the unit summary on the left screen
+-- and the alarm summary on the right. `at` is the floor point under the
+-- middle of its front edge; the operator stands or sits on its +Z side.
+local function computerConsole(parent: Instance, at: CFrame)
+	local w, d = 1.5 * M, 0.75 * M
+	local body = Color3.fromRGB(150, 154, 150)
+	prop(parent, "ComputerBase", Vector3.new(w, 0.72 * M, d), at * CFrame.new(0, 0.36 * M, -d / 2), body)
+	prop(parent, "ComputerKick", Vector3.new(w - 0.04 * M, 0.08 * M, d - 0.06 * M), at * CFrame.new(0, 0.04 * M, -d / 2 - 0.02 * M), RUBBER)
+	-- Keyboard shelf, sloping toward the operator.
+	prop(parent, "ComputerShelf", Vector3.new(w, 0.04 * M, 0.34 * M), at * CFrame.new(0, 0.76 * M, -0.17 * M) * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(90, 92, 90))
+	for k, x in { -0.37 * M, 0.37 * M } do
+		prop(parent, "ComputerKeyboard", Vector3.new(0.5 * M, 0.035 * M, 0.2 * M), at * CFrame.new(x, 0.8 * M, -0.17 * M) * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(196, 190, 170))
+		prop(parent, "ComputerKeys", Vector3.new(0.44 * M, 0.012 * M, 0.15 * M), at * CFrame.new(x, 0.822 * M, -0.17 * M) * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(70, 66, 60))
+		-- The CRT in its hood, tipped back toward the operator's eyes.
+		local hood = at * CFrame.new(x, 1.06 * M, -0.52 * M) * CFrame.Angles(math.rad(-12), 0, 0)
+		prop(parent, "ComputerHood", Vector3.new(0.7 * M, 0.5 * M, 0.42 * M), hood, body)
+		prop(parent, "ComputerBezel", Vector3.new(0.5 * M, 0.38 * M, 0.02 * M), hood * CFrame.new(0, 0, 0.21 * M), Color3.fromRGB(36, 36, 38))
+		local screen = prop(parent, "DeskScreen" .. k, Vector3.new(0.34 * M, 0.26 * M, 0.01 * M), hood * CFrame.new(0, 0, 0.222 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(8, 22, 12))
+		screen:SetAttribute("DeskScreen", k)
+	end
+	local tag = prop(parent, "ComputerTag", Vector3.new(0.9 * M, 0.06 * M, 0.01 * M), at * CFrame.new(0, 1.36 * M, -0.36 * M) * CFrame.Angles(math.rad(-12), math.pi, 0), Color3.fromRGB(24, 24, 26))
+	sign(tag, "PLANT PROCESS COMPUTER", 14, Color3.fromRGB(236, 236, 228), 60)
 end
 
--- A desk telephone: a squat body, a rotary dial and the handset across the
--- cradle. `at` is the desk-top point under it; it faces +Z.
-local function telephone(parent: Instance, at: CFrame, color: Color3)
-	prop(parent, "Phone", Vector3.new(0.2 * M, 0.08 * M, 0.22 * M), at * CFrame.new(0, 0.04 * M, 0), color)
-	cylinderProp(parent, "PhoneDial", 0.11 * M, 0.01 * M, at * CFrame.new(0, 0.085 * M, 0.04 * M) * CFrame.Angles(0, 0, math.pi / 2) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(226, 224, 214))
+-- A steel office desk: tan laminate top with an aluminium edge, a gray
+-- enamel body, a modesty panel and a three-drawer pedestal on the right.
+-- `at` is the floor point under the middle of the desk; the user sits on
+-- its +Z side.
+local function steelDesk(parent: Instance, at: CFrame, length: number, depth: number)
+	local h = 0.74 * M
+	local top = 0.03 * M
+	prop(parent, "DeskTop", Vector3.new(length, top, depth), at * CFrame.new(0, h - top / 2, 0), LAMINATE).CanCollide = true
+	prop(parent, "DeskEdge", Vector3.new(length + 0.01 * M, top + 0.004 * M, 0.012 * M), at * CFrame.new(0, h - top / 2, depth / 2), CHROME, Enum.Material.Metal)
+	prop(parent, "DeskModesty", Vector3.new(length - 0.04 * M, h - top - 0.12 * M, 0.02 * M), at * CFrame.new(0, (h - top) / 2 + 0.06 * M, -depth / 2 + 0.04 * M), DESK_STEEL, Enum.Material.Metal)
+	local pw = 0.4 * M
+	local px = length / 2 - pw / 2
+	part(parent, "DeskPedestal", Vector3.new(pw, h - top, depth - 0.02 * M), at * CFrame.new(px, (h - top) / 2, 0), DESK_STEEL, Enum.Material.Metal)
+	prop(parent, "DeskLeg", Vector3.new(0.04 * M, h - top, depth - 0.04 * M), at * CFrame.new(-length / 2 + 0.02 * M, (h - top) / 2, 0), DESK_STEEL, Enum.Material.Metal)
+	for k = 0, 2 do
+		prop(parent, "DrawerFront", Vector3.new(pw - 0.04 * M, 0.2 * M, 0.012 * M), at * CFrame.new(px, 0.13 * M + k * 0.22 * M, depth / 2 - 0.004 * M), Color3.fromRGB(140, 144, 140), Enum.Material.Metal)
+		prop(parent, "DrawerPull", Vector3.new(0.14 * M, 0.02 * M, 0.02 * M), at * CFrame.new(px, 0.19 * M + k * 0.22 * M, depth / 2 + 0.006 * M), CHROME, Enum.Material.Metal)
+	end
+end
+
+-- A key telephone of the period: a squat body with a rotary dial, a row of
+-- clear line buttons along the front and the handset across the cradle.
+-- The red one is the direct line, with no dial. `at` is the desk-top point
+-- under it; it faces +Z.
+local function telephone(parent: Instance, at: CFrame, color: Color3, hotline: boolean?)
+	prop(parent, "Phone", Vector3.new(0.22 * M, 0.08 * M, 0.24 * M), at * CFrame.new(0, 0.04 * M, 0), color)
+	if not hotline then
+		cylinderProp(parent, "PhoneDial", 0.11 * M, 0.01 * M, at * CFrame.new(0, 0.085 * M, 0.03 * M) * CFrame.Angles(0, 0, math.pi / 2) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(226, 224, 214))
+		for i = 0, 5 do
+			prop(parent, "PhoneKey", Vector3.new(0.022 * M, 0.025 * M, 0.02 * M), at * CFrame.new(-0.075 * M + i * 0.03 * M, 0.05 * M, 0.125 * M), if i == 5 then Color3.fromRGB(200, 40, 34) else Color3.fromRGB(236, 236, 228))
+		end
+	end
 	prop(parent, "PhoneHandset", Vector3.new(0.22 * M, 0.05 * M, 0.06 * M), at * CFrame.new(0, 0.11 * M, -0.06 * M), color)
 	prop(parent, "PhoneCord", Vector3.new(0.02 * M, 0.02 * M, 0.12 * M), at * CFrame.new(-0.12 * M, 0.06 * M, -0.08 * M), color)
 end
 
--- The alarm typer: a floor-standing teleprinter that prints every event on
--- fan-fold paper. `at` is the floor point under it; the keyboard faces +Z.
+-- The alarm typer: a GE TermiNet printing terminal on its pedestal, which
+-- prints every event on fan-fold paper. `at` is the floor point under it;
+-- the keyboard faces +Z.
 local function teleprinter(parent: Instance, at: CFrame)
-	local case = Color3.fromRGB(150, 156, 150)
+	local case = Color3.fromRGB(214, 208, 190)
 	local h = 0.72 * M
-	prop(parent, "PrinterStand", Vector3.new(0.7 * M, h, 0.55 * M), at * CFrame.new(0, h / 2, 0), Color3.fromRGB(96, 100, 98))
+	prop(parent, "PrinterStand", Vector3.new(0.7 * M, h, 0.55 * M), at * CFrame.new(0, h / 2, 0), Color3.fromRGB(84, 80, 74))
 	prop(parent, "PrinterBody", Vector3.new(0.72 * M, 0.16 * M, 0.6 * M), at * CFrame.new(0, h + 0.08 * M, 0), case)
-	prop(parent, "PrinterCover", Vector3.new(0.68 * M, 0.08 * M, 0.26 * M), at * CFrame.new(0, h + 0.2 * M, -0.14 * M), Color3.fromRGB(70, 74, 72))
+	prop(parent, "PrinterCover", Vector3.new(0.68 * M, 0.08 * M, 0.26 * M), at * CFrame.new(0, h + 0.2 * M, -0.14 * M), Color3.fromRGB(96, 88, 78))
+	local badge = prop(parent, "PrinterBadge", Vector3.new(0.2 * M, 0.04 * M, 0.005 * M), at * CFrame.new(0.2 * M, h + 0.11 * M, 0.302 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(40, 40, 40))
+	sign(badge, "GE TermiNet", 12, Color3.fromRGB(230, 230, 220), 120)
 	prop(parent, "PrinterKeys", Vector3.new(0.56 * M, 0.02 * M, 0.18 * M), at * CFrame.new(0, h + 0.17 * M, 0.18 * M) * CFrame.Angles(math.rad(8), 0, 0), Color3.fromRGB(52, 54, 52))
 	-- The sheet rises out of the platen and leans back over the cover.
 	local paper = prop(parent, "PrinterPaper", Vector3.new(0.58 * M, 0.42 * M, 0.005 * M), at * CFrame.new(0, h + 0.44 * M, -0.12 * M) * CFrame.Angles(math.rad(-12), math.pi, 0), Color3.fromRGB(240, 238, 224))
@@ -179,17 +228,33 @@ function RoomBuilder.build(): Folder
 	local west, east, north, south = -50, 34, -50, 28
 	local width, length, height = east - west, south - north, 3.8 * M
 	local cx, cz = (west + east) / 2, (north + south) / 2
-	part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), CARPET, Enum.Material.Carpet)
+	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
+	floor.Reflectance = 0.04
+	-- Twelve-inch vinyl tile joints.
+	local tileJoint = Color3.fromRGB(160, 154, 138)
+	local ft = 0.305 * M
+	for x = west + ft, east - 0.1, ft do
+		prop(room, "FloorJoint", Vector3.new(0.05, 0.02, length), CFrame.new(x, 0.01, cz), tileJoint)
+	end
+	for z = north + ft, south - 0.1, ft do
+		prop(room, "FloorJoint", Vector3.new(width, 0.02, 0.05), CFrame.new(cx, 0.01, z), tileJoint)
+	end
 	part(room, "Ceiling", Vector3.new(width, 1, length), CFrame.new(cx, height + 0.5, cz), TILE, Enum.Material.Plaster)
 	part(room, "WallNorth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, north - 0.5), WALL, Enum.Material.Plaster)
 	part(room, "WallSouth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, south + 0.5), WALL, Enum.Material.Plaster)
+	-- Walnut paneling on the south wall, in vertical boards.
+	part(room, "Paneling", Vector3.new(width, height, 0.1), CFrame.new(cx, height / 2, south - 0.05), WOOD, Enum.Material.Wood)
+	for x = west + 0.4 * M, east - 0.1, 0.4 * M do
+		prop(room, "PanelGroove", Vector3.new(0.05, height, 0.02), CFrame.new(x, height / 2, south - 0.11), Color3.fromRGB(70, 46, 30))
+	end
 	part(room, "WallWest", Vector3.new(1, height, length), CFrame.new(west - 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
 	part(room, "WallEast", Vector3.new(1, height, length), CFrame.new(east + 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
-	for _, z in { north + 0.06, south - 0.06 } do
-		prop(room, "Skirting", Vector3.new(width, 0.6, 0.12), CFrame.new(cx, 0.3, z), WOOD, Enum.Material.Wood)
+	-- Black rubber cove base.
+	for _, z in { north + 0.06, south - 0.16 } do
+		prop(room, "Skirting", Vector3.new(width, 0.55, 0.12), CFrame.new(cx, 0.275, z), RUBBER, Enum.Material.Rubber)
 	end
 	for _, x in { west + 0.06, east - 0.06 } do
-		prop(room, "Skirting", Vector3.new(0.12, 0.6, length), CFrame.new(x, 0.3, cz), WOOD, Enum.Material.Wood)
+		prop(room, "Skirting", Vector3.new(0.12, 0.55, length), CFrame.new(x, 0.275, cz), RUBBER, Enum.Material.Rubber)
 	end
 
 	-- Suspended ceiling: two-foot acoustic tiles in a white T-bar grid, with
@@ -234,9 +299,9 @@ function RoomBuilder.build(): Folder
 	-- The door, a sign over it, and a clock above the boards.
 	local doorX = 22
 	part(room, "Door", Vector3.new(0.9 * M, 2.1 * M, 0.25), CFrame.new(doorX, 1.05 * M, south - 0.12), Color3.fromRGB(126, 96, 70), Enum.Material.Wood)
-	prop(room, "DoorFrame", Vector3.new(1.0 * M, 2.16 * M, 0.15), CFrame.new(doorX, 1.08 * M, south - 0.04), DARK)
+	prop(room, "DoorFrame", Vector3.new(1.0 * M, 2.16 * M, 0.15), CFrame.new(doorX, 1.08 * M, south - 0.12), DARK)
 	cylinderProp(room, "DoorHandle", 0.05 * M, 0.1 * M, CFrame.new(doorX - 0.36 * M, 1.0 * M, south - 0.3) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(190, 180, 150), Enum.Material.Metal)
-	local doorSign = prop(room, "DoorSign", Vector3.new(1.4 * M, 0.25 * M, 0.08), CFrame.new(doorX, 2.4 * M, south - 0.1) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(24, 24, 26))
+	local doorSign = prop(room, "DoorSign", Vector3.new(1.4 * M, 0.25 * M, 0.08), CFrame.new(doorX, 2.85 * M, south - 0.2) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(24, 24, 26))
 	sign(doorSign, "UNIT 1 MAIN CONTROL ROOM", 22, Color3.fromRGB(240, 240, 230))
 	local clockX, clockY, clockZ = -6, 3.25 * M, north + 0.1
 	cylinderProp(room, "WallClockRim", 0.4 * M, 0.06 * M, CFrame.new(clockX, clockY, clockZ) * CFrame.Angles(0, math.pi / 2, 0), DARK)
@@ -267,14 +332,15 @@ function RoomBuilder.build(): Folder
 		end
 		-- Cabinet: a base under the bench, a tall box behind it, and a
 		-- slab under the sloping bench that closes the gap at the sides.
-		part(room, p.id .. "_base", Vector3.new(W, h0 - 0.5, backZ - 0.3), frame(0, 0.5 + (h0 - 0.5) / 2, -backZ / 2 - 0.15), BASE_COLOR, Enum.Material.Wood)
-		part(room, p.id .. "_kick", Vector3.new(W, 0.5, backZ - 0.6), frame(0, 0.25, -backZ / 2 - 0.3), WOOD, Enum.Material.Wood)
+		part(room, p.id .. "_base", Vector3.new(W, h0 - 0.5, backZ - 0.3), frame(0, 0.5 + (h0 - 0.5) / 2, -backZ / 2 - 0.15), BASE_COLOR)
+		part(room, p.id .. "_kick", Vector3.new(W, 0.5, backZ - 0.6), frame(0, 0.25, -backZ / 2 - 0.3), RUBBER, Enum.Material.Rubber)
 		part(room, p.id .. "_cabinet", Vector3.new(W, top, cabinetDepth), frame(0, top / 2, -backZ - cabinetDepth / 2 - T / 2), CABINET_COLOR)
 		local bench = PanelLayout.designFace(p.index, "bench")
 		part(room, p.id .. "_slab", Vector3.new(W, depth, 1.6), PanelLayout.faceCFrame(bench) * CFrame.new(0, 0, T / 2 + 0.8), CABINET_COLOR)
-		-- Wood trim: a lip along the bench front and a cap over the annunciators.
-		part(room, p.id .. "_lip", Vector3.new(W, 0.4, 0.45), frame(0, h0 - 0.1, 0.12), WOOD, Enum.Material.Wood)
-		prop(room, p.id .. "_cap", Vector3.new(W, 0.3, cabinetDepth + 1.4), frame(0, top + 0.15, -backZ - cabinetDepth / 2 + 0.55), WOOD, Enum.Material.Wood)
+		-- Trim: a black rubber bumper along the bench front and a darker
+		-- cap over the annunciators.
+		part(room, p.id .. "_lip", Vector3.new(W, 0.4, 0.45), frame(0, h0 - 0.1, 0.12), RUBBER, Enum.Material.Rubber)
+		prop(room, p.id .. "_cap", Vector3.new(W, 0.3, cabinetDepth + 1.4), frame(0, top + 0.15, -backZ - cabinetDepth / 2 + 0.55), CAP_COLOR)
 		-- A dark reveal between the board and the annunciator box.
 		prop(room, p.id .. "_reveal", Vector3.new(W, 0.12, 0.2), frame(0, backY + PanelLayout.VERT_HEIGHT, -backZ + T / 2 + 0.06), DARK)
 		for _, faceName in { "bench", "vert", "ann" } do
@@ -312,8 +378,8 @@ function RoomBuilder.build(): Folder
 					part(room, tag .. "Board", Vector3.new(ext, PanelLayout.VERT_HEIGHT, T), at(ext / 2, backY + PanelLayout.VERT_HEIGHT / 2, -backZ), PANEL_COLOR)
 					part(room, tag .. "Ann", Vector3.new(ext, PanelLayout.ANN_HEIGHT, T), at(ext / 2, backY + PanelLayout.VERT_HEIGHT + PanelLayout.ANN_HEIGHT / 2, -backZ), ANN_COLOR)
 					prop(room, tag .. "Reveal", Vector3.new(ext, 0.12, 0.2), at(ext / 2, backY + PanelLayout.VERT_HEIGHT, -backZ + T / 2 + 0.06), DARK)
-					part(room, tag .. "Base", Vector3.new(ext, h0 - 0.1, backZ), at(ext / 2, (h0 - 0.1) / 2, -backZ / 2), BASE_COLOR, Enum.Material.Wood)
-					prop(room, tag .. "Cap", Vector3.new(extCab, 0.3, cabinetDepth + 1.4), at(extCab / 2, top + 0.15, -backZ - cabinetDepth / 2 + 0.55), WOOD, Enum.Material.Wood)
+					part(room, tag .. "Base", Vector3.new(ext, h0 - 0.1, backZ), at(ext / 2, (h0 - 0.1) / 2, -backZ / 2), BASE_COLOR)
+					prop(room, tag .. "Cap", Vector3.new(extCab, 0.3, cabinetDepth + 1.4), at(extCab / 2, top + 0.15, -backZ - cabinetDepth / 2 + 0.55), CAP_COLOR)
 					-- Bench carried on at the same slope.
 					local slopeUp = up * math.sin(s) - b * math.cos(s)
 					local slopeNormal = up * math.cos(s) + b * math.sin(s)
@@ -353,123 +419,102 @@ function RoomBuilder.build(): Folder
 			w.Parent = room
 		end
 		filler("CornerFill", 0, top, CABINET_COLOR)
-		filler("CornerCap", top, 0.3, WOOD, Enum.Material.Wood)
+		filler("CornerCap", top, 0.3, CAP_COLOR)
 	end
 
-	-- The operators' console: a U of desks in the middle of the room, open
-	-- toward the operators and facing the corner, so the reactor panel is
-	-- straight ahead. A raised shelf along the far edge carries the
-	-- telephones and binders; the terminals sit on the desk in front of it.
-	local console = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
-	local deskH = 0.76 * M
-	local deskD = 0.8 * M
-	local deskL = 4.4 * M
-	local returnL = 1.8 * M
-	local function desk(name: string, size: Vector3, x: number, y: number, z: number, color: Color3, material: Enum.Material?): Part
-		return part(room, name, size, console * CFrame.new(x, y, z), color, material)
-	end
-	local slab = 0.035 * M
-	desk("DeskTop", Vector3.new(deskL, slab, deskD), 0, deskH - slab / 2, 0, LAMINATE)
-	desk("DeskEdge", Vector3.new(deskL + 0.02 * M, slab + 0.01 * M, 0.03 * M), 0, deskH - slab / 2, deskD / 2, WOOD, Enum.Material.Wood).CanCollide = false
-	desk("DeskModesty", Vector3.new(deskL, deskH - slab, 0.05 * M), 0, (deskH - slab) / 2, -deskD / 2 + 0.025 * M, CONSOLE)
-	local riserH, riserD = 0.16 * M, 0.26 * M
-	desk("DeskRiser", Vector3.new(deskL, riserH, riserD), 0, deskH + riserH / 2, -deskD / 2 + riserD / 2, CONSOLE)
-	desk("DeskRiserTop", Vector3.new(deskL + 0.02 * M, 0.025 * M, riserD + 0.02 * M), 0, deskH + riserH + 0.0125 * M, -deskD / 2 + riserD / 2, LAMINATE)
-	for _, side in { -1, 1 } do
-		local rx = side * (deskL / 2 - deskD / 2)
-		local rz = deskD / 2 + returnL / 2
-		desk("DeskReturn", Vector3.new(deskD, slab, returnL), rx, deskH - slab / 2, rz, LAMINATE)
-		desk("DeskReturnEdge", Vector3.new(0.03 * M, slab + 0.01 * M, returnL), rx - side * deskD / 2, deskH - slab / 2, rz, WOOD, Enum.Material.Wood).CanCollide = false
-		desk("DeskReturnSide", Vector3.new(0.05 * M, deskH - slab, returnL + deskD), rx + side * (deskD / 2 - 0.025 * M), (deskH - slab) / 2, rz - deskD / 2, CONSOLE)
-		-- A drawer pedestal at the end of each return.
-		local pz = deskD / 2 + returnL - 0.25 * M
-		desk("DeskPedestal", Vector3.new(deskD - 0.06 * M, deskH - slab - 0.04 * M, 0.45 * M), rx, (deskH - slab) / 2, pz, CONSOLE)
-		for d = 0, 2 do
-			desk("DrawerFront", Vector3.new(deskD - 0.12 * M, 0.2 * M, 0.02 * M), rx - side * 0.01, 0.13 * M + d * 0.22 * M, pz - 0.235 * M, LAMINATE).CanCollide = false
-			desk("DrawerPull", Vector3.new(0.12 * M, 0.02 * M, 0.03 * M), rx - side * 0.01, 0.18 * M + d * 0.22 * M, pz - 0.25 * M, STEEL, Enum.Material.Metal).CanCollide = false
+	-- The operators' area, facing the corner so the reactor panel is straight
+	-- ahead: two steel desks side by side, the process computer's console
+	-- to their left and the alarm typer to their right.
+	local area = CFrame.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+	local deskL, deskD, deskH = 1.52 * M, 0.76 * M, 0.74 * M
+	for k, x in { -0.8 * M, 0.8 * M } do
+		local at = area * CFrame.new(x, 0, 0)
+		steelDesk(room, at, deskL, deskD)
+		local top = at * CFrame.new(0, deskH, 0)
+		telephone(room, top * CFrame.new(-0.5 * M, 0, -0.2 * M) * CFrame.Angles(0, 0.15, 0), Color3.fromRGB(28, 28, 30))
+		if k == 1 then
+			telephone(room, top * CFrame.new(0.05 * M, 0, -0.22 * M), Color3.fromRGB(160, 30, 28), true)
+			prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), top * CFrame.new(0.15 * M, 0.015 * M, 0.12 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(36, 60, 44))
+			prop(room, "Papers", Vector3.new(0.21 * M, 0.006 * M, 0.3 * M), top * CFrame.new(0.55 * M, 0.003 * M, 0.05 * M) * CFrame.Angles(0, -0.12, 0), Color3.fromRGB(240, 238, 226))
+			cylinderProp(room, "Mug", 0.08 * M, 0.1 * M, top * CFrame.new(-0.2 * M, 0.05 * M, 0.2 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(230, 230, 226))
+		else
+			binders(room, top * CFrame.new(0.25 * M, 0, -0.24 * M), 6, 2)
+			prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), top * CFrame.new(-0.05 * M, 0.015 * M, 0.12 * M) * CFrame.Angles(0, -0.15, 0), Color3.fromRGB(110, 32, 30))
+			prop(room, "Clipboard", Vector3.new(0.23 * M, 0.01 * M, 0.32 * M), top * CFrame.new(-0.5 * M, 0.005 * M, 0.15 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(150, 110, 70), Enum.Material.Wood)
 		end
+		cylinderProp(room, "Ashtray", 0.13 * M, 0.025 * M, top * CFrame.new(0.62 * M, 0.0125 * M, -0.22 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(120, 86, 40), Enum.Material.Glass).Transparency = 0.2
+		chair(room, at * CFrame.new(-0.1 * M, 0, deskD / 2 + 0.4 * M))
 	end
-	local onDesk = console * CFrame.new(0, deskH, 0)
-	local onRiser = console * CFrame.new(0, deskH + riserH + 0.025 * M, -deskD / 2 + riserD / 2)
-	-- Two terminals: the unit computer and the alarm summary.
-	terminal(room, onDesk * CFrame.new(-0.85 * M, 0, -0.02 * M) * CFrame.Angles(0, 0.06, 0), 1)
-	terminal(room, onDesk * CFrame.new(0.85 * M, 0, -0.02 * M) * CFrame.Angles(0, -0.06, 0), 2)
-	-- Telephones on the shelf: the plant phones in black, the grid
-	-- dispatcher's line in red.
-	telephone(room, onRiser * CFrame.new(-1.75 * M, 0, 0), Color3.fromRGB(28, 28, 30))
-	telephone(room, onRiser * CFrame.new(0, 0, 0), Color3.fromRGB(150, 30, 28))
-	telephone(room, onRiser * CFrame.new(1.45 * M, 0, 0), Color3.fromRGB(28, 28, 30))
-	binders(room, onRiser * CFrame.new(-1.45 * M, 0, 0), 9, 1)
-	binders(room, onRiser * CFrame.new(0.35 * M, 0, 0), 7, 4)
-	prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), onDesk * CFrame.new(0.1 * M, 0.015 * M, 0.2 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(36, 60, 44))
-	prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), console * CFrame.new(-(deskL / 2 - deskD / 2), deskH + 0.015 * M, deskD / 2 + 0.6 * M) * CFrame.Angles(0, -0.2, 0), Color3.fromRGB(110, 32, 30))
-	prop(room, "Papers", Vector3.new(0.21 * M, 0.006 * M, 0.3 * M), onDesk * CFrame.new(-1.6 * M, 0.003 * M, 0.15 * M) * CFrame.Angles(0, -0.12, 0), Color3.fromRGB(240, 238, 226))
-	prop(room, "Papers", Vector3.new(0.21 * M, 0.006 * M, 0.3 * M), console * CFrame.new(deskL / 2 - deskD / 2, deskH + 0.003 * M, deskD / 2 + 0.9 * M) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(240, 238, 226))
-	prop(room, "Clipboard", Vector3.new(0.23 * M, 0.01 * M, 0.32 * M), onDesk * CFrame.new(1.65 * M, 0.005 * M, 0.18 * M) * CFrame.Angles(0, 0.1, 0), Color3.fromRGB(150, 110, 70), Enum.Material.Wood)
-	cylinderProp(room, "Mug", 0.08 * M, 0.1 * M, onDesk * CFrame.new(0.42 * M, 0.05 * M, 0.25 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(230, 230, 226))
-	cylinderProp(room, "Ashtray", 0.13 * M, 0.025 * M, console * CFrame.new(deskL / 2 - deskD / 2, deskH + 0.0125 * M, deskD / 2 + 1.3 * M) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(120, 86, 40), Enum.Material.Glass).Transparency = 0.2
-	for _, x in { -0.85 * M, 0.85 * M, 0 } do
-		chair(room, console * CFrame.new(x, 0, deskD / 2 + 0.55 * M) * CFrame.Angles(0, -x / M * 0.15, 0))
+	computerConsole(room, area * CFrame.new(-2.45 * M, 0, 0.55 * M) * CFrame.Angles(0, 0.45, 0))
+	chair(room, area * CFrame.new(-2.2 * M, 0, 1.15 * M) * CFrame.Angles(0, 0.45, 0))
+	teleprinter(room, area * CFrame.new(2.3 * M, 0, 0.35 * M) * CFrame.Angles(0, -0.5, 0))
+	-- A floor-standing ashtray between the desks and the typer.
+	do
+		local stand = area * CFrame.new(1.75 * M, 0, 0.95 * M)
+		cylinderProp(room, "SmokingStandBase", 0.3 * M, 0.03 * M, stand * CFrame.new(0, 0.015 * M, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(40, 40, 42))
+		cylinderProp(room, "SmokingStandPost", 0.04 * M, 0.6 * M, stand * CFrame.new(0, 0.32 * M, 0) * CFrame.Angles(0, 0, math.pi / 2), CHROME, Enum.Material.Metal)
+		cylinderProp(room, "SmokingStandTray", 0.22 * M, 0.05 * M, stand * CFrame.new(0, 0.64 * M, 0) * CFrame.Angles(0, 0, math.pi / 2), CHROME, Enum.Material.Metal)
 	end
-	teleprinter(room, console * CFrame.new(-(deskL / 2 + 0.55 * M), 0, deskD / 2 + 0.6 * M) * CFrame.Angles(0, -math.pi / 2, 0))
 
-	-- The shift supervisor's desk behind the console, facing the boards.
+	-- The shift supervisor's desk behind the operators, facing the boards.
 	do
 		local ss = CFrame.new(10, 0, 10) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
-		local L, D = 1.6 * M, 0.75 * M
-		part(room, "SupervisorDesk", Vector3.new(L, slab, D), ss * CFrame.new(0, deskH - slab / 2, 0), LAMINATE)
-		part(room, "SupervisorModesty", Vector3.new(L, deskH - slab, 0.04 * M), ss * CFrame.new(0, (deskH - slab) / 2, -D / 2 + 0.02 * M), CONSOLE)
-		for _, side in { -1, 1 } do
-			part(room, "SupervisorPedestal", Vector3.new(0.42 * M, deskH - slab, D), ss * CFrame.new(side * (L / 2 - 0.21 * M), (deskH - slab) / 2, 0), CONSOLE)
-		end
+		steelDesk(room, ss, 1.52 * M, 0.76 * M)
 		local top2 = ss * CFrame.new(0, deskH, 0)
-		telephone(room, top2 * CFrame.new(0.55 * M, 0, -0.12 * M), Color3.fromRGB(28, 28, 30))
-		prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), top2 * CFrame.new(-0.1 * M, 0.015 * M, 0.05 * M) * CFrame.Angles(0, 0.15, 0), Color3.fromRGB(30, 54, 110))
-		prop(room, "InTray", Vector3.new(0.26 * M, 0.06 * M, 0.34 * M), top2 * CFrame.new(-0.55 * M, 0.03 * M, -0.1 * M), Color3.fromRGB(60, 60, 64))
-		prop(room, "LampBase", Vector3.new(0.14 * M, 0.03 * M, 0.14 * M), top2 * CFrame.new(-0.3 * M, 0.015 * M, -0.25 * M), DARK)
-		prop(room, "LampArm", Vector3.new(0.02 * M, 0.38 * M, 0.02 * M), top2 * CFrame.new(-0.3 * M, 0.2 * M, -0.25 * M), DARK)
-		prop(room, "LampShade", Vector3.new(0.18 * M, 0.08 * M, 0.12 * M), top2 * CFrame.new(-0.3 * M, 0.38 * M, -0.18 * M) * CFrame.Angles(math.rad(25), 0, 0), Color3.fromRGB(40, 70, 50))
-		chair(room, ss * CFrame.new(0, 0, D / 2 + 0.45 * M))
+		telephone(room, top2 * CFrame.new(0.5 * M, 0, -0.18 * M), Color3.fromRGB(28, 28, 30))
+		prop(room, "Logbook", Vector3.new(0.3 * M, 0.03 * M, 0.38 * M), top2 * CFrame.new(-0.1 * M, 0.015 * M, 0.08 * M) * CFrame.Angles(0, 0.15, 0), Color3.fromRGB(30, 54, 110))
+		prop(room, "InTray", Vector3.new(0.26 * M, 0.06 * M, 0.34 * M), top2 * CFrame.new(-0.52 * M, 0.03 * M, -0.12 * M), Color3.fromRGB(60, 60, 64))
+		prop(room, "LampBase", Vector3.new(0.14 * M, 0.03 * M, 0.14 * M), top2 * CFrame.new(-0.25 * M, 0.015 * M, -0.27 * M), DARK)
+		prop(room, "LampArm", Vector3.new(0.02 * M, 0.38 * M, 0.02 * M), top2 * CFrame.new(-0.25 * M, 0.2 * M, -0.27 * M), DARK)
+		prop(room, "LampShade", Vector3.new(0.18 * M, 0.08 * M, 0.12 * M), top2 * CFrame.new(-0.25 * M, 0.38 * M, -0.2 * M) * CFrame.Angles(math.rad(25), 0, 0), Color3.fromRGB(40, 70, 50))
+		chair(room, ss * CFrame.new(-0.1 * M, 0, 0.78 * M), Color3.fromRGB(96, 62, 40))
 	end
 
-	-- Along the south wall: a bookcase of procedures and two file cabinets.
+	-- Along the south wall: steel shelving of procedures and two file
+	-- cabinets.
 	do
-		local bx, bz = -32, south - 0.2 * M
+		local bx, bz = -32, south - 0.2 * M - 0.1
 		local bw, bh, bd = 1.8 * M, 1.95 * M, 0.35 * M
+		local shelving = Color3.fromRGB(140, 144, 138)
 		local case = CFrame.new(bx, 0, bz) * CFrame.Angles(0, math.pi, 0)
-		part(room, "BookcaseBack", Vector3.new(bw, bh, 0.03 * M), case * CFrame.new(0, bh / 2, bd / 2 - 0.015 * M), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+		part(room, "ShelvingBack", Vector3.new(bw, bh, 0.02 * M), case * CFrame.new(0, bh / 2, bd / 2 - 0.01 * M), shelving, Enum.Material.Metal)
 		for _, side in { -1, 1 } do
-			part(room, "BookcaseSide", Vector3.new(0.03 * M, bh, bd), case * CFrame.new(side * (bw / 2 - 0.015 * M), bh / 2, 0), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+			part(room, "ShelvingSide", Vector3.new(0.02 * M, bh, bd), case * CFrame.new(side * (bw / 2 - 0.01 * M), bh / 2, 0), shelving, Enum.Material.Metal)
 		end
 		for shelf = 0, 5 do
 			local y = 0.08 * M + shelf * 0.37 * M
-			part(room, "BookcaseShelf", Vector3.new(bw, 0.025 * M, bd), case * CFrame.new(0, y, 0), Color3.fromRGB(150, 120, 86), Enum.Material.Wood)
+			part(room, "Shelf", Vector3.new(bw, 0.02 * M, bd), case * CFrame.new(0, y, 0), shelving, Enum.Material.Metal)
 			if shelf < 5 then
-				binders(room, case * CFrame.new(-bw / 2 + 0.04 * M, y + 0.0125 * M, 0.02 * M), 14 + shelf % 3, shelf * 3)
+				binders(room, case * CFrame.new(-bw / 2 + 0.04 * M, y + 0.01 * M, 0.02 * M), 14 + shelf % 3, shelf * 3)
 			end
 		end
 		for i = 0, 1 do
 			local fx = bx + bw / 2 + 0.6 * M + i * 0.5 * M
-			local cab = CFrame.new(fx, 0, south - 0.36 * M) * CFrame.Angles(0, math.pi, 0)
-			part(room, "FileCabinet", Vector3.new(0.46 * M, 1.33 * M, 0.7 * M), cab * CFrame.new(0, 0.665 * M, 0), Color3.fromRGB(140, 140, 132), Enum.Material.Metal)
+			local cab = CFrame.new(fx, 0, south - 0.36 * M - 0.1) * CFrame.Angles(0, math.pi, 0)
+			part(room, "FileCabinet", Vector3.new(0.46 * M, 1.33 * M, 0.7 * M), cab * CFrame.new(0, 0.665 * M, 0), Color3.fromRGB(150, 140, 112), Enum.Material.Metal)
 			for d = 0, 3 do
-				prop(room, "FilePull", Vector3.new(0.12 * M, 0.03 * M, 0.03 * M), cab * CFrame.new(0, 0.25 * M + d * 0.31 * M, -0.36 * M), STEEL, Enum.Material.Metal)
+				prop(room, "FilePull", Vector3.new(0.12 * M, 0.03 * M, 0.03 * M), cab * CFrame.new(0, 0.25 * M + d * 0.31 * M, -0.36 * M), CHROME, Enum.Material.Metal)
 			end
 		end
 	end
 
-	-- On the east wall: the shift status board and a fire extinguisher by
-	-- the door.
+	-- On the east wall: the shift chalkboard. By the door: a fire
+	-- extinguisher and a lit exit sign.
 	do
-		local board = prop(room, "StatusBoard", Vector3.new(2.4 * M, 1.2 * M, 0.05 * M), CFrame.new(east - 0.2, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(246, 246, 240))
+		local board = prop(room, "StatusBoard", Vector3.new(2.4 * M, 1.2 * M, 0.05 * M), CFrame.new(east - 0.2, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(44, 72, 56))
 		board:SetAttribute("StatusBoard", true)
-		prop(room, "StatusBoardFrame", Vector3.new(2.46 * M, 1.26 * M, 0.03 * M), CFrame.new(east - 0.08, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), STEEL, Enum.Material.Metal)
-		prop(room, "MarkerTray", Vector3.new(1.0 * M, 0.03 * M, 0.06 * M), CFrame.new(east - 0.35, 0.93 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), STEEL, Enum.Material.Metal)
-		local ex = CFrame.new(doorX - 1.0 * M, 0, south - 0.15 * M)
+		prop(room, "StatusBoardFrame", Vector3.new(2.46 * M, 1.26 * M, 0.03 * M), CFrame.new(east - 0.08, 1.55 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(176, 178, 176), Enum.Material.Metal)
+		prop(room, "ChalkTray", Vector3.new(2.4 * M, 0.03 * M, 0.06 * M), CFrame.new(east - 0.35, 0.93 * M, -10) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(176, 178, 176), Enum.Material.Metal)
+		prop(room, "Chalk", Vector3.new(0.08 * M, 0.012 * M, 0.012 * M), CFrame.new(east - 0.35, 0.95 * M, -12) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(246, 246, 240))
+		prop(room, "Eraser", Vector3.new(0.13 * M, 0.03 * M, 0.05 * M), CFrame.new(east - 0.35, 0.96 * M, -7) * CFrame.Angles(0, -math.pi / 2, 0), Color3.fromRGB(120, 92, 60))
+		local ex = CFrame.new(doorX - 1.0 * M, 0, south - 0.15 * M - 0.1)
 		cylinderProp(room, "Extinguisher", 0.16 * M, 0.5 * M, ex * CFrame.new(0, 0.65 * M, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(190, 24, 20))
 		prop(room, "ExtinguisherHead", Vector3.new(0.06 * M, 0.1 * M, 0.06 * M), ex * CFrame.new(0, 0.95 * M, 0), DARK)
 		local fireSign = prop(room, "FireSign", Vector3.new(0.3 * M, 0.15 * M, 0.02 * M), ex * CFrame.new(0, 1.3 * M, 0.12 * M) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(190, 24, 20))
 		sign(fireSign, "FIRE", 18, Color3.fromRGB(255, 255, 255))
+		local exit = prop(room, "ExitSign", Vector3.new(0.36 * M, 0.18 * M, 0.06 * M), CFrame.new(doorX, 2.32 * M, south - 0.25) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(236, 232, 220))
+		local exitText = sign(exit, "EXIT", 26, Color3.fromRGB(230, 30, 24), 60)
+		exitText.Parent.LightInfluence = 0
 	end
 
 	scaleRoom(room, PanelLayout.SCALE)
