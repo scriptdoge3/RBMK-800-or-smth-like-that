@@ -209,6 +209,22 @@ end
 H.setGlobal("workspace", workspace)
 local _ = realInstanceNew
 
+-- An import of the old Blender panel models left in the place, the way
+-- Studio's importer leaves it: the server has to take it out of the game.
+do
+	local old = Instance.new("Model")
+	old.Name = "RBMKModels"
+	for _, name in { "PushCap", "GuardCoverLarge", "ProbeO" } do
+		local m = Instance.new("MeshPart")
+		m.Name = name
+		m.Parent = old
+	end
+	old.Parent = workspace
+	local loose = Instance.new("MeshPart")
+	loose.Name = "PistolGrip"
+	loose.Parent = workspace
+end
+
 -- ---------------------------------------------------------------- server
 print("starting the server script")
 local t0 = os.clock()
@@ -227,6 +243,7 @@ for _, p in PanelLayout.panels do
 end
 H.check(missingFaces == 0, "every panel face exists")
 H.check(replicated:FindFirstChild("RBMKRemotes") ~= nil, "remotes created")
+H.check(workspace:FindFirstChild("RBMKModels") == nil and workspace:FindFirstChild("PistolGrip") == nil, "an old Blender import left in the place is taken out of the game")
 H.check(#room:GetChildren() > 40, string.format("room has %d parts", #room:GetChildren()))
 for _ = 1, 30 do
 	heartbeat.fire(0.1)

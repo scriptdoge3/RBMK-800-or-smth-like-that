@@ -186,6 +186,10 @@ return AlarmList
 -- kg/s internally (displays convert to t/h and m3/h), metres, seconds.
 local Config = {}
 
+-- Shown in the corner of the screen and printed at startup, so it is easy
+-- to tell which version of the game a place is running.
+Config.VERSION = "2026-11-18c (panel hardware built from parts)"
+
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
 Config.GRID_HZ = 60
@@ -1888,6 +1892,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("RBMK")
+local Config = require(Shared.Config)
 local PanelLayout = require(Shared.PanelLayout)
 local AlarmList = require(Shared.AlarmList)
 local RoomBuilder = require(script.Parent.RoomBuilder)
@@ -1913,6 +1918,35 @@ local alarmEvent: RemoteEvent = remote("RemoteEvent", "Alarm")
 local logEvent: RemoteEvent = remote("RemoteEvent", "Log")
 local helloFunction: RemoteFunction = remote("RemoteFunction", "Hello")
 remotes.Parent = ReplicatedStorage
+
+print("[RBMK-800] version " .. Config.VERSION)
+
+-- An earlier version modelled the panel hardware in Blender, and the place
+-- may still hold that import: a model called RBMKModels (in the Workspace
+-- or ReplicatedStorage) or its meshes loose. The hardware is built from
+-- parts now, so take any of it out of the game before it can show up in
+-- the room.
+do
+	local OLD_MESHES = {
+		PushCap = true, PushCollar = true, MushroomCap = true, MushroomCollar = true,
+		LampBezel = true, LampLens = true, SwitchHub = true, PistolGrip = true,
+		KeyLock = true, Key = true, KeyBow = true, Knob = true, KnobPointer = true,
+		GuardBase = true, GuardCover = true, GuardBaseLarge = true, GuardCoverLarge = true,
+		ProbeO = true, ProbeX = true, ProbeY = true, ProbeZ = true,
+	}
+	local removed = 0
+	for _, root in { workspace, ReplicatedStorage } do
+		for _, d in root:GetDescendants() do
+			if d.Parent and (d.Name == "RBMKModels" or (d:IsA("MeshPart") and OLD_MESHES[d.Name])) then
+				d:Destroy()
+				removed += 1
+			end
+		end
+	end
+	if removed > 0 then
+		warn("[RBMK-800] Took the old Blender panel models (RBMKModels) out of the game. They are still saved in this place: delete RBMKModels in Studio's Explorer and save to get rid of them for good.")
+	end
+end
 
 RoomBuilder.build()
 
@@ -8044,6 +8078,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
+local Config = require(Shared.Config)
 local PanelLayout = require(Shared.PanelLayout)
 
 local Controls = {}
@@ -8102,6 +8137,20 @@ function Controls.start(built: any, ctx: any)
 	local HINT_WALK = "[E] sit at the nearest panel     [P] procedures     click any control; hover for details; guarded buttons: click lifts the cover"
 	local HINT_VIEW = "[A] [D] next panel     [W] [S] bench / board / wide     [wheel] zoom     [E] stand up"
 	hint.Text = HINT_WALK
+	-- Which version is running, small in the corner.
+	local version = Instance.new("TextLabel")
+	version.Name = "Version"
+	version.BackgroundTransparency = 1
+	version.AnchorPoint = Vector2.new(1, 1)
+	version.Position = UDim2.new(1, -10, 1, -6)
+	version.Size = UDim2.fromOffset(420, 16)
+	version.TextXAlignment = Enum.TextXAlignment.Right
+	version.TextColor3 = Color3.fromRGB(200, 200, 190)
+	version.TextTransparency = 0.35
+	version.Font = Enum.Font.SourceSans
+	version.TextSize = 14
+	version.Text = "RBMK-800 version " .. Config.VERSION
+	version.Parent = gui
 
 	-- What is under the mouse?
 	local function pick(): (any, number, number)

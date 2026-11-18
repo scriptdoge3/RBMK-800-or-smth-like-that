@@ -40,6 +40,11 @@ plus the Rojo Studio plugin will sync `src/` into an open place. You do not need
 just to play.
 
 The server needs a few seconds at startup to design the core ("Commissioning the unit").
+The version is shown in the bottom-right corner of the screen.
+
+If an earlier version had you import `RBMKModels.glb` (Blender models of the panel
+hardware), delete the `RBMKModels` model from the Explorer and save: the hardware is built
+from parts now. The game also takes it out of the room by itself when it starts.
 
 ## Playing
 

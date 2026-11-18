@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("RBMK")
+local Config = require(Shared.Config)
 local PanelLayout = require(Shared.PanelLayout)
 local AlarmList = require(Shared.AlarmList)
 local RoomBuilder = require(script.Parent.RoomBuilder)
@@ -31,6 +32,35 @@ local alarmEvent: RemoteEvent = remote("RemoteEvent", "Alarm")
 local logEvent: RemoteEvent = remote("RemoteEvent", "Log")
 local helloFunction: RemoteFunction = remote("RemoteFunction", "Hello")
 remotes.Parent = ReplicatedStorage
+
+print("[RBMK-800] version " .. Config.VERSION)
+
+-- An earlier version modelled the panel hardware in Blender, and the place
+-- may still hold that import: a model called RBMKModels (in the Workspace
+-- or ReplicatedStorage) or its meshes loose. The hardware is built from
+-- parts now, so take any of it out of the game before it can show up in
+-- the room.
+do
+	local OLD_MESHES = {
+		PushCap = true, PushCollar = true, MushroomCap = true, MushroomCollar = true,
+		LampBezel = true, LampLens = true, SwitchHub = true, PistolGrip = true,
+		KeyLock = true, Key = true, KeyBow = true, Knob = true, KnobPointer = true,
+		GuardBase = true, GuardCover = true, GuardBaseLarge = true, GuardCoverLarge = true,
+		ProbeO = true, ProbeX = true, ProbeY = true, ProbeZ = true,
+	}
+	local removed = 0
+	for _, root in { workspace, ReplicatedStorage } do
+		for _, d in root:GetDescendants() do
+			if d.Parent and (d.Name == "RBMKModels" or (d:IsA("MeshPart") and OLD_MESHES[d.Name])) then
+				d:Destroy()
+				removed += 1
+			end
+		end
+	end
+	if removed > 0 then
+		warn("[RBMK-800] Took the old Blender panel models (RBMKModels) out of the game. They are still saved in this place: delete RBMKModels in Studio's Explorer and save to get rid of them for good.")
+	end
+end
 
 RoomBuilder.build()
 

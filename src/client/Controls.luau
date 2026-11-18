@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
+local Config = require(Shared.Config)
 local PanelLayout = require(Shared.PanelLayout)
 
 local Controls = {}
@@ -68,6 +69,20 @@ function Controls.start(built: any, ctx: any)
 	local HINT_WALK = "[E] sit at the nearest panel     [P] procedures     click any control; hover for details; guarded buttons: click lifts the cover"
 	local HINT_VIEW = "[A] [D] next panel     [W] [S] bench / board / wide     [wheel] zoom     [E] stand up"
 	hint.Text = HINT_WALK
+	-- Which version is running, small in the corner.
+	local version = Instance.new("TextLabel")
+	version.Name = "Version"
+	version.BackgroundTransparency = 1
+	version.AnchorPoint = Vector2.new(1, 1)
+	version.Position = UDim2.new(1, -10, 1, -6)
+	version.Size = UDim2.fromOffset(420, 16)
+	version.TextXAlignment = Enum.TextXAlignment.Right
+	version.TextColor3 = Color3.fromRGB(200, 200, 190)
+	version.TextTransparency = 0.35
+	version.Font = Enum.Font.SourceSans
+	version.TextSize = 14
+	version.Text = "RBMK-800 version " .. Config.VERSION
+	version.Parent = gui
 
 	-- What is under the mouse?
 	local function pick(): (any, number, number)
