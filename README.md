@@ -57,11 +57,15 @@ operate any panel.
 The room is life-size around a standard Roblox character: the bench front is at hip
 height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.76 m
 high and the ceiling is 3.8 m up. Everything in it is dated before 1986: edgewise
-meters, strip-chart recorders with ruled chart paper behind glass, pistol-grip switches
-with red and green lamps, white engraved nameplates, coloured mimic lines tracing the
-flow paths (reactor water blue, steam red, feedwater green, power black), backlit
-annunciator windows, a lamp-mosaic channel cartogram, red LED readouts and a
-green-phosphor unit computer. The console carries two video terminals (unit summary and
+meters graduated in twenty divisions with the unit on the dial, strip-chart recorders
+with ruled chart paper behind glass, pistol-grip control switches with red and green
+indicating lamps (white on mode switches), key-operated bypass switches, raise/lower
+pushbuttons with small position indicators, white engraved nameplates, coloured mimic
+lines tracing the flow paths (reactor water blue, steam red, feedwater green, power
+black), backlit annunciator windows, a lamp-mosaic channel cartogram, an orange
+bargraph for the axial power shape, seven-segment digital panel meters where a number
+matters (power, period, reactivity, margin, rod positions, setpoints) and a
+green-phosphor unit computer. Hover over any meter for its exact reading. The console carries two video terminals (unit summary and
 alarm summary), dial telephones (the red one is the grid dispatcher) and binders, with
 an alarm teleprinter beside it; behind it are the shift supervisor's desk, a bookcase
 of procedures and a shift status board kept up to date in marker. The room is lit by

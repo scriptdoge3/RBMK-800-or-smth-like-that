@@ -55,11 +55,12 @@ end
 
 local function meter(face: string, x: number, y: number, label: string, sig: string, lo: number, hi: number, unit: string, opts: any?)
 	local o = opts or {}
-	add({ kind = "meter", face = face, x = x, y = y, w = 0.8, h = 2.5, label = label, sig = sig, lo = lo, hi = hi, unit = unit, fmt = o.fmt or "%.0f", red = o.red, amber = o.amber, low = o.low, tip = o.tip })
+	add({ kind = "meter", face = face, x = x, y = y, w = 0.8, h = o.h or 2.5, label = label, sig = sig, lo = lo, hi = hi, unit = unit, fmt = o.fmt or "%.0f", red = o.red, amber = o.amber, low = o.low, tip = o.tip })
 end
 
-local function digital(face: string, x: number, y: number, label: string, sig: string, fmt: string, unit: string, w: number?)
-	add({ kind = "digital", face = face, x = x, y = y, w = w or 1.35, h = 0.8, label = label, sig = sig, fmt = fmt, unit = unit })
+-- A digital panel meter: a seven-segment display with `cells` digits.
+local function digital(face: string, x: number, y: number, label: string, sig: string, fmt: string, unit: string, w: number?, cells: number?)
+	add({ kind = "digital", face = face, x = x, y = y, w = w or 1.35, h = 0.8, label = label, sig = sig, fmt = fmt, unit = unit, cells = cells })
 end
 
 -- A lamp is lit when the signal is above `gt` (default 0.5) or, with `eq`,
@@ -92,8 +93,11 @@ local function pump(face: string, x: number, y: number, label: string, cmd: stri
 end
 
 -- Lower / raise pushbuttons with a readout between them.
-local function jog(face: string, x: number, y: number, label: string, cmd: string, sig: string, fmt: string, unit: string)
-	add({ kind = "jog", face = face, x = x, y = y, w = 1.5, h = 1.25, label = label, cmd = cmd, sig = sig, fmt = fmt, unit = unit })
+-- Lower / raise pushbuttons with a position indicator under them (lo to hi),
+-- or a seven-segment readout when `digits` is set.
+local function jog(face: string, x: number, y: number, label: string, cmd: string, sig: string, fmt: string, unit: string, opts: any?)
+	local o = opts or {}
+	add({ kind = "jog", face = face, x = x, y = y, w = 1.5, h = 1.25, label = label, cmd = cmd, sig = sig, fmt = fmt, unit = unit, lo = o.lo or 0, hi = o.hi or 100, digits = o.digits })
 end
 
 local function recorder(face: string, x: number, y: number, w: number, h: number, label: string, pens: { any })
@@ -124,11 +128,14 @@ section("vert", 0.3, 0.7, 4.3, 3.2, "REACTOR SPACE")
 meter("vert", 0.6, 1.1, "SPACE\nPRESS", "rs.press", 0, 200, "kPa", { red = 5, tip = "Reactor space pressure. Any reading means a fuel channel is leaking into the graphite stack." })
 meter("vert", 1.6, 1.1, "GAS\nACTIVITY", "rad.gas", 0, 100, "", { red = 20 })
 meter("vert", 2.6, 1.1, "POOL\nTEMP", "pool.temp", 0, 100, "C", { red = 45 })
-section("vert", 0.3, 4.05, 4.3, 2.45, "CHANNEL INTEGRITY")
-digital("vert", 0.5, 4.4, "RUPTURED CHANNELS", "core.ruptured", "%.0f", "", 1.9)
-digital("vert", 2.55, 4.4, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.85)
-digital("vert", 0.5, 5.4, "FLOW-BLOCKED CHANNELS", "core.blocked", "%.0f", "", 1.9)
-digital("vert", 2.55, 5.4, "GRAPHITE MAX", "core.graphT", "%.0f", "C", 1.85)
+section("vert", 0.3, 4.05, 4.3, 2.52, "CHANNEL INTEGRITY")
+digital("vert", 0.5, 4.4, "RUPTURED", "core.ruptured", "%.0f", "", 1.25, 4)
+digital("vert", 1.85, 4.4, "FUEL DAMAGED", "core.damaged", "%.0f", "", 1.25, 4)
+digital("vert", 3.2, 4.4, "FLOW BLOCKED", "core.blocked", "%.0f", "", 1.25, 4)
+lamp("vert", 0.5, 5.45, "SPACE PRESS HIGH", "rs.press", "red", { w = 1.95, gt = 5 })
+lamp("vert", 2.5, 5.45, "GAS ACTIVITY HIGH", "rad.gas", "amber", { w = 1.95, gt = 20 })
+lamp("vert", 0.5, 5.95, "CHANNEL FLOW LOW", "core.blocked", "amber", { w = 1.95 })
+lamp("vert", 2.5, 5.95, "FUEL FAILURE", "core.damaged", "red", { w = 1.95 })
 section("vert", 4.9, 0.7, 4.3, 3.2, "ROD CHANNEL COOLING")
 meter("vert", 5.2, 1.1, "FLOW", "cps.flow", 0, 100, "%", { low = 50 })
 meter("vert", 6.2, 1.1, "TANK\nLEVEL", "cps.tank", 0, 100, "%", { low = 60 })
@@ -144,9 +151,10 @@ lamp("vert", 13.8, 2.7, "PUMP 3", "eccs.pump.3.run", "red", { w = 1.2 })
 recorder("vert", 4.9, 4.05, REC_W, REC_H, "REACTOR SPACE", { pen("rs.press", 0, 200, "red", "SPACE PRESS", "kPa"), pen("rad.gas", 0, 100, "blue", "GAS ACTIVITY") })
 recorder("vert", 7.35, 4.05, REC_W, REC_H, "DRUM SEPARATORS", { pen("pri.press", 0, 8, "red", "PRESSURE", "MPa"), pen("pri.temp", 0, 400, "blue", "TEMPERATURE", "C") })
 recorder("vert", 9.8, 4.05, REC_W, REC_H, "EMERGENCY COOLING", { pen("eccs.flow", 0, 2500, "red", "INJECTION", "t/h"), pen("cps.flow", 0, 100, "blue", "CPS FLOW", "%") })
-section("vert", 12.3, 4.05, 3.4, 2.45, "FUEL TEMPERATURES")
-digital("vert", 12.5, 4.4, "HOTTEST FUEL", "core.maxFuel", "%.0f", "C", 3.0)
-digital("vert", 12.5, 5.4, "HOTTEST CLADDING", "core.maxClad", "%.0f", "C", 3.0)
+section("vert", 12.3, 4.05, 3.4, 2.52, "CORE TEMPERATURES")
+meter("vert", 12.55, 4.35, "FUEL\nMAX", "core.maxFuel", 0, 3000, "C", { red = 1800, h = 2.2 })
+meter("vert", 13.6, 4.35, "CLAD\nMAX", "core.maxClad", 0, 1200, "C", { h = 2.2 })
+meter("vert", 14.65, 4.35, "GRAPH-\nITE", "core.graphT", 0, 1000, "C", { red = 750, h = 2.2 })
 section("bench", 0.3, 0.2, 4.4, 2.0, "ROD CHANNEL COOLING")
 pump("bench", 0.6, 0.55, "PUMP 1", "cps.pump.1", "cps.pump.1.run")
 pump("bench", 1.8, 0.55, "PUMP 2", "cps.pump.2", "cps.pump.2.run")
@@ -160,7 +168,7 @@ toggle("bench", 9.9, 0.7, "PUMP 2", "eccs.pump.2", "eccs.pump.2.sw", { labels = 
 toggle("bench", 10.9, 0.7, "PUMP 3", "eccs.pump.3", "eccs.pump.3.sw", { labels = { "AUTO", "RUN" } })
 section("bench", 12.3, 0.2, 3.4, 2.0, "SHUTDOWN COOLING")
 toggle("bench", 12.6, 0.7, "COOLDOWN\nSYSTEM", "pri.cooldown", "pri.cooldown")
-digital("bench", 13.9, 0.9, "CIRCUIT TEMP", "pri.temp", "%.0f", "C", 1.5)
+digital("bench", 13.9, 0.9, "CIRCUIT TEMP", "pri.temp", "%.0f", "C", 1.5, 4)
 section("bench", 0.3, 2.6, 6.2, 2.2, "MAIN SAFETY VALVES")
 for g = 1, 3 do
 	toggle("bench", 0.6 + (g - 1) * 1.9, 3.1, "GROUP " .. g, "srv." .. g, "srv." .. g .. ".sw", { labels = { "AUTO", "OPEN" } })
@@ -169,8 +177,8 @@ end
 section("bench", 6.9, 2.6, 2.3, 2.2, "ANNUNCIATORS")
 button("bench", 7.45, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
 section("bench", 9.4, 2.6, 6.3, 2.2, "ACCIDENT LOCALISATION")
-digital("bench", 9.65, 3.05, "BUBBLER POOL TEMP", "pool.temp", "%.1f", "C", 2.6)
-digital("bench", 12.75, 3.05, "REACTOR SPACE PRESS", "rs.press", "%.0f", "kPa", 2.7)
+digital("bench", 9.95, 3.05, "BUBBLER POOL TEMP", "pool.temp", "%.1f", "C", 2.0, 4)
+digital("bench", 12.75, 3.05, "REACTOR SPACE PRESS", "rs.press", "%.0f", "kPa", 2.4, 4)
 -- Relief steam from the safety valve groups runs down to the bubbler pool.
 mimic("bench", "steam", { { 1.1, 4.33 }, { 1.1, 4.9 }, { 10.95, 4.9 }, { 10.95, 3.88 } })
 mimic("bench", "steam", { { 3.0, 4.33 }, { 3.0, 4.9 } })
@@ -198,11 +206,11 @@ recorder("vert", 0.4, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -6
 recorder("vert", 2.85, 4.05, REC_W, REC_H, "LOOP FLOW", { pen("loop.1.flow", 0, 20000, "red", "LOOP A", "t/h"), pen("loop.2.flow", 0, 20000, "blue", "LOOP B", "t/h") })
 recorder("vert", 5.3, 4.05, REC_W, REC_H, "CORE FLOW AND STEAM", { pen("pri.flow", 0, 40000, "red", "CORE FLOW", "t/h"), pen("steam.total", 0, 5000, "blue", "STEAM", "t/h") })
 recorder("vert", 7.75, 4.05, REC_W, REC_H, "CORE INLET TEMP", { pen("loop.1.tin", 0, 300, "red", "LOOP A", "C"), pen("loop.2.tin", 0, 300, "blue", "LOOP B", "C") })
-section("vert", 10.2, 4.05, 5.5, 2.45, "CIRCULATION")
-digital("vert", 10.4, 4.4, "PUMPS RUNNING A", "loop.1.running", "%.0f", "", 2.45)
-digital("vert", 13.05, 4.4, "PUMPS RUNNING B", "loop.2.running", "%.0f", "", 2.45)
-digital("vert", 10.4, 5.4, "PUMP HEAD A", "loop.1.dp", "%.2f", "MPa", 2.45)
-digital("vert", 13.05, 5.4, "PUMP HEAD B", "loop.2.dp", "%.2f", "MPa", 2.45)
+section("vert", 10.2, 4.05, 5.5, 2.52, "PUMP HEAD AND CORE FLOW")
+meter("vert", 10.5, 4.35, "HEAD\nLOOP A", "loop.1.dp", 0, 2.5, "MPa", { fmt = "%.2f", h = 2.2 })
+meter("vert", 11.8, 4.35, "HEAD\nLOOP B", "loop.2.dp", 0, 2.5, "MPa", { fmt = "%.2f", h = 2.2 })
+meter("vert", 13.1, 4.35, "CORE\nFLOW", "pri.flow", 0, 40000, "t/h", { h = 2.2 })
+meter("vert", 14.4, 4.35, "CORE\nSTEAM", "core.steam", 0, 5000, "t/h", { h = 2.2 })
 for l = 1, 2 do
 	local x0 = if l == 1 then 0.2 else 8.1
 	section("bench", x0, 0.15, 7.7, 4.7, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
@@ -211,7 +219,7 @@ for l = 1, 2 do
 		local x = x0 + 0.25 + (i - 1) * 1.55
 		pump("bench", x + 0.15, 0.5, string.format("MCP-%d%d", l, i), key .. ".sw", key .. ".run")
 		lamp("bench", x + 0.1, 2.1, "CAVIT", key .. ".cav", "amber", { w = 1.2 })
-		digital("bench", x, 2.75, "FLOW", key .. ".flow", "%.0f", "m3/h", 1.4)
+		digital("bench", x, 2.75, "FLOW", key .. ".flow", "%.0f", "m3/h", 1.4, 4)
 		jog("bench", x - 0.05, 3.55, "THROTTLE", key .. ".valve", key .. ".valve", "%.0f", "%")
 	end
 	-- Pressure header: the pumps' discharge joined and led off to the core.
@@ -236,11 +244,11 @@ meter("vert", 9.0, 1.0, "INTERM\nRANGE", "n.log", -9, 1, "log P", { fmt = "%.1f"
 meter("vert", 10.0, 1.0, "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f", red = 110, amber = 100 })
 meter("vert", 11.0, 1.0, "STARTUP\nRATE", "n.sur", -1, 3, "dec/min", { fmt = "%.2f", red = 2.6, amber = 1.3, tip = "Startup rate in decades per minute. 1.3 is a 20 s period (rod block), 2.6 is a 10 s period (scram)." })
 meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." })
-digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4)
-digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0)
-digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35)
-digital("vert", 13.1, 2.75, "MARGIN, RODS", "core.orm", "%.0f", "", 1.15)
-digital("vert", 14.35, 2.75, "VOID COEF, beta", "core.void", "%+.2f", "", 1.2)
+digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4, 4)
+digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0, 4)
+digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35, 5)
+digital("vert", 13.1, 2.75, "ORM", "core.orm", "%.0f", "rods", 1.15, 3)
+digital("vert", 14.35, 2.75, "VOID COEF", "core.void", "%+.2f", "beta", 1.2, 4)
 add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
 
 add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.25, w = 4.5, h = 4.5, label = "ROD SELECT" })
@@ -249,8 +257,8 @@ button("bench", 5.15, 0.5, "WITHDRAW", "rod.move", { value = -1, hold = true, co
 button("bench", 6.3, 0.5, "INSERT", "rod.move", { value = 1, hold = true, color = "white", w = 1.1 })
 button("bench", 7.45, 0.5, "CLEAR\nSELECT", "rod.clear", { color = "black" })
 toggle("bench", 8.4, 0.45, "SELECT", "rod.quad", "rod.quad", { labels = { "ONE", "FOUR" } })
-digital("bench", 5.15, 1.62, "SELECTED", "rod.selCount", "%.0f", "", 0.95)
-digital("bench", 6.15, 1.62, "DEPTH", "rod.selPos", "%.2f", "m", 1.25)
+digital("bench", 5.15, 1.62, "SELECTED", "rod.selCount", "%.0f", "", 0.95, 3)
+digital("bench", 6.15, 1.62, "DEPTH", "rod.selPos", "%.2f", "m", 1.25, 3)
 lamp("bench", 7.5, 1.78, "ROD BLOCK", "rod.block", "amber", { w = 1.3 })
 lamp("bench", 8.85, 1.78, "AZ RODS OUT", "rod.azOut", "green", { w = 1.4 })
 section("bench", 5.0, 2.65, 5.3, 2.25, "GROUPS AND INTERLOCKS")
@@ -258,9 +266,9 @@ button("bench", 5.15, 2.92, "SELECT\nAZ RODS", "rod.group", { value = 1, color =
 button("bench", 6.1, 2.92, "SELECT\nUSP", "rod.group", { value = 2, color = "blue" })
 button("bench", 7.05, 2.92, "SELECT\nAR", "rod.group", { value = 3, color = "green" })
 button("bench", 8.0, 2.92, "SELECT\nLAR", "rod.group", { value = 4, color = "yellow" })
-digital("bench", 5.15, 4.0, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.2)
-digital("bench", 6.4, 4.0, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.2)
-digital("bench", 7.65, 4.0, "USP MEAN", "rod.meanUSP", "%.2f", "m", 1.2)
+digital("bench", 5.15, 4.0, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.2, 3)
+digital("bench", 6.4, 4.0, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.2, 3)
+digital("bench", 7.65, 4.0, "USP MEAN", "rod.meanUSP", "%.2f", "m", 1.2, 3)
 toggle("bench", 9.25, 2.72, "BLOCK", "rod.blockBypass", "rod.blockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
 toggle("bench", 9.25, 3.84, "AZ INTLK", "rod.azInterlockBypass", "rod.azInterlockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
 
@@ -273,7 +281,7 @@ for n = 1, 5 do
 end
 section("bench", 10.5, 2.15, 5.3, 1.35, "")
 selector("bench", 10.6, 2.2, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
-jog("bench", 11.95, 2.2, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%")
+jog("bench", 11.95, 2.2, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digits = true })
 toggle("bench", 13.5, 2.2, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
 selector("bench", 14.5, 2.2, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
 section("bench", 10.5, 3.58, 5.3, 1.4, "PROTECTION BYPASS KEYS")
@@ -308,11 +316,11 @@ recorder("vert", 0.4, 4.05, REC_W, REC_H, "FEEDWATER FLOW", { pen("loop.1.feed",
 recorder("vert", 2.85, 4.05, REC_W, REC_H, "STEAM FLOW", { pen("loop.1.steam", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.steam", 0, 2500, "blue", "DRUMS B", "t/h") })
 recorder("vert", 5.3, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
 recorder("vert", 7.75, 4.05, REC_W, REC_H, "DEAERATOR", { pen("da.level", 0, 100, "red", "LEVEL", "%"), pen("da.temp", 0, 200, "blue", "TEMPERATURE", "C") })
-section("vert", 10.2, 4.05, 5.5, 2.45, "FEEDWATER TOTALS")
-digital("vert", 10.4, 4.4, "TOTAL FEEDWATER", "fw.total", "%.0f", "t/h", 2.45)
-digital("vert", 13.05, 4.4, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.45)
-digital("vert", 10.4, 5.4, "FEED PUMPS RUNNING", "fw.running", "%.0f", "", 2.45)
-digital("vert", 13.05, 5.4, "CONDENSATE FLOW", "cond.flow", "%.0f", "t/h", 2.45)
+section("vert", 10.2, 4.05, 5.5, 2.52, "UNIT TOTALS")
+meter("vert", 10.5, 4.35, "TOTAL\nFEED", "fw.total", 0, 5000, "t/h", { h = 2.2 })
+meter("vert", 11.8, 4.35, "TOTAL\nSTEAM", "steam.total", 0, 5000, "t/h", { h = 2.2 })
+meter("vert", 13.1, 4.35, "CONDEN-\nSATE", "cond.flow", 0, 5000, "t/h", { h = 2.2 })
+meter("vert", 14.4, 4.35, "DEAER\nTEMP", "da.temp", 0, 200, "C", { h = 2.2 })
 section("bench", 0.2, 0.15, 5.0, 2.3, "MAIN FEEDWATER PUMPS")
 for i = 1, 4 do
 	pump("bench", 0.45 + (i - 1) * 1.2, 0.5, "FWP-" .. i, "fw.pump." .. i, "fw.pump." .. i .. ".run")
@@ -326,13 +334,12 @@ section("bench", 10.7, 0.15, 5.1, 2.3, "CONDENSATE PUMPS")
 for i = 1, 3 do
 	pump("bench", 10.95 + (i - 1) * 1.2, 0.5, "CP-" .. i, "cond.pump." .. i, "cond.pump." .. i .. ".run")
 end
-digital("bench", 14.4, 0.9, "RUNNING", "cond.running", "%.0f", "", 1.2)
 for l = 1, 2 do
 	local x0 = if l == 1 then 0.2 else 5.4
 	section("bench", x0, 2.6, 5.0, 2.25, "DRUM " .. (if l == 1 then "A" else "B") .. " LEVEL CONTROL")
 	toggle("bench", x0 + 0.3, 3.05, "CONTROLLER", "lvl." .. l .. ".auto", "lvl." .. l .. ".auto", { labels = { "MAN", "AUTO" } })
 	jog("bench", x0 + 1.5, 3.05, "FEED VALVE", "lvl." .. l .. ".valve", "lvl." .. l .. ".valve", "%.0f", "%")
-	digital("bench", x0 + 3.3, 3.25, "LEVEL", "loop." .. l .. ".level", "%.0f", "mm", 1.4)
+	digital("bench", x0 + 3.3, 3.25, "LEVEL", "loop." .. l .. ".level", "%.0f", "mm", 1.4, 4)
 end
 -- Feedwater train: condensate pumps to the deaerator, feed pumps to the
 -- drum level control valves.
@@ -347,7 +354,7 @@ section("bench", 10.7, 2.6, 5.1, 2.25, "DEAERATOR")
 toggle("bench", 10.95, 3.05, "PEGGING\nSTEAM", "da.peg", "da.peg")
 toggle("bench", 12.05, 3.05, "LEVEL\nCONTROL", "da.levelAuto", "da.levelAuto", { labels = { "MAN", "AUTO" } })
 jog("bench", 13.2, 3.05, "COND VALVE", "da.valve", "da.valve", "%.0f", "%")
-digital("bench", 14.75, 3.25, "TEMP", "da.temp", "%.0f", "C", 0.95)
+digital("bench", 14.75, 3.25, "TEMP", "da.temp", "%.0f", "C", 0.95, 3)
 
 -- ------------------------------------------------------------------ P5
 panel("P5", "TURBINE-GENERATORS")
@@ -366,18 +373,20 @@ for k = 1, 2 do
 	meter("vert", x0 + 6.29, 1.1, "LUBE\nOIL", key .. ".lube", 0, 0.3, "MPa", { fmt = "%.2f", low = 0.12 })
 end
 section("vert", 7.5, 0.7, 1.0, 3.2, "")
-digital("vert", 0.3, 4.15, "STEAM PRESSURE", "pri.press", "%.2f", "MPa", 2.2)
-digital("vert", 2.6, 4.15, "PRESSURE SETPOINT", "ehc.pressSet", "%.2f", "MPa", 2.2)
-digital("vert", 0.3, 5.05, "STEAM DEMAND", "ehc.demand", "%.0f", "%", 2.2)
-digital("vert", 2.6, 5.05, "TOTAL STEAM", "steam.total", "%.0f", "t/h", 2.2)
+meter("vert", 7.6, 1.1, "GRID\nFREQ", "grid.hz", 58, 62, "Hz", { fmt = "%.2f", tip = "Grid frequency. Bring the generator to this before closing its breaker." })
+section("vert", 0.2, 4.05, 4.7, 2.52, "PRESSURE CONTROL")
+meter("vert", 0.5, 4.35, "STEAM\nPRESS", "pri.press", 0, 10, "MPa", { fmt = "%.2f", red = 7.35, h = 2.2 })
+meter("vert", 1.6, 4.35, "PRESS\nSET", "ehc.pressSet", 0, 10, "MPa", { fmt = "%.2f", h = 2.2 })
+meter("vert", 2.7, 4.35, "STEAM\nDEMAND", "ehc.demand", 0, 120, "%", { h = 2.2 })
+meter("vert", 3.8, 4.35, "TOTAL\nSTEAM", "steam.total", 0, 5000, "t/h", { h = 2.2 })
 recorder("vert", 5.1, 4.05, REC_W, REC_H, "TURBINE SPEED", { pen("tg.1.rpm", 0, 2000, "red", "TG-1", "rpm"), pen("tg.2.rpm", 0, 2000, "blue", "TG-2", "rpm") })
 recorder("vert", 7.6, 4.05, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0, 450, "red", "GEN 1", "MW"), pen("gen.2.mw", 0, 450, "blue", "GEN 2", "MW") })
 recorder("vert", 10.1, 4.05, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
 recorder("vert", 12.6, 4.05, REC_W, REC_H, "SHELL METAL TEMP", { pen("tg.1.metal", 0, 300, "red", "TG-1", "C"), pen("tg.2.metal", 0, 300, "blue", "TG-2", "C") })
 section("bench", 6.9, 0.15, 2.2, 4.7, "PRESSURE REG")
 toggle("bench", 7.5, 0.5, "REGULATOR", "ehc.pressAuto", "ehc.pressAuto", { labels = { "OUT", "IN" } })
-jog("bench", 7.25, 2.0, "PRESS SET", "ehc.press", "ehc.pressSet", "%.2f", "")
-digital("bench", 7.3, 3.6, "DEMAND", "ehc.demand", "%.0f", "%", 1.4)
+jog("bench", 7.25, 2.0, "PRESS SET", "ehc.press", "ehc.pressSet", "%.2f", "MPa", { digits = true })
+digital("bench", 7.3, 3.6, "DEMAND", "ehc.demand", "%.0f", "%", 1.4, 3)
 for k = 1, 2 do
 	local x0 = if k == 1 then 0.15 else 9.25
 	local key = "tg." .. k
@@ -391,7 +400,7 @@ for k = 1, 2 do
 	jog("bench", x0 + 5.0, 0.4, "LOAD SET", key .. ".load", key .. ".load", "%.0f", "%")
 	toggle("bench", x0 + 2.15, 1.85, "BYPASS", key .. ".bypassAuto", key .. ".bypassAuto", { labels = { "MAN", "AUTO" } })
 	jog("bench", x0 + 3.3, 1.85, "BYPASS VLV", key .. ".bypass", key .. ".bypass", "%.0f", "%")
-	digital("bench", x0 + 5.0, 2.05, "GEN MW", "gen." .. k .. ".mw", "%.0f", "", 1.4)
+	digital("bench", x0 + 5.0, 2.05, "GENERATOR", "gen." .. k .. ".mw", "%.0f", "MW", 1.4, 3)
 	local row = {
 		{ "LUBE\nOIL PUMP", ".lube", ".lubeAC" },
 		{ "TURNING\nGEAR", ".tgear", ".tgear" },
@@ -421,9 +430,9 @@ for k = 1, 2 do
 end
 add({ kind = "sync", face = "vert", x = 9.1, y = 0.7, w = 3.2, h = 3.2, label = "SYNCHROSCOPE" })
 section("vert", 12.6, 0.7, 3.2, 3.2, "UNIT OUTPUT")
-digital("vert", 12.8, 1.05, "GROSS", "plant.gross", "%.0f", "MW", 2.8)
-digital("vert", 12.8, 1.95, "AUXILIARIES", "plant.aux", "%.1f", "MW", 2.8)
-digital("vert", 12.8, 2.85, "NET TO GRID", "plant.net", "%.0f", "MW", 2.8)
+digital("vert", 12.8, 1.05, "GROSS", "plant.gross", "%.0f", "MW", 2.8, 4)
+digital("vert", 12.8, 1.95, "AUXILIARIES", "plant.aux", "%.1f", "MW", 2.8, 4)
+digital("vert", 12.8, 2.85, "NET TO GRID", "plant.net", "%.0f", "MW", 2.8, 4)
 section("vert", 0.2, 4.1, 9.0, 2.3, "BUSES")
 do
 	local names = { "1A", "1B", "2A", "2B" }
@@ -431,7 +440,7 @@ do
 		local x = 0.4 + (i - 1) * 1.55
 		lamp("vert", x, 4.5, "BUS " .. name, "bus." .. name .. ".live", "red", { w = 1.4 })
 		lamp("vert", x, 5.05, "ON RESERVE", "bus." .. name .. ".reserve", "amber", { w = 1.4 })
-		digital("vert", x, 5.55, "LOAD", "bus." .. name .. ".mw", "%.1f", "MW", 1.4)
+		digital("vert", x, 5.55, "LOAD", "bus." .. name .. ".mw", "%.1f", "MW", 1.4, 4)
 	end
 	for i = 1, 3 do
 		local x = 6.7 + (i - 1) * 0.83
@@ -442,13 +451,13 @@ do
 end
 recorder("vert", 9.5, 4.05, REC_W, REC_H, "UNIT OUTPUT", { pen("plant.gross", 0, 900, "red", "GROSS", "MW"), pen("plant.net", 0, 900, "blue", "NET", "MW") })
 recorder("vert", 11.95, 4.05, REC_W, REC_H, "FREQUENCY", { pen("grid.hz", 58, 62, "red", "GRID", "Hz"), pen("gen.1.hz", 58, 62, "blue", "GEN 1", "Hz") })
-meter("vert", 14.6, 4.05, "AUX\nLOAD", "plant.aux", 0, 80, "MW")
+meter("vert", 14.6, 4.05, "AUX\nLOAD", "plant.aux", 0, 80, "MW", { h = 2.4 })
 for k = 1, 2 do
 	local x0 = if k == 1 then 0.15 else 5.0
 	local key = "gen." .. k
 	section("bench", x0, 0.15, 4.75, 2.3, "GENERATOR " .. k)
 	toggle("bench", x0 + 0.1, 0.6, "FIELD\nBREAKER", key .. ".field", key .. ".field")
-	jog("bench", x0 + 1.12, 0.6, "VOLTAGE", key .. ".volt", key .. ".kv", "%.1f", "kV")
+	jog("bench", x0 + 1.12, 0.6, "VOLTAGE", key .. ".volt", key .. ".kv", "%.1f", "kV", { lo = 0, hi = 26 })
 	toggle("bench", x0 + 2.65, 0.6, "GEN\nBREAKER", key .. ".gcb", key .. ".gcb", { labels = { "TRIP", "CLOSE" } })
 	toggle("bench", x0 + 3.68, 0.6, "YARD\nBREAKER", key .. ".yard", key .. ".yard", { labels = { "TRIP", "CLOSE" } })
 end
