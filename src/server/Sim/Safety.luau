@@ -203,8 +203,16 @@ function Safety.step(self, dt: number)
 end
 
 function Safety.publish(self, S)
+	-- Motor currents in amperes, for the board ammeters.
+	local cpsRunning = 0
+	for _, pump in self.cpsPumps do
+		if pump.on then
+			cpsRunning += 1
+		end
+	end
 	for i, pump in self.cpsPumps do
 		S["cps.pump." .. i .. ".run"] = if pump.on then 1 else 0
+		S["cps.pump." .. i .. ".current"] = if pump.on then 38 + 30 * math.clamp(self.cpsFlow / math.max(cpsRunning, 1), 0, 1.2) else 0
 	end
 	S["cps.flow"] = self.cpsFlow * 100
 	S["cps.tank"] = self.cpsTank * 100
@@ -219,6 +227,7 @@ function Safety.publish(self, S)
 	for i, pump in self.eccsPumps do
 		S["eccs.pump." .. i .. ".run"] = if pump.on then 1 else 0
 		S["eccs.pump." .. i .. ".sw"] = if pump.manual then 1 else 0
+		S["eccs.pump." .. i .. ".current"] = if pump.on then 70 + 110 * math.clamp(self.eccsFlow / 230, 0, 1.1) else 0
 	end
 	S["pool.temp"] = self.poolTemp
 end

@@ -768,9 +768,15 @@ function Secondary.publish(self, S)
 		S["srv." .. g .. ".sw"] = if v.manual then 1 else 0
 	end
 	local feedRunning = 0
+	-- Motor currents, in amperes, for the board ammeters: no-load current
+	-- plus a share that follows the pump's flow.
+	local function amps(on: boolean, noLoad: number, full: number, frac: number): number
+		return if on then noLoad + (full - noLoad) * math.clamp(frac, 0, 1.2) else 0
+	end
 	for i, pump in self.feedPumps do
 		S["fw.pump." .. i .. ".run"] = if pump.on then 1 else 0
 		S["fw.pump." .. i .. ".flow"] = pump.flow * 3.6
+		S["fw.pump." .. i .. ".current"] = amps(pump.on, 150, 560, pump.flow / Sec.FEED_PUMP_FLOW)
 		if pump.on then
 			feedRunning += 1
 		end
@@ -781,11 +787,19 @@ function Secondary.publish(self, S)
 	S["fw.temp"] = self.da.temp
 	for i, pump in self.auxFeed do
 		S["afw.pump." .. i .. ".run"] = if pump.on then 1 else 0
+		S["afw.pump." .. i .. ".current"] = amps(pump.on, 40, 120, pump.flow / Sec.AUX_FEED_FLOW)
 	end
 	S["afw.auto"] = if self.auxFeedAuto then 1 else 0
 	local condRunning = 0
+	local condCapacity = 0
+	for _, pump in self.condPumps do
+		if pump.on then
+			condCapacity += Sec.COND_PUMP_FLOW
+		end
+	end
 	for i, pump in self.condPumps do
 		S["cond.pump." .. i .. ".run"] = if pump.on then 1 else 0
+		S["cond.pump." .. i .. ".current"] = amps(pump.on, 45, 140, if condCapacity > 0 then self.condFlow / condCapacity else 0)
 		if pump.on then
 			condRunning += 1
 		end

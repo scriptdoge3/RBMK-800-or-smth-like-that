@@ -497,6 +497,25 @@ if dumpDir then
 			})
 		end
 	end
+	-- Self-lit displays drawn on their own thin parts in front of the board.
+	for _, d in room:GetDescendants() do
+		if d:IsA("BasePart") and d:GetAttribute("Overlay") then
+			local gui = d:FindFirstChildOfClass("SurfaceGui")
+			local items = {}
+			describe(gui, items)
+			table.insert(faces, {
+				panel = d:GetAttribute("Panel"),
+				face = d:GetAttribute("Face"),
+				width = d.Size.X * gui.PixelsPerStud,
+				height = d.Size.Y * gui.PixelsPerStud,
+				pps = gui.PixelsPerStud,
+				color = { 0, 0, 0 },
+				transparent = true,
+				items = items,
+				widgets = {},
+			})
+		end
+	end
 	-- Every part in the room too, for a 3D view.
 	local parts = {}
 	for _, d in room:GetDescendants() do
@@ -508,6 +527,7 @@ if dumpDir then
 				color = rgb(d.Color),
 				shape = if d:IsA("Part") then d.Shape.Name elseif d:IsA("WedgePart") then "Wedge" else "Block",
 				neon = d.Material == Enum.Material.Neon,
+				overlay = d:GetAttribute("Overlay") == true,
 				transparency = d.Transparency,
 				face = d:GetAttribute("Face"),
 				panel = d:GetAttribute("Panel"),

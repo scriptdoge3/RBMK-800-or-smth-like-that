@@ -14,7 +14,9 @@ in real time, and fuel channels that burst when you starve or overheat them.
 ![The corner, with the reactor panel](docs/corner.png)
 ![The reactor control panel](docs/reactor-panel.png)
 ![Rod position indicators](docs/rod-positions.png)
-![Manual/automatic stations](docs/stations.png)
+![Main circulation board](docs/circulation-board.png)
+![Main circulation bench](docs/circulation-bench.png)
+![Feedwater bench with manual/automatic stations](docs/stations.png)
 ![The operators' console](docs/desk.png)
 ![Plan view](docs/plan.png)
 
@@ -62,16 +64,21 @@ The room is life-size around a standard Roblox character: the bench front is at 
 height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.74 m
 high and the ceiling is 3.8 m up. Nothing in it is later than 1979:
 
-- **Boards**: pale gray-green benchboards with a black rubber bumper and kick strip;
-  edgewise meters graduated in twenty divisions with the unit on the dial; strip-chart
-  recorders with ruled paper behind glass; pistol-grip control switches with red and
-  green indicating lamps (white on mode switches); key-operated bypass switches;
-  raise/lower pushbuttons with small position indicators; white engraved nameplates;
-  coloured mimic lines (reactor water blue, steam red, feedwater green, power black);
-  backlit annunciator windows; a lamp-mosaic channel cartogram; an orange bargraph for
-  the axial power shape; seven-segment digital panel meters only where a number matters
-  (power, period, reactivity, margin, rod positions, setpoints); and a green-phosphor
-  process computer display. Hover over any meter for its exact reading.
+- **Boards** are laid out the way GE boards of the period were: on each vertical board,
+  rows of identical narrow black-cased edgewise meters (GE type 180 style: white scale
+  behind glass, twenty divisions, the unit on the dial, red pointer), each under its own
+  engraved nameplate, a black group plate over each system, and a row of strip-chart
+  recorders; on each bench, rows of control switch modules, each a nameplate, a pair of
+  domed red and green indicating lamps (white on mode switches) and a black escutcheon
+  engraved with its two positions carrying a pistol-grip handle or a key lock. Valves and
+  setpoints are moved with spring-return LOWER / RAISE switches under small horizontal
+  position meters. Pushbuttons are oiltight, with chrome collars. Coloured mimic lines
+  trace the flow paths (reactor water blue, steam red, feedwater green, emergency
+  cooling orange, power black). Every large pump has a motor ammeter. Digital readouts
+  are few: small red LED panel meters for the process computer's figures and for rod
+  positions and setpoints, and mechanical counters for ruptured, damaged and
+  flow-blocked channels. Boards are pale gray-green with a black rubber bumper and kick
+  strip. Hover over any instrument for its exact reading.
 - **Reactor board (H11-P603)**, the widest section: on the vertical board, the rod
   position indicators (a synchro dial for every one of the 211 rods, laid out as in the
   core, with a red lamp at full out and a green one at full in, as on the RBMK's rod
@@ -84,12 +91,15 @@ high and the ceiling is 3.8 m up. Nothing in it is later than 1979:
 - **Controllers** are manual/automatic stations: a process scale with a red setpoint
   index, AUTO and MAN lamps, an output meter, and A / M / lower / raise pushbuttons (drum
   level A and B, deaerator level, the pressure regulator).
-- **Pumps**: motor current meters for all eight main circulation pumps, flow meters for
-  the four feed pumps.
+- **Pumps**: motor current meters for every large pump (main circulation, feed,
+  emergency feed, condensate, emergency core cooling, rod channel cooling), and flow
+  meters for each main circulation and feed pump.
 - **Annunciators** follow the ringback sequence of ISA S18.1 (1979): a new alarm flashes
   fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it flashes
   slowly until RESET; TEST lights every window on the panel while held. The pushbuttons
-  are on H11-P601, P603 and P604.
+  are on H11-P601, P603 and P604. In Roblox the board artwork takes the room's lighting,
+  while the self-lit displays (annunciator windows, LED digits, the cartogram, the
+  computer's tube) glow on their own.
 - **Room**: waxed vinyl tile floor with a black rubber cove base, walnut paneling on the
   back wall, an acoustic tile ceiling with fluorescent troffers, a lit exit sign and an
   electric wall clock.
