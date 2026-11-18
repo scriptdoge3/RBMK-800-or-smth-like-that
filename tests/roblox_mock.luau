@@ -209,6 +209,49 @@ end
 H.setGlobal("workspace", workspace)
 local _ = realInstanceNew
 
+-- ---------------------------------------------------------------- models
+-- With models=straight, models=turned or models=rotated, a stand-in for the
+-- Blender meshes imported in Studio is put in the Workspace, the way the
+-- 3D importer leaves them: one MeshPart per mesh and the four probe cubes.
+-- "turned" imports the meshes with their data turned half round (as an
+-- importer with other axis settings would); "rotated" leaves the data and
+-- turns the parts instead. Either way the panels must come out the same.
+local process = require("@lune/process")
+local modelsMode: string? = nil
+for _, a in process.args do
+	modelsMode = string.match(a, "^models=(.+)$") or modelsMode
+end
+local Meshes = H.require(H.client.Meshes)
+local importTurn = if modelsMode == "turned" or modelsMode == "rotated" then CFrame.Angles(0, math.pi, 0) else CFrame.new()
+-- How the meshes' own data is turned from the panel frame.
+local meshTurn = if modelsMode == "turned" then importTurn else CFrame.new()
+if modelsMode then
+	print("models: a " .. modelsMode .. " import of the Blender meshes")
+	local import = Instance.new("Model")
+	import.Name = "RBMKModels"
+	local unit = 0.7 -- studs per unit, as the importer chose
+	local at = CFrame.new(40, 2, 12) -- wherever it landed
+	local partTurn = if modelsMode == "rotated" then importTurn else CFrame.new()
+	local function abs(v)
+		return Vector3.new(math.abs(v.X), math.abs(v.Y), math.abs(v.Z))
+	end
+	for name, info in Meshes.info do
+		local m = Instance.new("MeshPart")
+		m.Name = name
+		m.Size = abs(meshTurn:VectorToWorldSpace(Vector3.new(info.size[1], info.size[2], info.size[3]))) * unit
+		m.CFrame = at * partTurn
+		m.Parent = import
+	end
+	for name, pos in Meshes.probes do
+		local m = Instance.new("MeshPart")
+		m.Name = name
+		m.Size = Vector3.new(0.02, 0.02, 0.02) * unit
+		m.CFrame = at * CFrame.new(importTurn:VectorToWorldSpace(Vector3.new(pos[1], pos[2], pos[3])) * unit) * partTurn
+		m.Parent = import
+	end
+	import.Parent = workspace
+end
+
 -- ---------------------------------------------------------------- server
 print("starting the server script")
 local t0 = os.clock()
@@ -307,6 +350,100 @@ end
 H.check(findText("RBMK-800 UNIT"), "unit computer shows live data")
 H.check(findText("CHANNEL CARTOGRAM   FLUX"), "channel cartogram received and titled")
 H.check(findText("Unit in cold shutdown"), "event log reached the client")
+
+local Models = H.require(H.client.Models)
+local controlsFolder = room:FindFirstChild("PanelControls")
+if modelsMode then
+	H.check(Models.source == "imported", "the imported meshes are used (" .. Models.source .. ")")
+	H.check(replicated:FindFirstChild("RBMKModels") ~= nil and workspace:FindFirstChild("RBMKModels") == nil, "the server moved the import out of the room")
+	-- Every mesh must stand out of its panel, whichever way the importer
+	-- turned it: the panel frame of each copy has its Z along a face normal.
+	local normals = {}
+	for _, p in PanelLayout.panels do
+		for _, f in { "bench", "vert" } do
+			table.insert(normals, PanelLayout.face(p.index, f).normal)
+		end
+	end
+	local meshes, wrong, kinds = 0, 0, {}
+	for _, d in controlsFolder:GetChildren() do
+		local name = d:GetAttribute("Model")
+		if name then
+			meshes += 1
+			kinds[name] = true
+			local z = (d.CFrame * meshTurn).ZVector
+			local out = false
+			for _, n in normals do
+				if z:Dot(n) > 0.999 then
+					out = true
+				end
+			end
+			if not out then
+				wrong += 1
+			end
+		end
+	end
+	local nKinds = 0
+	for _ in kinds do
+		nKinds += 1
+	end
+	H.check(meshes > 600 and wrong == 0, string.format("%d meshes of %d kinds on the panels, %d not standing out of the panel", meshes, nKinds, wrong))
+	-- A cap is scaled to its modelled size.
+	local cap = nil
+	for _, d in controlsFolder:GetChildren() do
+		if d:GetAttribute("Model") == "MushroomCap" then
+			cap = d
+		end
+	end
+	local want = Meshes.info.MushroomCap.size[1] * PanelLayout.SCALE
+	H.near(cap and cap.Size.X or 0, want * 0.999, want * 1.001, "the AZ-5 mushroom head is its modelled size")
+else
+	H.check(Models.source == "parts", "with no meshes the panels use plain parts")
+end
+
+-- The scram button is under a hinged cover: the first click lifts the
+-- cover, the second presses the button, a right click closes the cover.
+do
+	local p3 = PanelLayout.panels[PanelLayout.CORNER_PANEL]
+	local az5 = nil
+	for _, w in p3.widgets do
+		if w.cmd == "az5.button" then
+			az5 = w
+		end
+	end
+	local face = PanelLayout.face(p3.index, "bench")
+	local part = room:FindFirstChild(p3.id .. "_bench")
+	local cover = nil
+	for _, d in controlsFolder:GetChildren() do
+		if d:GetAttribute("Guard") == "az5.button" then
+			cover = d
+		end
+	end
+	H.check(az5 ~= nil and az5.guard and cover ~= nil, "AZ-5 has a guard with a cover")
+	local function count(): number
+		local n = 0
+		for _, s in sent do
+			if s[1] == "az5.button" then
+				n += 1
+			end
+		end
+		return n
+	end
+	local closed = cover.CFrame
+	nextHit = { Instance = part, Position = PanelLayout.toWorld(face, az5.x + az5.w / 2, az5.y + az5.h / 2, 0) }
+	renderStepped.fire(0.016)
+	inputBegan.fire({ UserInputType = Enum.UserInputType.MouseButton1 }, false)
+	inputEnded.fire({ UserInputType = Enum.UserInputType.MouseButton1 })
+	local lifted = cover.CFrame
+	local outward = (lifted.Position - closed.Position):Dot(face.normal)
+	H.check(count() == 0 and outward > 0.1, string.format("first click lifts the AZ-5 cover (%.2f studs out) without pressing", outward))
+	inputBegan.fire({ UserInputType = Enum.UserInputType.MouseButton1 }, false)
+	inputEnded.fire({ UserInputType = Enum.UserInputType.MouseButton1 })
+	H.check(count() == 1, "with the cover up, AZ-5 can be pressed")
+	inputBegan.fire({ UserInputType = Enum.UserInputType.MouseButton2 }, false)
+	inputEnded.fire({ UserInputType = Enum.UserInputType.MouseButton2 })
+	H.check((cover.CFrame.Position - closed.Position).Magnitude < 1e-3 and count() == 1, "a right click closes the cover again")
+	nextHit = nil
+end
 
 -- Click every control on every face, the way a player would.
 local Plant = H.require(H.server.Sim.Plant)
@@ -417,13 +554,26 @@ H.check((fired.Alarm or 0) > 0, "annunciator changes reach the client")
 -- rendered outside Roblox for a quick look at the layout.
 --   lune run tests/roblox_mock -- dump=/some/dir
 local fs = require("@lune/fs")
-local process = require("@lune/process")
 local serde = require("@lune/serde")
 local dumpDir: string? = nil
 for _, a in process.args do
 	dumpDir = string.match(a, "^dump=(.+)$") or dumpDir
 end
 if dumpDir then
+	-- The click-through above left every guard cover lifted. Close them all
+	-- but the first turbine's trip guard, so that both are seen.
+	for _, p in PanelLayout.panels do
+		local part = room:FindFirstChild(p.id .. "_bench")
+		local face = PanelLayout.face(p.index, "bench")
+		for _, w in p.widgets do
+			if w.guard and w.cmd ~= "tg.1.trip" then
+				nextHit = { Instance = part, Position = PanelLayout.toWorld(face, w.x + w.w / 2, w.y + w.h / 2, 0) }
+				inputBegan.fire({ UserInputType = Enum.UserInputType.MouseButton2 }, false)
+				inputEnded.fire({ UserInputType = Enum.UserInputType.MouseButton2 })
+			end
+		end
+	end
+	nextHit = nil
 	local function rgb(c)
 		return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }
 	end
@@ -526,6 +676,8 @@ if dumpDir then
 				cf = { d.CFrame:GetComponents() },
 				color = rgb(d.Color),
 				shape = if d:IsA("Part") then d.Shape.Name elseif d:IsA("WedgePart") then "Wedge" else "Block",
+				mesh = d:GetAttribute("Model"),
+				material = d.Material.Name,
 				neon = d.Material == Enum.Material.Neon,
 				overlay = d:GetAttribute("Overlay") == true,
 				transparency = d.Transparency,

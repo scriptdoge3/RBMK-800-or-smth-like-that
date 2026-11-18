@@ -9,6 +9,7 @@ local SoundService = game:GetService("SoundService")
 local Shared = ReplicatedStorage:WaitForChild("RBMK")
 local Config = require(Shared.Config)
 local PanelLayout = require(Shared.PanelLayout)
+local Models = require(script.Parent.Models)
 local Panels = require(script.Parent.Panels)
 local Controls = require(script.Parent.Controls)
 local ProcedureGui = require(script.Parent.ProcedureGui)
@@ -51,6 +52,17 @@ local ctx = {
 	end,
 }
 
+-- The panel hardware: the Blender meshes, imported or built here, or
+-- plain parts.
+local source = Models.init()
+if source == "parts" then
+	print("[RBMK-800] panel hardware: plain parts. For the modelled hardware, import models/RBMKModels.glb in Studio or allow Mesh / Image APIs (see README).")
+	if Models.note then
+		print("[RBMK-800] " .. Models.note)
+	end
+else
+	print("[RBMK-800] panel hardware: Blender meshes (" .. source .. ")")
+end
 local built = Panels.build(room, ctx)
 Controls.start(built, ctx)
 ProcedureGui.start()

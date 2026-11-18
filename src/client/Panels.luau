@@ -1,8 +1,10 @@
 --!nonstrict
 -- Dresses the benchboards: every instrument, lamp, switch and display in the
 -- shared layout is drawn here, on each player's own machine. The flat
--- artwork goes on a SurfaceGui per panel face; buttons, switch handles and
--- knobs are small parts standing proud of the panel.
+-- artwork goes on a SurfaceGui per panel face. The hardware standing proud
+-- of the panel (pushbuttons and their guards, lamps, switch handles, keys,
+-- knobs) is the Blender meshes from Models, or plain parts when the meshes
+-- are not available.
 --
 -- build() returns the list of things that need refreshing when a new
 -- snapshot arrives and the list of clickable regions on each face.
@@ -11,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("RBMK")
 local PanelLayout = require(Shared.PanelLayout)
 local CoreLayout = require(Shared.CoreLayout)
 local AlarmList = require(Shared.AlarmList)
+local Models = require(script.Parent.Models)
 
 local Panels = {}
 
@@ -195,9 +198,19 @@ local function dome(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 	return p
 end
 
--- An indicating light: a coloured domed lens in a black bezel, glowing
--- when lit.
+-- An indicating light: a coloured domed lens in a chrome bezel, glowing
+-- when lit. `diameter` is the lens's.
 local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, diameter: number, colors: { Color3 }): (boolean) -> ()
+	if Models.ready then
+		local k = diameter / Models.info.LampLens.size[1]
+		local frame = blockCFrame(face, x, y, 0, 0)
+		Models.place("LampBezel", folder, frame, k, CHROME, Enum.Material.Metal)
+		local glass = Models.place("LampLens", folder, frame, k, colors[2], Enum.Material.Glass)
+		return function(on: boolean)
+			glass.Color = colors[if on then 1 else 2]
+			glass.Material = if on then Enum.Material.Neon else Enum.Material.Glass
+		end
+	end
 	cylinder(folder, face, x, y, diameter + 0.08, 0.05, Color3.fromRGB(28, 28, 30))
 	local cap = cylinder(folder, face, x, y, diameter, 0.08, colors[2])
 	local top = dome(folder, face, x, y, diameter * 0.96, 0.08 + diameter * 0.25, colors[2])
@@ -210,6 +223,27 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 end
 
 local BEZEL = Color3.fromRGB(34, 35, 38)
+local BRASS = Color3.fromRGB(200, 168, 84)
+local GUARD_YELLOW = Color3.fromRGB(232, 196, 40)
+local GUARD_BLACK = Color3.fromRGB(30, 30, 32)
+local COVER_RED = Color3.fromRGB(214, 44, 30)
+local COVER_TRANSPARENCY = 0.4
+local COVER_OPEN = 100 -- degrees a lifted guard cover stands open
+
+-- Where a mesh's bounding box sits when the mesh is mounted at `frame`.
+local function boxFrame(name: string, frame: CFrame): CFrame
+	local c = Models.info[name].center
+	return frame * CFrame.new(c[1] * S, c[2] * S, c[3] * S)
+end
+
+-- A plain block the size of a mesh's bounding box, where the meshes are
+-- not available.
+local function boxOf(folder: Instance, name: string, frame: CFrame, color: Color3): Part
+	local size = Models.info[name].size
+	local p = basePart(folder, Vector3.new(size[1], size[2], size[3]), color)
+	p.CFrame = boxFrame(name, frame)
+	return p
+end
 -- Second switch positions that mean a piece of equipment is energised,
 -- running or open: these switches get red and green lamps.
 local EQUIPMENT_STATES = { ON = true, OPEN = true, CLOSE = true, RUN = true, START = true }
@@ -629,30 +663,124 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	-- An oiltight pushbutton: a coloured cap in a chrome collar, its
-	-- nameplate below. The scram button is a large mushroom head on a
-	-- yellow guard plate.
+	-- nameplate below. The protective functions (the scram, ECCS
+	-- initiation, the turbine trips) are guarded: the button stands on a
+	-- guard base under a hinged translucent cover, which has to be lifted
+	-- before the button can be pressed. The scram button is a large red
+	-- mushroom head in a yellow guard.
 	builders.button = function(gui, face, part, w)
-		local big = w.big
-		local d = if big then 0.6 else 0.3
-		local cx, cy = w.x + w.w / 2, w.y + d / 2 + 0.09
-		local ring = box(gui, cx - d / 2 - 0.08, cy - d / 2 - 0.08, d + 0.16, d + 0.16, Color3.fromRGB(28, 28, 30))
-		round(ring)
-		if big then
-			block(controls, face, cx, cy, d + 0.34, d + 0.34, 0.025, Color3.fromRGB(232, 196, 40))
+		local big, guarded = w.big, w.guard
+		local suffix = if big then "Large" else ""
+		local hinge = Models.hinge[suffix]
+		local half, baseT = hinge[2], hinge[3]
+		local d = if big then 0.64 else 0.3
+		local cx = w.x + w.w / 2
+		local cy = if guarded then w.y + half + 0.07 else w.y + d / 2 + 0.09
+		local mount = blockCFrame(face, cx, cy, 0, 0)
+		-- A guarded button stands on the guard's base.
+		local seat = mount * CFrame.new(0, 0, (if guarded then baseT else 0) * S)
+		local color = BUTTON[w.color]
+		local moving: { BasePart } = {}
+		local cover: BasePart? = nil
+		if not guarded then
+			round(box(gui, cx - d / 2 - 0.08, cy - d / 2 - 0.08, d + 0.16, d + 0.16, Color3.fromRGB(28, 28, 30)))
 		end
-		cylinder(controls, face, cx, cy, d + 0.1, 0.06, CHROME).Material = Enum.Material.Metal
-		local cap = cylinder(controls, face, cx, cy, d, if big then 0.2 else 0.13, BUTTON[w.color])
-		if big then
-			dome(controls, face, cx, cy, d * 0.98, 0.2, BUTTON[w.color])
+		if Models.ready then
+			if guarded then
+				Models.place("GuardBase" .. suffix, controls, mount, 1, if big then GUARD_YELLOW else GUARD_BLACK, Enum.Material.SmoothPlastic)
+			end
+			Models.place(if big then "MushroomCollar" else "PushCollar", controls, seat, 1, CHROME, Enum.Material.Metal)
+			table.insert(moving, Models.place(if big then "MushroomCap" else "PushCap", controls, seat, 1, color, Enum.Material.SmoothPlastic))
+			if guarded then
+				cover = Models.place("GuardCover" .. suffix, controls, mount, 1, COVER_RED, Enum.Material.Glass, COVER_TRANSPARENCY)
+			end
+		else
+			if guarded then
+				boxOf(controls, "GuardBase" .. suffix, mount, if big then GUARD_YELLOW else GUARD_BLACK)
+			end
+			local collar = cylinder(controls, face, cx, cy, d + 0.1, 0.06, CHROME)
+			collar.Material = Enum.Material.Metal
+			table.insert(moving, cylinder(controls, face, cx, cy, d, if big then 0.2 else 0.13, color))
+			if big then
+				table.insert(moving, dome(controls, face, cx, cy, d * 0.98, 0.2, color))
+			end
+			if guarded then
+				for _, p in { collar, table.unpack(moving) } do
+					p.CFrame += face.normal * baseT * S
+				end
+				local c = boxOf(controls, "GuardCover" .. suffix, mount, COVER_RED)
+				c.Material = Enum.Material.Glass
+				c.Transparency = COVER_TRANSPARENCY
+				cover = c
+			end
 		end
-		local home = cap.CFrame
-		local plateY = cy + d / 2 + 0.12
+		if cover then
+			cover:SetAttribute("Guard", w.cmd)
+		end
+		local homes: { CFrame } = {}
+		for i, p in moving do
+			homes[i] = p.CFrame
+		end
+		local function pressCap(down: boolean)
+			for i, p in moving do
+				p.CFrame = if down then homes[i] - face.normal * 0.05 * S else homes[i]
+			end
+		end
+		local lowest = if guarded then cy + half else cy + d / 2
+		local plateY = lowest + (if guarded then 0.05 else 0.12)
 		plate(gui, w.x - 0.02, plateY, w.w + 0.04, math.min(0.3, w.y + w.h - plateY), w.label, if big then 0.13 else 0.075)
-		region(part, w, function(_button: number)
+
+		-- The cover swings about the hinge along the top edge of the guard.
+		local open = false
+		local angle = 0
+		local swing = 0
+		local function coverAt(a: number)
+			local hy, hz = half * S, baseT * S
+			local frame = mount * CFrame.new(0, hy, hz) * CFrame.Angles(-math.rad(a), 0, 0) * CFrame.new(0, -hy, -hz)
+			if Models.ready then
+				Models.move(cover :: BasePart, frame)
+			else
+				(cover :: BasePart).CFrame = boxFrame("GuardCover" .. suffix, frame)
+			end
+		end
+		local function swingTo(target: number)
+			swing += 1
+			local mine = swing
+			local from = angle
+			task.spawn(function()
+				for step = 1, 8 do
+					if swing ~= mine then
+						return
+					end
+					angle = from + (target - from) * step / 8
+					coverAt(angle)
+					task.wait(0.02)
+				end
+			end)
+		end
+
+		region(part, w, function(button: number)
+			if guarded then
+				if button == 2 then
+					if open then
+						open = false
+						ctx.click()
+						swingTo(0)
+					end
+					return nil
+				elseif not open then
+					open = true
+					ctx.click()
+					swingTo(COVER_OPEN)
+					return nil
+				end
+			elseif button == 2 then
+				return nil
+			end
 			ctx.click()
-			cap.CFrame = home - face.normal * 0.05 * S
+			pressCap(true)
 			task.delay(0.15, function()
-				cap.CFrame = home
+				pressCap(false)
 			end)
 			if w.hold then
 				return { hold = w.cmd, value = w.value }
@@ -660,13 +788,27 @@ function Panels.build(room: Instance, ctx: Context)
 			ctx.send(w.cmd, w.value)
 			return nil
 		end, function()
-			return cleanLabel(w.label) .. (if w.hold then " (hold)" else "")
+			local name = cleanLabel(w.label)
+			if guarded then
+				return if open
+					then name .. " (cover lifted)\nclick to press, right-click to close the cover"
+					else name .. " (guarded)\nclick to lift the cover"
+			end
+			return name .. (if w.hold then " (hold)" else "")
 		end)
 	end
 
 	-- A pistol-grip handle on its hub, pointing up and turned `angle`
-	-- degrees; returns a function that turns it.
-	local function pistolGrip(face: PanelLayout.Face, hx: number, hy: number, angle: number): (number) -> ()
+	-- degrees, `k` times its modelled size; returns a function that turns it.
+	local function pistolGrip(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
+		if Models.ready then
+			local scale = k or 1
+			Models.place("SwitchHub", controls, blockCFrame(face, hx, hy, 0, 0), scale, Color3.fromRGB(38, 38, 40), Enum.Material.SmoothPlastic)
+			local grip = Models.place("PistolGrip", controls, blockCFrame(face, hx, hy, 0, angle), scale, Color3.fromRGB(16, 16, 18), Enum.Material.SmoothPlastic)
+			return function(a: number)
+				Models.move(grip, blockCFrame(face, hx, hy, 0, a))
+			end
+		end
 		cylinder(controls, face, hx, hy, 0.26, 0.06, Color3.fromRGB(38, 38, 40))
 		local L = 0.36
 		local grip = block(controls, face, hx, hy, 0.13, L, 0.15, Color3.fromRGB(16, 16, 18))
@@ -713,12 +855,23 @@ function Panels.build(room: Instance, ctx: Context)
 		right.TextWrapped = false
 		local hx, hy = cx, ey + eh * 0.62
 		local set: (boolean) -> ()
-		if key then
+		if key and Models.ready then
+			-- A chrome lock with a brass key standing in it.
+			Models.place("KeyLock", controls, blockCFrame(face, hx, hy, 0, 0), 1, CHROME, Enum.Material.Metal)
+			local keyParts = {
+				Models.place("Key", controls, blockCFrame(face, hx, hy, 0, -45), 1, BRASS, Enum.Material.Metal),
+				Models.place("KeyBow", controls, blockCFrame(face, hx, hy, 0, -45), 1, BRASS, Enum.Material.Metal),
+			}
+			set = function(on: boolean)
+				for _, p in keyParts do
+					Models.move(p, blockCFrame(face, hx, hy, 0, if on then 45 else -45))
+				end
+			end
+		elseif key then
 			cylinder(controls, face, hx, hy, 0.28, 0.07, Color3.fromRGB(196, 198, 202)).Material = Enum.Material.Metal
 			cylinder(controls, face, hx, hy, 0.17, 0.09, Color3.fromRGB(140, 142, 146)).Material = Enum.Material.Metal
-			local brass = Color3.fromRGB(200, 168, 84)
-			local blade = block(controls, face, hx, hy, 0.03, 0.09, 0.1, brass)
-			local bow = block(controls, face, hx, hy, 0.03, 0.2, 0.17, brass)
+			local blade = block(controls, face, hx, hy, 0.03, 0.09, 0.1, BRASS)
+			local bow = block(controls, face, hx, hy, 0.03, 0.2, 0.17, BRASS)
 			blade.Material = Enum.Material.Metal
 			bow.Material = Enum.Material.Metal
 			set = function(on: boolean)
@@ -727,7 +880,7 @@ function Panels.build(room: Instance, ctx: Context)
 				bow.CFrame = blockCFrame(face, hx, hy, 0.19 + 0.085, angle)
 			end
 		else
-			local turn = pistolGrip(face, hx, hy, -45)
+			local turn = pistolGrip(face, hx, hy, -45, 0.78)
 			set = function(on: boolean)
 				turn(if on then 45 else -45)
 			end
@@ -796,8 +949,14 @@ function Panels.build(room: Instance, ctx: Context)
 		local esc = box(gui, cx - 0.32, cy - 0.3, 0.64, 0.6, Color3.fromRGB(22, 22, 24))
 		local _ = esc
 		local n = #w.positions
-		cylinder(controls, face, cx, cy, 0.42, 0.13, Color3.fromRGB(28, 28, 30))
-		local pointer = block(controls, face, cx, cy, 0.07, 0.4, 0.15, Color3.fromRGB(232, 232, 226), 0)
+		local pointer: BasePart
+		if Models.ready then
+			Models.place("Knob", controls, blockCFrame(face, cx, cy, 0, 0), 1, Color3.fromRGB(28, 28, 30), Enum.Material.SmoothPlastic)
+			pointer = Models.place("KnobPointer", controls, blockCFrame(face, cx, cy, 0, 0), 1, Color3.fromRGB(232, 232, 226), Enum.Material.SmoothPlastic)
+		else
+			cylinder(controls, face, cx, cy, 0.42, 0.13, Color3.fromRGB(28, 28, 30))
+			pointer = block(controls, face, cx, cy, 0.07, 0.4, 0.15, Color3.fromRGB(232, 232, 226), 0)
+		end
 		local readout = plate(gui, w.x + 0.08, w.y + 0.93, w.w - 0.16, 0.26, "", 0.12, true)
 		local function index(): number
 			return math.clamp(math.floor(get(w.sig) - w.base + 1.5), 1, n)
@@ -808,7 +967,11 @@ function Panels.build(room: Instance, ctx: Context)
 			if i ~= last then
 				last = i
 				local angle = if n > 1 then -120 + (i - 1) / (n - 1) * 240 else 0
-				pointer.CFrame = blockCFrame(face, cx, cy, 0.13 + 0.075, angle)
+				if Models.ready then
+					Models.move(pointer, blockCFrame(face, cx, cy, 0, angle))
+				else
+					pointer.CFrame = blockCFrame(face, cx, cy, 0.13 + 0.075, angle)
+				end
 				readout.Text = w.positions[i]
 			end
 		end)
@@ -872,7 +1035,7 @@ function Panels.build(room: Instance, ctx: Context)
 		l.TextXAlignment = Enum.TextXAlignment.Left
 		local r = text(gui, cx - 0.03, ey + 0.02, ew / 2, 0.11, "RAISE", 0.062, white, Enum.Font.ArialBold)
 		r.TextXAlignment = Enum.TextXAlignment.Right
-		local turn = pistolGrip(face, cx, ey + eh * 0.66, 0)
+		local turn = pistolGrip(face, cx, ey + eh * 0.66, 0, 0.85)
 		local last = math.huge
 		table.insert(updaters, function()
 			local v = get(w.sig)
@@ -1398,7 +1561,7 @@ function Panels.build(room: Instance, ctx: Context)
 		text(gui, cx - 0.3, ey + 0.03, 0.6, 0.13, w.positions[2], 0.075, white, Enum.Font.ArialBold)
 		local r = text(gui, cx - 0.04, ey + eh - 0.2, ew / 2, 0.13, w.positions[3], 0.075, white, Enum.Font.ArialBold)
 		r.TextXAlignment = Enum.TextXAlignment.Right
-		local turn = pistolGrip(face, cx, ey + eh * 0.62, 0)
+		local turn = pistolGrip(face, cx, ey + eh * 0.62, 0, 1.25)
 		region(part, w, function(_button: number, u: number)
 			ctx.click()
 			local insert = u < cx
@@ -1527,8 +1690,15 @@ function Panels.build(room: Instance, ctx: Context)
 		local cx, cy = w.x + w.w / 2, w.y + d / 2 + 0.09
 		local ring = box(gui, cx - d / 2 - 0.08, cy - d / 2 - 0.08, d + 0.16, d + 0.16, Color3.fromRGB(28, 28, 30))
 		round(ring)
-		cylinder(controls, face, cx, cy, d + 0.1, 0.06, CHROME).Material = Enum.Material.Metal
-		local cap = cylinder(controls, face, cx, cy, d, 0.13, BUTTON.white)
+		local cap: BasePart
+		if Models.ready then
+			local seat = blockCFrame(face, cx, cy, 0, 0)
+			Models.place("PushCollar", controls, seat, 1, CHROME, Enum.Material.Metal)
+			cap = Models.place("PushCap", controls, seat, 1, BUTTON.white, Enum.Material.SmoothPlastic)
+		else
+			cylinder(controls, face, cx, cy, d + 0.1, 0.06, CHROME).Material = Enum.Material.Metal
+			cap = cylinder(controls, face, cx, cy, d, 0.13, BUTTON.white)
+		end
 		local home = cap.CFrame
 		local plateY = cy + d / 2 + 0.12
 		plate(gui, w.x - 0.02, plateY, w.w + 0.04, math.min(0.3, w.y + w.h - plateY), w.label, 0.075)

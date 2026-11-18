@@ -91,10 +91,13 @@ local function lamp(face: string, x: number, y: number, label: string, sig: stri
 	add({ kind = "lamp", face = face, x = x, y = y, w = o.w or 1.4, h = o.h or 0.3, label = label, sig = sig, color = color, gt = o.gt, eq = o.eq, lt = o.lt })
 end
 
--- An oiltight pushbutton with its nameplate below.
+-- An oiltight pushbutton with its nameplate below. `guard` puts it under
+-- a hinged cover that has to be lifted before it can be pressed, as on the
+-- protective functions; `big` makes it a mushroom head.
 local function button(face: string, x: number, y: number, label: string, cmd: string, opts: any?)
 	local o = opts or {}
-	add({ kind = "button", face = face, x = x, y = y, w = o.w or 0.75, h = o.h or 0.9, label = label, cmd = cmd, value = o.value or 1, hold = o.hold, color = o.color or "black", lit = o.lit, litEq = o.litEq, big = o.big })
+	local h = o.h or (if o.guard then 1.0 else 0.9)
+	add({ kind = "button", face = face, x = x, y = y, w = o.w or 0.75, h = h, label = label, cmd = cmd, value = o.value or 1, hold = o.hold, color = o.color or "black", lit = o.lit, litEq = o.litEq, big = o.big, guard = o.guard })
 end
 
 -- A control switch module: nameplate, red/green lamps (white for a mode
@@ -260,7 +263,7 @@ pump("bench", 1.3, 0.4, "CPS\nPUMP 2", "cps.pump.2", "cps.pump.2.run")
 toggle("bench", 2.3, 0.4, "TANK\nMAKEUP", "cps.makeup", "cps.makeup", { labels = { "SHUT", "OPEN" } })
 group("bench", 3.7, 0.06, 6.05, "EMERGENCY CORE COOLING")
 toggle("bench", 3.75, 0.4, "AUTO\nACTUATION", "eccs.auto", "eccs.auto", { labels = { "OFF", "ARMED" }, key = true })
-button("bench", 4.85, 0.4, "MANUAL\nINITIATE", "eccs.manual", { color = "red" })
+button("bench", 4.85, 0.4, "MANUAL\nINITIATE", "eccs.manual", { color = "red", guard = true })
 button("bench", 5.7, 0.4, "ECCS\nRESET", "eccs.reset", { color = "black" })
 for i = 1, 3 do
 	toggle("bench", 6.65 + (i - 1) * 1.05, 0.4, "ECCS\nPUMP " .. i, "eccs.pump." .. i, "eccs.pump." .. i .. ".sw", { labels = { "AUTO", "RUN" } })
@@ -404,7 +407,7 @@ jog("bench", 11.9, 2.96, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digi
 toggle("bench", 13.35, 2.96, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
 selector("bench", 14.45, 2.96, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
 group("bench", 16.75, 0.06, 5.35, "EMERGENCY PROTECTION")
-button("bench", 16.8, 0.4, "AZ-5", "az5.button", { color = "red", big = true, w = 1.3, h = 1.45 })
+button("bench", 16.8, 0.4, "AZ-5", "az5.button", { color = "red", big = true, guard = true, w = 1.3, h = 1.45 })
 button("bench", 18.25, 0.48, "AZ\nRESET", "az.reset", { color = "black" })
 toggle("bench", 19.15, 0.4, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", "DROP" }, key = true })
 for n = 1, 5 do
@@ -566,7 +569,7 @@ for k = 1, 2 do
 	local x0 = if k == 1 then 0.2 else 9.05
 	local key = "tg." .. k
 	group("bench", x0, 0.06, 6.6, "TURBINE " .. k)
-	button("bench", x0, 0.4, "TRIP", key .. ".trip", { color = "red" })
+	button("bench", x0, 0.4, "TRIP", key .. ".trip", { color = "red", guard = true })
 	button("bench", x0 + 0.85, 0.4, "RESET\nLATCH", key .. ".reset", { color = "green" })
 	lamp("bench", x0, 1.42, "TRIPPED", key .. ".trip", "red", { w = 1.6 })
 	lamp("bench", x0, 1.8, "LATCHED", key .. ".stop", "green", { w = 1.6 })

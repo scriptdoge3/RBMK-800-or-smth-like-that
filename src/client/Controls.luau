@@ -60,12 +60,12 @@ function Controls.start(built: any, ctx: any)
 	hint.BorderSizePixel = 0
 	hint.AnchorPoint = Vector2.new(0.5, 1)
 	hint.Position = UDim2.new(0.5, 0, 1, -12)
-	hint.Size = UDim2.fromOffset(640, 26)
+	hint.Size = UDim2.fromOffset(860, 26)
 	hint.TextColor3 = Color3.fromRGB(235, 235, 225)
 	hint.Font = Enum.Font.SourceSans
 	hint.TextSize = 16
 	hint.Parent = gui
-	local HINT_WALK = "[E] sit at the nearest panel     [P] procedures     click any control; hover for details"
+	local HINT_WALK = "[E] sit at the nearest panel     [P] procedures     click any control; hover for details; guarded buttons: click lifts the cover"
 	local HINT_VIEW = "[A] [D] next panel     [W] [S] bench / board / wide     [wheel] zoom     [E] stand up"
 	hint.Text = HINT_WALK
 
@@ -229,11 +229,19 @@ function Controls.start(built: any, ctx: any)
 		hint.Text = HINT_VIEW
 	end
 
+	-- Walking about, the right button also turns the camera: there a right
+	-- click works a control only if the camera did not turn while it was
+	-- down. Seated at a panel the camera is fixed and it works at once.
+	local rightDown: { look: Vector3, at: number }? = nil
 	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and not processed then
 			press(1)
-		elseif input.UserInputType == Enum.UserInputType.MouseButton2 and not processed and viewing then
-			press(2)
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 and not processed then
+			if viewing then
+				press(2)
+			else
+				rightDown = { look = camera.CFrame.LookVector, at = os.clock() }
+			end
 		elseif input.KeyCode == Enum.KeyCode.E and not processed then
 			if viewing then
 				leaveView()
@@ -244,6 +252,14 @@ function Controls.start(built: any, ctx: any)
 	end)
 	UserInputService.InputEnded:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			release()
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			local down = rightDown
+			rightDown = nil
+			if down and not viewing and os.clock() - down.at < 0.6 and camera.CFrame.LookVector:Dot(down.look) > 0.9995 then
+				-- The button is already up: whatever it does is momentary.
+				press(2)
+			end
 			release()
 		end
 	end)
