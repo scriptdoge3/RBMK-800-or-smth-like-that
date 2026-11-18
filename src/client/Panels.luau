@@ -189,9 +189,9 @@ end
 -- The hardware standing proud of the panels is built from parts in the
 -- frame of each device: X to the operator's right, Y up the panel, Z out of
 -- it, in board units, with the origin at the device's mounting point on the
--- panel face. Round parts are discs standing out of the panel; domes, caps
--- and handles are ellipsoids (a sphere mesh stretched to its part); rings
--- are stepped like turned metal.
+-- panel face. The style is deliberately simple: blocks and cylinders only,
+-- no spheres. Round parts are discs standing out of the panel, and rings,
+-- caps and lenses are stepped like turned parts.
 local CHROME = Color3.fromRGB(200, 202, 206)
 local PHENOLIC = Color3.fromRGB(20, 20, 22) -- black moulded handles and knobs
 local BRASS = Color3.fromRGB(200, 168, 84)
@@ -213,8 +213,8 @@ end
 
 -- One part of a device, centred at `at`. `kind` is "block"; "disc", a
 -- cylinder standing out of the panel (size: diameter, diameter, height);
--- "rod", a cylinder lying along X (size: length, diameter, diameter); or
--- "ellipsoid". Returns the part and where it sits in the device frame.
+-- or "rod", a cylinder lying along X (size: length, diameter, diameter).
+-- Returns the part and where it sits in the device frame.
 local function piece(folder: Instance, frame: CFrame, kind: string, size: Vector3, at: Vector3, color: Color3, material: Enum.Material?, transparency: number?): (Part, CFrame)
 	local p = Instance.new("Part")
 	p.Anchored = true
@@ -235,11 +235,6 @@ local function piece(folder: Instance, frame: CFrame, kind: string, size: Vector
 		p.Size = size * S
 	else
 		p.Size = size * S
-		if kind == "ellipsoid" then
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.Sphere
-			mesh.Parent = p
-		end
 	end
 	p.CFrame = frame * rel
 	p.Parent = folder
@@ -278,7 +273,7 @@ local function turned(angle: number): CFrame
 	return CFrame.Angles(0, 0, -math.rad(angle))
 end
 
--- An indicating light: a coloured lens with a domed face in a stepped
+-- An indicating light: a coloured lens with a stepped face in a stepped
 -- chrome bezel, glass when dark and glowing when lit. `diameter` is the
 -- lens's.
 local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, diameter: number, colors: { Color3 }): (boolean) -> ()
@@ -286,8 +281,8 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 	local d = diameter
 	piece(folder, frame, "disc", v3(d + 0.11, d + 0.11, 0.025), v3(0, 0, 0.0125), CHROME, METAL)
 	piece(folder, frame, "disc", v3(d + 0.065, d + 0.065, 0.06), v3(0, 0, 0.03), CHROME, METAL)
-	local body = piece(folder, frame, "disc", v3(d, d, 0.066), v3(0, 0, 0.033), colors[2], GLASS)
-	local top = piece(folder, frame, "ellipsoid", v3(d, d, d * 0.6), v3(0, 0, 0.066), colors[2], GLASS)
+	local body = piece(folder, frame, "disc", v3(d, d, 0.07), v3(0, 0, 0.035), colors[2], GLASS)
+	local top = piece(folder, frame, "disc", v3(d * 0.72, d * 0.72, 0.03), v3(0, 0, 0.085), colors[2], GLASS)
 	return function(on: boolean)
 		for _, p in { body, top } do
 			p.Color = colors[if on then 1 else 2]
@@ -297,7 +292,7 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 end
 
 -- An oiltight pushbutton standing at `frame`: a chrome locking ring with a
--- stepped edge, a dark gap, and a coloured cap with a crowned face. Returns
+-- stepped edge, a dark gap, and a coloured cap with a stepped face. Returns
 -- the cap, which moves in when the button is pressed.
 local function pushbutton(folder: Instance, frame: CFrame, color: Color3): Assembly
 	piece(folder, frame, "disc", v3(0.44, 0.44, 0.03), v3(0, 0, 0.015), CHROME, METAL)
@@ -305,20 +300,21 @@ local function pushbutton(folder: Instance, frame: CFrame, color: Color3): Assem
 	piece(folder, frame, "disc", v3(0.33, 0.33, 0.072), v3(0, 0, 0.036), PHENOLIC)
 	local cap = assembly(folder, frame)
 	cap.add("disc", v3(0.3, 0.3, 0.12), v3(0, 0, 0.06), color)
-	cap.add("ellipsoid", v3(0.29, 0.29, 0.07), v3(0, 0, 0.12), color)
+	cap.add("disc", v3(0.24, 0.24, 0.03), v3(0, 0, 0.135), color)
 	return cap
 end
 
--- The scram button: a large mushroom head on a stem, in a wide chrome ring.
+-- The scram button: a large mushroom head on a stem, in a wide chrome ring,
+-- the head stepped in towards its face.
 local function mushroom(folder: Instance, frame: CFrame, color: Color3): Assembly
 	piece(folder, frame, "disc", v3(0.56, 0.56, 0.03), v3(0, 0, 0.015), CHROME, METAL)
 	piece(folder, frame, "disc", v3(0.48, 0.48, 0.08), v3(0, 0, 0.04), CHROME, METAL)
 	piece(folder, frame, "disc", v3(0.38, 0.38, 0.082), v3(0, 0, 0.041), PHENOLIC)
 	local cap = assembly(folder, frame)
 	cap.add("disc", v3(0.3, 0.3, 0.2), v3(0, 0, 0.1), color)
-	cap.add("ellipsoid", v3(0.66, 0.66, 0.08), v3(0, 0, 0.2), color)
-	cap.add("disc", v3(0.66, 0.66, 0.05), v3(0, 0, 0.225), color)
-	cap.add("ellipsoid", v3(0.66, 0.66, 0.22), v3(0, 0, 0.25), color)
+	cap.add("disc", v3(0.66, 0.66, 0.1), v3(0, 0, 0.23), color)
+	cap.add("disc", v3(0.56, 0.56, 0.05), v3(0, 0, 0.305), color)
+	cap.add("disc", v3(0.42, 0.42, 0.03), v3(0, 0, 0.345), color)
 	return cap
 end
 
@@ -870,16 +866,17 @@ function Panels.build(room: Instance, ctx: Context)
 
 	-- A pistol-grip handle on its hub, pointing up and turned `angle`
 	-- degrees, `k` times the standard size; returns a function that turns
-	-- it. The moulded handle is broad over the shaft and tapers to a rounded
-	-- end, the end that points at the position.
+	-- it. The handle is a round boss over the shaft and a straight grip with
+	-- a round end, the end that points at the position.
 	local function pistolGrip(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
 		local s = k or 1
 		local frame = blockCFrame(face, hx, hy, 0, 0)
 		piece(controls, frame, "disc", v3(0.26 * s, 0.26 * s, 0.03), v3(0, 0, 0.015), PHENOLIC)
 		piece(controls, frame, "disc", v3(0.19 * s, 0.19 * s, 0.07), v3(0, 0, 0.035), PHENOLIC)
 		local handle = assembly(controls, frame)
-		handle.add("ellipsoid", v3(0.19 * s, 0.21 * s, 0.13 * s), v3(0, 0, 0.07 + 0.03 * s), PHENOLIC)
-		handle.add("ellipsoid", v3(0.135 * s, 0.47 * s, 0.11 * s), v3(0, 0.13 * s, 0.07 + 0.035 * s), PHENOLIC)
+		handle.add("disc", v3(0.2 * s, 0.2 * s, 0.12 * s), v3(0, 0, 0.07 + 0.06 * s), PHENOLIC)
+		handle.add("block", v3(0.13 * s, 0.26 * s, 0.1 * s), v3(0, 0.13 * s, 0.07 + 0.05 * s), PHENOLIC)
+		handle.add("disc", v3(0.13 * s, 0.13 * s, 0.1 * s), v3(0, 0.26 * s, 0.07 + 0.05 * s), PHENOLIC)
 		local function turn(a: number)
 			handle.move(turned(a))
 		end
@@ -1001,12 +998,12 @@ function Panels.build(room: Instance, ctx: Context)
 		local esc = box(gui, cx - 0.32, cy - 0.3, 0.64, 0.6, Color3.fromRGB(22, 22, 24))
 		local _ = esc
 		local n = #w.positions
-		-- A black knob: a skirt, a body with a crowned top, and a bar across
+		-- A black knob: a skirt, a body with a stepped top, and a bar across
 		-- it, rounded at the ends, with a white line on the end that points.
 		local frame = blockCFrame(face, cx, cy, 0, 0)
 		piece(controls, frame, "disc", v3(0.44, 0.44, 0.035), v3(0, 0, 0.0175), PHENOLIC)
 		piece(controls, frame, "disc", v3(0.34, 0.34, 0.11), v3(0, 0, 0.055), PHENOLIC)
-		piece(controls, frame, "ellipsoid", v3(0.34, 0.34, 0.05), v3(0, 0, 0.11), PHENOLIC)
+		piece(controls, frame, "disc", v3(0.28, 0.28, 0.02), v3(0, 0, 0.12), PHENOLIC)
 		local pointer = assembly(controls, frame)
 		pointer.add("block", v3(0.08, 0.34, 0.05), v3(0, 0.02, 0.14), PHENOLIC)
 		pointer.add("disc", v3(0.08, 0.08, 0.05), v3(0, 0.19, 0.14), PHENOLIC)
