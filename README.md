@@ -23,13 +23,11 @@ in real time, and fuel channels that burst when you starve or overheat them.
 ![Turbine trip with its cover lifted](docs/trip-guard.png)
 ![ECCS manual initiation, guarded](docs/eccs-guard.png)
 ![Pump control switches](docs/switches.png)
-![The panel hardware, modelled in Blender](docs/models.jpg)
 
-*Preview renders. These are drawn outside Roblox from exactly the parts, meshes and panel
-artwork the game's scripts create, so the geometry is the game's; Roblox's own lighting
-and materials will look different. The blocky figures are added to the previews only, at
-the size of a standard Roblox character, to show the scale. The last picture is the
-panel hardware rendered in Blender.*
+*Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
+the game's scripts create, so the geometry is the game's; Roblox's own lighting and
+materials will look different. The blocky figures are added to the previews only, at the
+size of a standard Roblox character, to show the scale.*
 
 ## Getting it into Roblox Studio
 
@@ -42,27 +40,6 @@ plus the Rojo Studio plugin will sync `src/` into an open place. You do not need
 just to play.
 
 The server needs a few seconds at startup to design the core ("Commissioning the unit").
-
-### Panel hardware (Blender models)
-
-The pushbuttons and their hinged guards, the indicating lights, the pistol-grip switch
-handles, the key switches and the selector knobs are meshes modelled in Blender
-(`models/blender/build_models.py`). A place file built outside Studio cannot carry meshes,
-so the game gets them in one of two ways:
-
-1. **Import them (recommended).** With the place open in Studio, open the 3D Importer
-   (Import 3D), choose `models/RBMKModels.glb`, leave the settings at their defaults
-   (meshes not merged) and import. It arrives in the Workspace as a model called
-   `RBMKModels`, including four tiny cubes the game uses to work out which way the importer
-   turned the meshes. Leave it there (the server moves it out of the room when the game
-   starts) or drag it into ReplicatedStorage, and save the place. Studio uploads the meshes
-   as your assets, so they also work in the published game.
-2. **Let the game build them.** Turn on **Allow Mesh / Image APIs** in Game Settings >
-   Security. The client then builds the same meshes from `src/client/Meshes` with
-   `EditableMesh` when it starts.
-
-With neither, the panels use plain parts instead, with the same guards and covers. The
-Output window says which is in use (`[RBMK-800] panel hardware: ...`).
 
 ## Playing
 
@@ -202,8 +179,7 @@ is American (60 Hz, 1,800 rpm). Fast physics, rod speeds, xenon and graphite run
 | `src/shared` | Design data (`Config`), core map, steam tables, the control-room layout as data (`PanelLayout`), annunciator list, procedures text. |
 | `src/server/Sim` | The plant model. No Roblox APIs, so it also runs in the tests. |
 | `src/server` | Room builder and the server script that runs and replicates the plant. |
-| `src/client` | Instrument drawing, mouse interaction and panel view, procedures binder. `Models` places the Blender meshes; `Meshes` holds their triangles. |
-| `models` | The Blender scripts that model the panel hardware (`blender/build_models.py`) and render it (`blender/render_showcase.py`), and their output `RBMKModels.glb` for Studio's 3D Importer. |
+| `src/client` | Instrument drawing and panel hardware, mouse interaction and panel view, procedures binder. |
 | `tests` | Headless tests (see below). |
 
 Adding or moving a control is a one-line change in `PanelLayout.luau`; `tests/layout_check`
@@ -222,18 +198,9 @@ lune run tests/layout_check    # control room vs. plant signals and commands
 lune run tests/transients      # pump trip, feed loss, channel rupture, turbine trip, scram, the 1986 sequence
 lune run tests/startup         # scripted cold startup to full power (about 4 minutes to run)
 lune run tests/roblox_mock     # server and client scripts run against each other, every control clicked
-lune run tests/roblox_mock -- models=straight   # the same, with a stand-in for the imported meshes
 ```
-
-`models=turned` and `models=rotated` do the same with the import turned round, as other
-importer settings would leave it; the meshes must still come out standing on the panels.
 
 `tests/roblox_mock` uses Roblox's own class and property database to check everything the
 scripts create, but it is not Roblox Studio: the game has not yet been run in Studio itself.
 
 To rebuild the place file after changing the source: `rojo build -o RBMK-800.rbxlx`.
-
-To rebuild the models, with Blender's Python module (`pip install bpy`, Python 3.13):
-`python models/blender/build_models.py out`, then copy `out/Meshes` to `src/client/Meshes`
-and `out/RBMKModels.glb` to `models/`. `python models/blender/render_showcase.py out out/showcase.png`
-renders the picture of them.

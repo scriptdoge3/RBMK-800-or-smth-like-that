@@ -32,19 +32,6 @@ local logEvent: RemoteEvent = remote("RemoteEvent", "Log")
 local helloFunction: RemoteFunction = remote("RemoteFunction", "Hello")
 remotes.Parent = ReplicatedStorage
 
--- The panel hardware meshes, when they were imported in Studio and left in
--- the Workspace (see src/client/Models.luau): out of the room, where every
--- client can find them.
-local importedModels = workspace:FindFirstChild("RBMKModels")
-if importedModels then
-	for _, d in importedModels:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.Anchored = true
-		end
-	end
-	importedModels.Parent = ReplicatedStorage
-end
-
 RoomBuilder.build()
 
 local plant: any = nil
