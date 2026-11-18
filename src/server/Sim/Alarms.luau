@@ -1,7 +1,9 @@
 --!nonstrict
--- Annunciator logic. Each window follows the usual control-room sequence:
--- a new alarm flashes and sounds the horn until acknowledged, then stays
--- lit steadily until the condition clears.
+-- Annunciator logic. Each window follows the ringback sequence of ISA
+-- S18.1 (1979): a new alarm flashes fast and sounds the horn until it is
+-- acknowledged, then stays lit steadily. When its condition clears it
+-- flashes slowly ("ringback") until the operator resets it; if the
+-- condition comes back first, it alarms again.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
 local AlarmList = require(Shared.AlarmList)
 local Config = require(Shared.Config)
@@ -9,7 +11,7 @@ local Config = require(Shared.Config)
 local Alarms = {}
 Alarms.__index = Alarms
 
-local CLEAR, NEW, ACKED = 0, 1, 2
+local CLEAR, NEW, ACKED, RINGBACK = 0, 1, 2, 3
 
 -- Conditions read the published signal table `S` (and the plant for a few
 -- things that are not signals).
@@ -104,11 +106,15 @@ function Alarms.new(plant)
 	self.plant = plant
 	self.cond = conditions(plant)
 	self.state = table.create(#AlarmList.list, CLEAR)
+	self.on = table.create(#AlarmList.list, false)
 	self.pulse = {} -- id -> seconds remaining, for event-type alarms
 	self.changed = {} -- indices changed this tick, drained by the network layer
 	self.horn = false
 	plant.cmd["ann.ack"] = function()
 		self:acknowledge()
+	end
+	plant.cmd["ann.reset"] = function()
+		self:reset()
 	end
 	return self
 end
@@ -121,7 +127,17 @@ end
 function Alarms.acknowledge(self)
 	for i, s in self.state do
 		if s == NEW then
-			self.state[i] = ACKED
+			-- An alarm that has already cleared goes straight to ringback.
+			self.state[i] = if self.on[i] then ACKED else RINGBACK
+			table.insert(self.changed, i)
+		end
+	end
+end
+
+function Alarms.reset(self)
+	for i, s in self.state do
+		if s == RINGBACK then
+			self.state[i] = CLEAR
 			table.insert(self.changed, i)
 		end
 	end
@@ -142,13 +158,14 @@ function Alarms.step(self, dt: number)
 			p -= dt
 			self.pulse[alarm.id] = if p > 0 then p else nil
 		end
+		self.on[i] = on
 		local s = self.state[i]
-		if on and s == CLEAR then
+		if on and (s == CLEAR or s == RINGBACK) then
 			self.state[i] = NEW
 			table.insert(self.changed, i)
 			self.plant:log("ALARM: " .. string.gsub(alarm.text, "\n", " "))
 		elseif not on and s == ACKED then
-			self.state[i] = CLEAR
+			self.state[i] = RINGBACK
 			table.insert(self.changed, i)
 		end
 		if self.state[i] == NEW then

@@ -93,13 +93,21 @@ function Controls.start(built: any, ctx: any)
 		return best, u, v
 	end
 
-	local holding: { cmd: string, value: number }? = nil
+	-- A control being held: a raise/lower button, the rod movement switch,
+	-- an annunciator TEST. Held commands are re-sent until release.
+	local holding: { cmd: string?, value: number, onRelease: (() -> ())? }? = nil
 	local holdClock = 0
 
 	local function release()
-		if holding then
-			ctx.send(holding.cmd, 0)
+		local h = holding
+		if h then
 			holding = nil
+			if h.cmd then
+				ctx.send(h.cmd, 0)
+			end
+			if h.onRelease then
+				h.onRelease()
+			end
 		end
 	end
 
@@ -109,11 +117,13 @@ function Controls.start(built: any, ctx: any)
 			return
 		end
 		local result = r.press(button, u, v)
-		if result and result.hold then
+		if result and (result.hold or result.onRelease) then
 			release()
-			holding = { cmd = result.hold, value = result.value }
+			holding = { cmd = result.hold, value = result.value or 0, onRelease = result.onRelease }
 			holdClock = 0
-			ctx.send(result.hold, result.value)
+			if result.hold then
+				ctx.send(result.hold, result.value)
+			end
 		end
 	end
 
@@ -140,7 +150,8 @@ function Controls.start(built: any, ctx: any)
 			local board = PanelLayout.face(viewing, "vert")
 			targetCF = CFrame.lookAt(at(10.5, 6.4), board.center)
 		else
-			targetCF = CFrame.lookAt(at(11.4, 14), at(9.1, 0))
+			-- Stand back far enough to take in the whole section.
+			targetCF = CFrame.lookAt(at(11.4, 14 * PanelLayout.panels[viewing].width / PanelLayout.PANEL_WIDTH), at(9.1, 0))
 		end
 	end
 
@@ -247,7 +258,7 @@ function Controls.start(built: any, ctx: any)
 		if viewing and targetCF then
 			camera.CFrame = camera.CFrame:Lerp(targetCF, math.min(1, dt * 10))
 		end
-		if holding then
+		if holding and holding.cmd then
 			holdClock += dt
 			if holdClock >= HOLD_REFRESH then
 				holdClock = 0
@@ -259,7 +270,9 @@ function Controls.start(built: any, ctx: any)
 		local textOut: string? = nil
 		if r then
 			local kind = r.widget.kind
-			if kind == "coremap" and built.mapCellAt then
+			if r.tipAt then
+				textOut = r.tipAt(u, v)
+			elseif kind == "coremap" and built.mapCellAt then
 				textOut = built.mapInfo(built.mapCellAt(u, v))
 			elseif kind == "rodmatrix" and built.rodAt then
 				textOut = built.rodAt(u, v)

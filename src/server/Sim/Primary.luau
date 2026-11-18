@@ -413,6 +413,8 @@ function Primary.publish(self, S)
 			S[pk .. ".flow"] = pump.flow / rho * 3600
 			S[pk .. ".speed"] = pump.speed * 100
 			S[pk .. ".amps"] = pump.power / (P.PUMP_MOTOR_MW * 1e6) * 100
+			-- Motor current in amperes: a 6 kV induction motor at 0.88 power factor.
+			S[pk .. ".current"] = pump.power / (math.sqrt(3) * 6000 * 0.88)
 			S[pk .. ".valve"] = pump.valve * 100
 			S[pk .. ".cav"] = if pump.cav > 0.15 then 1 else 0
 			S[pk .. ".fail"] = if pump.failed then 1 else 0

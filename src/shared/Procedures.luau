@@ -52,7 +52,7 @@ Procedures.pages = {
 			"",
 			"APPROACH TO CRITICALITY",
 			"[ ] P603: AZ RESET; confirm no AZ lamps lit",
-			"[ ] P603: SELECT AZ RODS, hold WITHDRAW until AZ RODS OUT lights, CLEAR SELECT",
+			"[ ] P603: SELECT AZ RODS, hold ROD MOVEMENT at WITHDRAW until AZ RODS OUT, CLEAR SELECT",
 			"[ ] P603: withdraw manual (white) rods a few at a time. Use the FLUX cartogram: pull",
 			"    rods where the lamps are darkest, and spread each group across the core",
 			"[ ] Watch the source range meter. As it starts to climb on its own, slow down:",

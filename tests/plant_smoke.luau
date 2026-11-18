@@ -47,4 +47,20 @@ end
 print("protection signals present: " .. table.concat(active, ", "))
 local buf = plant:mapBuffer()
 H.check(buffer.len(buf) == 1 + plant.core.NC * 2 + plant.core.NR, "map buffer size")
+-- Annunciator ringback sequence (ISA S18.1): new, acknowledged, cleared
+-- awaiting reset, reset.
+do
+	local index = AlarmList.index["mcp.trip"]
+	plant:raise("mcp.trip")
+	plant:step(0.1)
+	H.check(plant.alarms.state[index] == 1, "a new alarm flashes")
+	plant:command("ann.ack", 1)
+	H.check(plant.alarms.state[index] == 2, "acknowledged while the condition stands: steady")
+	for _ = 1, 80 do
+		plant:step(0.1)
+	end
+	H.check(plant.alarms.state[index] == 3, "condition gone: ringback until reset")
+	plant:command("ann.reset", 1)
+	H.check(plant.alarms.state[index] == 0, "reset puts the window out")
+end
 H.finish()

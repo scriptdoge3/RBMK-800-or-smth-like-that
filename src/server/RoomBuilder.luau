@@ -225,7 +225,7 @@ function RoomBuilder.build(): Folder
 	room.Name = "ControlRoom"
 
 	-- Shell: about 15 by 14 metres and 3.8 metres to the ceiling tiles.
-	local west, east, north, south = -50, 34, -50, 28
+	local west, east, north, south = -50, 38, -50, 28
 	local width, length, height = east - west, south - north, 3.8 * M
 	local cx, cz = (west + east) / 2, (north + south) / 2
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
@@ -318,7 +318,6 @@ function RoomBuilder.build(): Folder
 	local s = PanelLayout.BENCH_SLOPE
 	local depth = PanelLayout.BENCH_DEPTH
 	local h0 = PanelLayout.BENCH_FRONT_HEIGHT
-	local W = PanelLayout.PANEL_WIDTH
 	local T = PanelLayout.FACE_THICKNESS
 	local backY = h0 + depth * math.sin(s)
 	local backZ = depth * math.cos(s)
@@ -326,6 +325,7 @@ function RoomBuilder.build(): Folder
 	local cabinetDepth = 3.2
 	local n = #PanelLayout.panels
 	for _, p in PanelLayout.panels do
+		local W = p.width
 		local origin, right, back = PanelLayout.designFrame(p.index)
 		local function frame(x: number, y: number, z: number): CFrame
 			return CFrame.fromMatrix(origin + right * x + up * y + back * z, right, up, back)
@@ -355,6 +355,7 @@ function RoomBuilder.build(): Folder
 		-- a corner filler where it turns.
 		if p.index < n then
 			local nOrigin, nRight, nBack = PanelLayout.designFrame(p.index + 1)
+			local nW = PanelLayout.panels[p.index + 1].width
 			local joint = origin + right * (W / 2)
 			local turn = math.acos(math.clamp(back:Dot(nBack), -1, 1))
 			if turn < 0.01 then
@@ -368,11 +369,11 @@ function RoomBuilder.build(): Folder
 				local half = turn / 2
 				local ext = backZ * math.tan(half)
 				local extCab = (backZ + cabinetDepth + T) * math.tan(half)
-				for _, side in { { origin, right, back, 1 }, { nOrigin, nRight, nBack, -1 } } do
-					local o, r, b, dir = side[1], side[2], side[3], side[4]
+				for _, side in { { origin, right, back, 1, W }, { nOrigin, nRight, nBack, -1, nW } } do
+					local o, r, b, dir, sw = side[1], side[2], side[3], side[4], side[5]
 					local tag = p.id .. (if dir > 0 then "_cornerA" else "_cornerB")
 					local function at(x: number, y: number, z: number): CFrame
-						return CFrame.fromMatrix(o + r * (dir * (W / 2 + x)) + up * y + b * z, r, up, b)
+						return CFrame.fromMatrix(o + r * (dir * (sw / 2 + x)) + up * y + b * z, r, up, b)
 					end
 					part(room, tag .. "Cabinet", Vector3.new(extCab, top, cabinetDepth), at(extCab / 2, top / 2, -backZ - cabinetDepth / 2 - T / 2), CABINET_COLOR)
 					part(room, tag .. "Board", Vector3.new(ext, PanelLayout.VERT_HEIGHT, T), at(ext / 2, backY + PanelLayout.VERT_HEIGHT / 2, -backZ), PANEL_COLOR)
@@ -383,7 +384,7 @@ function RoomBuilder.build(): Folder
 					-- Bench carried on at the same slope.
 					local slopeUp = up * math.sin(s) - b * math.cos(s)
 					local slopeNormal = up * math.cos(s) + b * math.sin(s)
-					local centre = o + r * (dir * (W / 2 + ext / 2)) + up * (h0 + depth / 2 * math.sin(s)) - b * (depth / 2 * math.cos(s)) - slopeNormal * 0.6
+					local centre = o + r * (dir * (sw / 2 + ext / 2)) + up * (h0 + depth / 2 * math.sin(s)) - b * (depth / 2 * math.cos(s)) - slopeNormal * 0.6
 					part(room, tag .. "Bench", Vector3.new(ext, depth, 1.2 + T), CFrame.fromMatrix(centre, slopeUp:Cross(-slopeNormal), slopeUp, -slopeNormal), BENCH_COLOR)
 				end
 			end

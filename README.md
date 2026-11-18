@@ -13,6 +13,8 @@ in real time, and fuel channels that burst when you starve or overheat them.
 ![The control room](docs/room.png)
 ![The corner, with the reactor panel](docs/corner.png)
 ![The reactor control panel](docs/reactor-panel.png)
+![Rod position indicators](docs/rod-positions.png)
+![Manual/automatic stations](docs/stations.png)
 ![The operators' console](docs/desk.png)
 ![Plan view](docs/plan.png)
 
@@ -37,7 +39,7 @@ The server needs a few seconds at startup to design the core ("Commissioning the
 
 | Key | Action |
 | --- | --- |
-| Click | Operate the control under the mouse. Raise/lower and rod-motion buttons act while held. |
+| Click | Operate the control under the mouse. Raise/lower buttons and the rod movement switch act while held (left half of the switch inserts, right half withdraws). |
 | Hover | Name and live reading of anything on a panel. |
 | E | Sit at the nearest panel (locks the camera on it). E again to stand up. |
 | A / D | While seated: move to the next panel. |
@@ -70,6 +72,24 @@ high and the ceiling is 3.8 m up. Nothing in it is later than 1979:
   the axial power shape; seven-segment digital panel meters only where a number matters
   (power, period, reactivity, margin, rod positions, setpoints); and a green-phosphor
   process computer display. Hover over any meter for its exact reading.
+- **Reactor board (H11-P603)**, the widest section: on the vertical board, the rod
+  position indicators (a synchro dial for every one of the 211 rods, laid out as in the
+  core, with a red lamp at full out and a green one at full in, as on the RBMK's rod
+  position board), the channel cartogram, the axial power bargraph, neutron monitoring
+  meters and a neutron power recorder. On the bench, rod control in the GE manner: a rod
+  select matrix of pushbuttons in core geometry, a spring-return rod movement switch
+  (INSERT / OFF / WITHDRAW) and a four-rod display giving each selected rod's
+  coordinates, position and FULL IN / FULL OUT / STUCK lamps; then rod group selection,
+  the power regulators, the emergency protection and the bypass keys.
+- **Controllers** are manual/automatic stations: a process scale with a red setpoint
+  index, AUTO and MAN lamps, an output meter, and A / M / lower / raise pushbuttons (drum
+  level A and B, deaerator level, the pressure regulator).
+- **Pumps**: motor current meters for all eight main circulation pumps, flow meters for
+  the four feed pumps.
+- **Annunciators** follow the ringback sequence of ISA S18.1 (1979): a new alarm flashes
+  fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it flashes
+  slowly until RESET; TEST lights every window on the panel while held. The pushbuttons
+  are on H11-P601, P603 and P604.
 - **Room**: waxed vinyl tile floor with a black rubber cove base, walnut paneling on the
   back wall, an acoustic tile ceiling with fluorescent troffers, a lit exit sign and an
   electric wall clock.
@@ -87,10 +107,18 @@ Where the RBMK features are on the boards:
 | Feature | Where |
 | --- | --- |
 | AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | P603 bench, EMERGENCY PROTECTION |
-| Shutdown (AZ) rods, shortened rods (USP), regulators | P603 bench, group select and rod motion |
+| Shutdown (AZ) rods, shortened rods (USP), regulators | P603 bench: ROD GROUPS, ROD MOTION, POWER REGULATORS |
+| Rod positions | P603 board: ROD POSITION INDICATORS, one dial per rod; FOUR ROD DISPLAY on the bench |
 | Void coefficient, operational reactivity margin (ORM) | P603 board, beside reactivity |
 | Channel ruptures and reactor space pressure | P601 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
 | Positive scram | watch POWER RANGE and PERIOD on P603 in the first seconds after AZ-5 |
+
+The panel equipment follows published descriptions of GE boiling-water-reactor control
+rooms of the period (the NRC's GE BWR/4 technology manuals: rod select matrix, rod
+movement and notch override switches, four-rod and full-core displays, reactor
+protection controls, manual/automatic controller stations), the ISA S18.1-1979
+annunciator sequences, and descriptions of the RBMK control room (rod position synchro
+indicators laid out as the core, with limit lamps; the core mimic of channel lamps).
 
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,

@@ -131,7 +131,8 @@ local function refreshDesk()
 		local lines = { "ALARM SUMMARY", "" }
 		for _, tile in built.annTiles do
 			if tile.state > 0 and #lines < 13 then
-				table.insert(lines, (if tile.state == 1 then "* " else "  ") .. string.upper(string.gsub(tile.label.Text, "\n", " ")))
+				local mark = if tile.state == 1 then "* " elseif tile.state == 3 then "- " else "  "
+				table.insert(lines, mark .. string.upper(string.gsub(tile.label.Text, "\n", " ")))
 			end
 		end
 		if #lines == 2 then
@@ -284,7 +285,7 @@ local camera = workspace.CurrentCamera
 local flashClock = 0
 RunService.RenderStepped:Connect(function(dt: number)
 	flashClock += dt
-	built.flash(flashClock % 0.5 < 0.25)
+	built.flash(flashClock % 0.5 < 0.25, flashClock % 1.6 < 0.8)
 	if wasDestroyed then
 		local age = os.clock() - destroyedAt
 		flashOverlay.BackgroundTransparency = math.clamp(age / 2.5, 0, 1)

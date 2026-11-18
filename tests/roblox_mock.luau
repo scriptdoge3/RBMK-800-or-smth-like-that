@@ -256,11 +256,13 @@ do
 	local oB, rB, bB = PanelLayout.panelFrame(c + 1)
 	H.check(math.abs(bW:Dot(bB)) < 1e-6, "the wing meets the back wall at 90 degrees")
 	H.check(math.abs(bC:Dot(bW) - math.sqrt(0.5)) < 1e-6 and math.abs(bC:Dot(bB) - math.sqrt(0.5)) < 1e-6, "the corner section is set at 45 degrees to both runs")
-	local W = PanelLayout.PANEL_WIDTH * PanelLayout.SCALE
-	H.check(((oW + rW * W / 2) - (oC - rC * W / 2)).Magnitude < 1e-4, "the wing joins the corner section edge to edge")
-	H.check(((oC + rC * W / 2) - (oB - rB * W / 2)).Magnitude < 1e-4, "the corner section joins the back wall edge to edge")
+	local function half(i: number): number
+		return PanelLayout.panels[i].width * PanelLayout.SCALE / 2
+	end
+	H.check(((oW + rW * half(c - 1)) - (oC - rC * half(c))).Magnitude < 1e-4, "the wing joins the corner section edge to edge")
+	H.check(((oC + rC * half(c)) - (oB - rB * half(c + 1))).Magnitude < 1e-4, "the corner section joins the back wall edge to edge")
 	local cornerPoint = Vector3.new(PanelLayout.CORNER_X, 0, PanelLayout.BACK_WALL_Z) * PanelLayout.SCALE
-	H.check(math.abs((oC - cornerPoint):Dot(bC) - W / 2) < 1e-4, "the corner section cuts straight across the square corner")
+	H.check(math.abs((oC - cornerPoint):Dot(bC) - half(c)) < 1e-4, "the corner section cuts straight across the square corner")
 	H.check(bC:Dot((Vector3.new(PanelLayout.DESK_X, 0, PanelLayout.DESK_Z) * PanelLayout.SCALE - oC).Unit) > 0.999, "the desk is straight in front of the reactor panel")
 	H.check(room:FindFirstChild("CornerFill") ~= nil and room.CornerFill:IsA("WedgePart"), "the corner behind the reactor panel is filled out square")
 	local u, v = PanelLayout.toFace(f, PanelLayout.toWorld(f, 3.25, 1.5, 0))

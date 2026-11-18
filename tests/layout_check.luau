@@ -21,13 +21,13 @@ print(string.format("%d panels, %d signals, commands checked", #PanelLayout.pane
 H.check(#missingSignals == 0, "every displayed signal exists (" .. table.concat(missingSignals, ", ") .. ")")
 H.check(#missingCommands == 0, "every control's command exists (" .. table.concat(missingCommands, ", ") .. ")")
 -- No widget may hang off the edge of its face.
-local W, sizes = PanelLayout.PANEL_WIDTH, { bench = PanelLayout.BENCH_DEPTH, vert = PanelLayout.VERT_HEIGHT, ann = PanelLayout.ANN_HEIGHT }
+local sizes = { bench = PanelLayout.BENCH_DEPTH, vert = PanelLayout.VERT_HEIGHT, ann = PanelLayout.ANN_HEIGHT }
 local off = {}
 local count = 0
 for _, p in PanelLayout.panels do
 	for _, w in p.widgets do
 		count += 1
-		if w.x < 0 or w.y < 0 or w.x + w.w > W + 0.01 or w.y + w.h > sizes[w.face] + 0.01 then
+		if w.x < 0 or w.y < 0 or w.x + w.w > p.width + 0.01 or w.y + w.h > sizes[w.face] + 0.01 then
 			table.insert(off, string.format("%s %s '%s'", p.id, w.kind, string.gsub(w.label or "", "\n", " ")))
 		end
 	end

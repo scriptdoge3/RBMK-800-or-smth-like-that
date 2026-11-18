@@ -318,6 +318,10 @@ function Panels.build(room: Instance, ctx: Context)
 	local controls = Instance.new("Folder")
 	controls.Name = "PanelControls"
 	controls.Parent = room
+	-- Displays fed from the rod section of the core map buffer.
+	local rodListeners: { (buf: buffer) -> () } = {}
+	-- Panels whose annunciator TEST button is held.
+	local testing: { [string]: boolean } = {}
 
 	local builders: { [string]: (gui: SurfaceGui, face: PanelLayout.Face, part: Instance, w: any) -> () } = {}
 
@@ -822,7 +826,8 @@ function Panels.build(room: Instance, ctx: Context)
 	end
 
 	builders.ann = function(gui, face, part, w)
-		local cols, rows = 10, 3
+		local cols, rows = math.max(4, math.floor(w.w / 1.6 + 0.5)), 3
+		local panelId = part:GetAttribute("Panel")
 		local tw, th = w.w / cols, w.h / rows
 		-- Window frames: each legend sits in its own recess.
 		for c = 0, cols do
@@ -838,7 +843,7 @@ function Panels.build(room: Instance, ctx: Context)
 				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.14, ANN_DARK_TEXT, Enum.Font.ArialBold)
 				local index = AlarmList.index[alarm.id]
 				local urgent = alarm.id == "az5" or alarm.id == "chan.rupture" or alarm.id == "core.damage" or alarm.id == "rs.press"
-				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent }
+				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent, panel = panelId }
 			end
 		end
 		for i = #w.alarms + 1, cols * rows do
@@ -857,7 +862,7 @@ function Panels.build(room: Instance, ctx: Context)
 				return nil
 			end,
 			tip = function()
-				return "Annunciators: click to acknowledge"
+				return "Annunciators: click to acknowledge. Fast flash = new alarm, steady = acknowledged,\nslow flash = cleared, waiting for RESET."
 			end,
 		})
 	end
@@ -962,7 +967,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local scaleY = (w.h - 0.35) * PPS / G
 		local back = box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(26, 28, 30))
 		outline(back, Color3.fromRGB(90, 92, 90), 2)
-		local title = text(gui, w.x + 0.1, w.y + 0.03, w.w - 0.2, 0.25, "ROD SELECT   white RR  green AR  yellow LAR  red AZ  blue USP", 0.115, Color3.fromRGB(230, 230, 220))
+		local title = text(gui, w.x + 0.1, w.y + 0.03, w.w - 0.2, 0.25, "ROD SELECT   white RR  green AR  yellow LAR  red AZ  blue USP   lit = selected", 0.105, Color3.fromRGB(230, 230, 220))
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		local size = math.max(6, math.floor(pitch * 1.9))
 		local buttons = table.create(L.nRods)
@@ -972,7 +977,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local cy = oy + (rod.gy - 0.5) * scaleY
 			local f = Instance.new("Frame")
 			f.BorderSizePixel = 0
-			f.BackgroundColor3 = ROD_COLOR[rod.kind]
+			f.BackgroundColor3 = ROD_COLOR[rod.kind]:Lerp(Color3.fromRGB(30, 30, 30), 0.5)
 			f.Position = UDim2.fromOffset(math.floor(cx - size / 2), math.floor(cy - size / 2))
 			f.Size = UDim2.fromOffset(size, size)
 			f.Parent = gui
@@ -984,7 +989,9 @@ function Panels.build(room: Instance, ctx: Context)
 			buttons[i] = { frame = f, stroke = stroke, flag = -1, depth = -1 }
 			centers[i] = { cx / PPS, cy / PPS }
 		end
-		out.setRods = function(buf: buffer)
+		-- Each button is a backlit pushbutton tinted by rod type; it lights up
+		-- when its rod is selected.
+		table.insert(rodListeners, function(buf: buffer)
 			local NC = L.nCells
 			for i, rod in L.rods do
 				local b = buttons[i]
@@ -994,16 +1001,11 @@ function Panels.build(room: Instance, ctx: Context)
 					b.flag = flag
 					b.depth = depth
 					local selected = flag % 2 == 1
-					local stuck = (flag // 2) % 2 == 1
 					b.stroke.Enabled = selected
-					local color = ROD_COLOR[rod.kind]:Lerp(Color3.new(0, 0, 0), depth / 255 * 0.55)
-					if stuck then
-						color = Color3.fromRGB(255, 0, 255)
-					end
-					b.frame.BackgroundColor3 = color
+					b.frame.BackgroundColor3 = if selected then ROD_COLOR[rod.kind]:Lerp(Color3.new(1, 1, 1), 0.55) else ROD_COLOR[rod.kind]:Lerp(Color3.fromRGB(30, 30, 30), 0.5)
 				end
 			end
-		end
+		end)
 		local function nearest(u: number, v: number): number
 			local best, bestD = 0, (size / PPS) ^ 2
 			for i, c in centers do
@@ -1029,7 +1031,7 @@ function Panels.build(room: Instance, ctx: Context)
 				return nil
 			end,
 			tip = function()
-				return "Rod select matrix: click a rod to select or deselect it.\nA white outline marks a selected rod; darker means deeper in the core."
+				return "Rod select matrix: one pushbutton per rod, laid out as in the core. Click a rod to select or deselect it; a selected rod's button lights."
 			end,
 		} :: any)
 		out.rodAt = function(u: number, v: number): string?
@@ -1042,6 +1044,323 @@ function Panels.build(room: Instance, ctx: Context)
 			local full = if rod.kind == "USP" then 3.5 else 6.5
 			return string.format("Rod %s (%s): %.2f m inserted", rod.label, rod.kind, math.max(b.depth, 0) / 255 * full)
 		end
+	end
+
+	-- The rod position board: a synchro dial for every rod, laid out as in
+	-- the core, as on the RBMK. Each dial reads metres inserted, 0 at the
+	-- top-left of its scale; its rim is coloured by rod type; a red lamp
+	-- lights at full out and a green one at full in.
+	builders.rodpos = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
+		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(70, 76, 72))
+		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "ROD POSITION INDICATORS   METRES INSERTED", 0.115, true)
+		local L = CoreLayout.get()
+		local G = L.grid
+		local size = math.min(w.w - 0.1, w.h - 0.36)
+		local cell = size / G
+		local ox, oy = w.x + (w.w - size) / 2, w.y + 0.31
+		local d = cell * 2.45
+		local dials = table.create(L.nRods)
+		local centers = table.create(L.nRods)
+		for i, rod in L.rods do
+			local cx, cy = ox + (rod.gx - 0.5) * cell, oy + (rod.gy - 0.5) * cell
+			local dial = box(gui, cx - d / 2, cy - d / 2, d, d, PAPER)
+			round(dial)
+			local rim = Instance.new("UIStroke")
+			rim.Thickness = 2
+			rim.Color = ROD_COLOR[rod.kind]:Lerp(Color3.fromRGB(40, 40, 40), 0.25)
+			rim.Parent = dial
+			local pivot = Instance.new("Frame")
+			pivot.BackgroundTransparency = 1
+			pivot.BorderSizePixel = 0
+			pivot.AnchorPoint = Vector2.new(0.5, 0.5)
+			pivot.Position = UDim2.fromOffset(px(cx), px(cy))
+			pivot.Size = UDim2.fromOffset(2, math.max(4, px(d * 0.82)))
+			pivot.Rotation = -135
+			pivot.ZIndex = 3
+			pivot.Parent = gui
+			local hand = Instance.new("Frame")
+			hand.BorderSizePixel = 0
+			hand.BackgroundColor3 = INK
+			hand.Size = UDim2.fromScale(1, 0.5)
+			hand.ZIndex = 3
+			hand.Parent = pivot
+			local outLamp = box(gui, cx - d * 0.42, cy - d * 0.42, d * 0.2, d * 0.2, Color3.fromRGB(70, 22, 20))
+			round(outLamp)
+			outLamp.ZIndex = 4
+			local inLamp = box(gui, cx - d * 0.42, cy + d * 0.22, d * 0.2, d * 0.2, Color3.fromRGB(20, 60, 28))
+			round(inLamp)
+			inLamp.ZIndex = 4
+			dials[i] = { pivot = pivot, outLamp = outLamp, inLamp = inLamp, depth = -1 }
+			centers[i] = { cx, cy }
+		end
+		table.insert(rodListeners, function(buf: buffer)
+			for i, rod in L.rods do
+				local dial = dials[i]
+				local depth = buffer.readu8(buf, rod.cell)
+				if depth ~= dial.depth then
+					dial.depth = depth
+					dial.pivot.Rotation = -135 + 270 * depth / 255
+					dial.outLamp.BackgroundColor3 = if depth <= 2 then LAMP.red[1] else LAMP.red[2]
+					dial.inLamp.BackgroundColor3 = if depth >= 253 then LAMP.green[1] else LAMP.green[2]
+				end
+			end
+		end)
+		table.insert(regions[part], {
+			x = w.x,
+			y = w.y,
+			w = w.w,
+			h = w.h,
+			widget = w,
+			tip = function()
+				return "Rod position indicators: one synchro dial per rod, laid out as in the core, reading metres inserted.\nRed lamp: rod fully withdrawn. Green lamp: rod fully inserted. The rim colour is the rod type."
+			end,
+			tipAt = function(u: number, v: number): string?
+				local best, bestD = 0, (d * 0.7) ^ 2
+				for i, c in centers do
+					local dd = (c[1] - u) ^ 2 + (c[2] - v) ^ 2
+					if dd < bestD then
+						best, bestD = i, dd
+					end
+				end
+				if best == 0 then
+					return nil
+				end
+				local rod = L.rods[best]
+				local full = if rod.kind == "USP" then 3.5 else 6.5
+				local depth = math.max(dials[best].depth, 0)
+				local state = if depth >= 253 then "  FULL IN" elseif depth <= 2 then "  FULL OUT" else ""
+				return string.format("Rod %s (%s): %.2f m inserted%s", rod.label, rod.kind, depth / 255 * full, state)
+			end,
+		} :: any)
+	end
+
+	-- The four-rod display: for up to four selected rods, the rod's
+	-- coordinates, its position in metres inserted, and FULL IN / FULL OUT /
+	-- STUCK lamps.
+	builders.fourrod = function(gui, face, part, w)
+		bezel(controls, face, w.x, w.y, w.w, w.h, 0.08, BEZEL, 0.05)
+		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(44, 46, 48))
+		local L = CoreLayout.get()
+		local cw = w.w / 4
+		local columns = {}
+		for k = 1, 4 do
+			local x0 = w.x + (k - 1) * cw
+			local id = text(gui, x0 + 0.08, w.y + 0.08, cw - 0.16, 0.28, "--", 0.17, Color3.fromRGB(236, 236, 226), Enum.Font.ArialBold)
+			id.BackgroundTransparency = 0
+			id.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+			local screen = box(gui, x0 + 0.08, w.y + 0.44, cw - 0.16, 0.6, SCREEN)
+			outline(screen, Color3.fromRGB(70, 70, 70), 1)
+			local show = sevenSeg(gui, x0 + 0.08, w.y + 0.44, cw - 0.16, 0.6, 3, DIGIT, DIGIT_DIM)
+			local lamps = {}
+			for j, def in { { "IN", LAMP.green }, { "OUT", LAMP.red }, { "STUCK", LAMP.amber } } do
+				local lx = x0 + 0.1 + (j - 1) * (cw - 0.2) / 3
+				local bulb = box(gui, lx + (cw - 0.2) / 6 - 0.08, w.y + 1.16, 0.16, 0.16, def[2][2])
+				round(bulb)
+				local t = text(gui, lx, w.y + 1.36, (cw - 0.2) / 3, 0.14, def[1], 0.075, Color3.fromRGB(210, 210, 200), Enum.Font.ArialBold)
+				t.TextWrapped = false
+				lamps[j] = { bulb = bulb, colors = def[2] }
+			end
+			columns[k] = { id = id, show = show, lamps = lamps }
+		end
+		local shown: { number } = {}
+		table.insert(rodListeners, function(buf: buffer)
+			local NC = L.nCells
+			table.clear(shown)
+			for i in L.rods do
+				if buffer.readu8(buf, 2 * NC + i) % 2 == 1 and #shown < 4 then
+					table.insert(shown, i)
+				end
+			end
+			for k, col in columns do
+				local i = shown[k]
+				if i then
+					local rod = L.rods[i]
+					local flag = buffer.readu8(buf, 2 * NC + i)
+					local depth = buffer.readu8(buf, rod.cell)
+					local full = if rod.kind == "USP" then 3.5 else 6.5
+					col.id.Text = rod.label
+					col.show(string.format("%.2f", depth / 255 * full))
+					local on = { depth >= 253, depth <= 2, (flag // 2) % 2 == 1 }
+					for j, lampDef in col.lamps do
+						lampDef.bulb.BackgroundColor3 = lampDef.colors[if on[j] then 1 else 2]
+					end
+				else
+					col.id.Text = "--"
+					col.show("")
+					for _, lampDef in col.lamps do
+						lampDef.bulb.BackgroundColor3 = lampDef.colors[2]
+					end
+				end
+			end
+		end)
+		region(part, w, nil, function()
+			return "Four rod display: the rods selected for movement (up to four), with their coordinates and metres inserted.\nLamps: FULL IN, FULL OUT, STUCK."
+		end)
+	end
+
+	-- The rod movement switch: a pistol grip that springs back to OFF. Hold
+	-- it to the left to insert the selected rods, to the right to withdraw.
+	builders.rodswitch = function(gui, face, part, w)
+		plate(gui, w.x + 0.05, w.y + 0.01, w.w - 0.1, 0.24, w.label, 0.11)
+		local cx, cy = w.x + w.w / 2, w.y + 0.85
+		block(controls, face, cx, cy, 0.7, 0.7, 0.025, Color3.fromRGB(26, 26, 28))
+		cylinder(controls, face, cx, cy, 0.4, 0.07, Color3.fromRGB(50, 52, 56)).Material = Enum.Material.Metal
+		local handle = block(controls, face, cx, cy, 0.15, 0.54, 0.22, Color3.fromRGB(20, 20, 22), 0)
+		local function turn(angle: number)
+			handle.CFrame = blockCFrame(face, cx, cy, 0.1 + 0.06, angle)
+		end
+		turn(0)
+		local gray = Color3.fromRGB(60, 60, 60)
+		text(gui, w.x, cy + 0.38, 0.8, 0.18, w.positions[1], 0.1, gray)
+		text(gui, cx - 0.3, w.y + 0.3, 0.6, 0.16, w.positions[2], 0.1, gray)
+		text(gui, w.x + w.w - 0.9, cy + 0.38, 0.9, 0.18, w.positions[3], 0.1, gray)
+		region(part, w, function(_button: number, u: number)
+			ctx.click()
+			local insert = u < cx
+			turn(if insert then -45 else 45)
+			return {
+				hold = w.cmd,
+				value = if insert then 1 else -1,
+				onRelease = function()
+					turn(0)
+				end,
+			}
+		end, function()
+			return "Rod movement switch: hold to the left to INSERT, to the right to WITHDRAW the selected rods.\nIt springs back to OFF when released."
+		end)
+	end
+
+	-- A manual/automatic control station: process scale with setpoint index,
+	-- AUTO and MAN lamps, an output meter, and A / M / lower / raise buttons.
+	builders.station = function(gui, face, part, w)
+		plate(gui, w.x, w.y, w.w, 0.22, w.label, 0.1)
+		local x0, y0, cw, ch = w.x, w.y + 0.26, w.w, w.h - 0.26
+		local case = box(gui, x0, y0, cw, ch, Color3.fromRGB(70, 72, 74))
+		outline(case, Color3.fromRGB(30, 30, 32), 2)
+		bezel(controls, face, x0, y0, cw, ch, 0.12, BEZEL, 0.05)
+		local sx, sy, sw, sh = x0 + 0.1, y0 + 0.1, 0.5, 0.88
+		box(gui, sx, sy, sw, sh, PAPER)
+		local span = w.hi - w.lo
+		local function yOf(v: number): number
+			return sy + 0.07 + (sh - 0.14) * (1 - math.clamp((v - w.lo) / span, 0, 1))
+		end
+		for i = 0, 10 do
+			local major = i % 5 == 0
+			local tw = if major then 0.2 else 0.12
+			box(gui, sx + sw - tw, yOf(w.lo + span * i / 10) - 0.005, tw, 0.01, INK).ZIndex = 2
+		end
+		local hiText = text(gui, sx + 0.03, yOf(w.hi) - 0.02, 0.3, 0.1, string.format("%g", w.hi), 0.075, INK, Enum.Font.Arial)
+		hiText.TextXAlignment = Enum.TextXAlignment.Left
+		hiText.ZIndex = 2
+		local loText = text(gui, sx + 0.03, yOf(w.lo) - 0.08, 0.3, 0.1, string.format("%g", w.lo), 0.075, INK, Enum.Font.Arial)
+		loText.TextXAlignment = Enum.TextXAlignment.Left
+		loText.ZIndex = 2
+		local unitText = text(gui, sx + 0.03, sy + sh / 2 - 0.05, 0.3, 0.1, w.unit, 0.07, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold)
+		unitText.TextXAlignment = Enum.TextXAlignment.Left
+		unitText.ZIndex = 2
+		local spMark = box(gui, sx, sy, 0.09, 0.05, Color3.fromRGB(215, 30, 26))
+		spMark.ZIndex = 3
+		spMark.Visible = w.sp ~= nil or w.spValue ~= nil
+		local pointer = block(controls, face, sx + sw / 2, yOf(w.lo), sw + 0.02, 0.03, 0.03, Color3.fromRGB(20, 20, 20))
+		local setAuto = lens(controls, face, x0 + 1.02, y0 + 0.28, 0.16, LAMP.white)
+		local setMan = lens(controls, face, x0 + 1.02, y0 + 0.66, 0.16, LAMP.amber)
+		local light = Color3.fromRGB(220, 220, 210)
+		text(gui, x0 + 0.74, y0 + 0.4, 0.56, 0.1, "AUTO", 0.07, light, Enum.Font.ArialBold).ZIndex = 2
+		text(gui, x0 + 0.74, y0 + 0.78, 0.56, 0.1, "MAN", 0.07, light, Enum.Font.ArialBold).ZIndex = 2
+		-- Output meter, 0 to 100 per cent.
+		local ox, oy, ow, oh = x0 + 0.1, y0 + 1.04, cw - 0.2, 0.18
+		box(gui, ox, oy, ow, oh, PAPER)
+		for i = 0, 4 do
+			box(gui, ox + 0.04 + (ow - 0.08) * i / 4 - 0.005, oy + oh - (if i % 2 == 0 then 0.1 else 0.06), 0.01, if i % 2 == 0 then 0.1 else 0.06, INK).ZIndex = 2
+		end
+		local outLabel = text(gui, ox + 0.03, oy + 0.01, 0.6, 0.08, "OUTPUT %", 0.06, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold)
+		outLabel.TextXAlignment = Enum.TextXAlignment.Left
+		outLabel.ZIndex = 2
+		local outPointer = block(controls, face, ox, oy + oh / 2, 0.025, oh + 0.02, 0.03, Color3.fromRGB(215, 25, 25))
+		-- Pushbuttons.
+		local legends = { "A", "M", "<", ">" }
+		local capColors = { BUTTON.white, Color3.fromRGB(230, 170, 40), BUTTON.black, BUTTON.black }
+		local bw = (cw - 0.2) / 4
+		local caps = {}
+		for k = 1, 4 do
+			local bx = x0 + 0.1 + (k - 0.5) * bw
+			text(gui, bx - bw / 2, y0 + 1.25, bw, 0.1, legends[k], 0.09, light, Enum.Font.ArialBold).ZIndex = 2
+			caps[k] = block(controls, face, bx, y0 + 1.47, bw - 0.06, 0.16, 0.05, capColors[k])
+		end
+		local last = ""
+		table.insert(updaters, function()
+			local v = get(w.sig)
+			local sp = if w.sp then get(w.sp) else w.spValue
+			local out = get(w.out)
+			local auto = get(w.auto) >= 0.5
+			local key = string.format("%.4g|%s|%.3g|%s", v, tostring(sp), out, tostring(auto))
+			if key == last then
+				return
+			end
+			last = key
+			pointer.CFrame = blockCFrame(face, sx + sw / 2, yOf(v), 0.05, 0)
+			if sp then
+				spMark.Position = UDim2.fromOffset(px(sx), px(yOf(sp) - 0.025))
+			end
+			outPointer.CFrame = blockCFrame(face, ox + 0.04 + (ow - 0.08) * math.clamp(out / 100, 0, 1), oy + oh / 2, 0.05, 0)
+			setAuto(auto)
+			setMan(not auto)
+		end)
+		region(part, w, function(_button: number, u: number, v: number)
+			if v < y0 + 1.22 then
+				return nil
+			end
+			local k = math.clamp(math.floor((u - x0 - 0.1) / bw) + 1, 1, 4)
+			ctx.click()
+			local cap = caps[k]
+			local home = cap.CFrame
+			cap.CFrame = home - face.normal * 0.03 * S
+			if k <= 2 then
+				task.delay(0.15, function()
+					cap.CFrame = home
+				end)
+				ctx.send(w.autoCmd, if k == 1 then 1 else 0)
+				return nil
+			end
+			return {
+				hold = w.cmd,
+				value = if k == 4 then 1 else -1,
+				onRelease = function()
+					cap.CFrame = home
+				end,
+			}
+		end, function()
+			local sp = if w.sp then get(w.sp) else w.spValue
+			local spText = if sp then string.format(", setpoint " .. w.fmt, sp) else ""
+			return string.format("%s: " .. w.fmt .. " %s%s, output %.0f%%, %s\nA = automatic, M = manual. The arrows move the %s.%s", cleanLabel(w.label), get(w.sig), w.unit, spText, get(w.out), if get(w.auto) >= 0.5 then "AUTO" else "MANUAL", string.lower(w.adjusts), if w.tip then "\n" .. w.tip else "")
+		end)
+	end
+
+	-- Annunciator TEST: lights every window on this panel while held.
+	builders.lamptest = function(gui, face, part, w)
+		local d = 0.5
+		local cx, cy = w.x + w.w / 2, w.y + d / 2 + 0.06
+		local ring = box(gui, cx - d / 2 - 0.05, cy - d / 2 - 0.05, d + 0.1, d + 0.1, Color3.fromRGB(60, 62, 64))
+		round(ring)
+		local cap = cylinder(controls, face, cx, cy, d, 0.16, BUTTON.white)
+		local home = cap.CFrame
+		cylinder(controls, face, cx, cy, d + 0.12, 0.06, Color3.fromRGB(186, 186, 190)).Material = Enum.Material.Metal
+		plate(gui, w.x - 0.02, w.y + d + 0.16, w.w + 0.04, w.h - d - 0.18, w.label, 0.12)
+		local panelId = part:GetAttribute("Panel")
+		region(part, w, function()
+			ctx.click()
+			cap.CFrame = home - face.normal * 0.06 * S
+			testing[panelId] = true
+			return {
+				onRelease = function()
+					testing[panelId] = nil
+					cap.CFrame = home
+				end,
+			}
+		end, function()
+			return "Annunciator TEST: hold to light every window on this panel."
+		end)
 	end
 
 	builders.axial = function(gui, face, part, w)
@@ -1200,9 +1519,9 @@ function Panels.build(room: Instance, ctx: Context)
 			t.state = state
 		end
 	end
-	out.flash = function(bright: boolean)
+	out.flash = function(fast: boolean, slow: boolean?)
 		for _, t in annTiles do
-			local lit = t.state == 2 or (t.state == 1 and bright)
+			local lit = testing[t.panel] == true or t.state == 2 or (t.state == 1 and fast) or (t.state == 3 and slow == true)
 			if lit ~= t.lit then
 				t.lit = lit
 				if lit then
@@ -1213,6 +1532,11 @@ function Panels.build(room: Instance, ctx: Context)
 					t.label.TextColor3 = ANN_DARK_TEXT
 				end
 			end
+		end
+	end
+	out.setRods = function(buf: buffer)
+		for _, fn in rodListeners do
+			fn(buf)
 		end
 	end
 	out.refresh = function()

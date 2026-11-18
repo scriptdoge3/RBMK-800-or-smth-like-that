@@ -40,9 +40,10 @@ local panels: { Panel } = {}
 local current: Panel
 
 -- Panels carry GE-style numbers on their title plates: H11-P601 and on.
-local function panel(id: string, title: string)
+-- Most sections are PANEL_WIDTH wide; the reactor panel is wider.
+local function panel(id: string, title: string, width: number?)
 	local index = #panels + 1
-	current = { id = id, title = title, index = index, number = "H11-P60" .. index, widgets = {} }
+	current = { id = id, title = title, index = index, number = "H11-P60" .. index, width = width or PanelLayout.PANEL_WIDTH, widgets = {} }
 	table.insert(panels, current)
 end
 
@@ -57,7 +58,7 @@ end
 
 local function meter(face: string, x: number, y: number, label: string, sig: string, lo: number, hi: number, unit: string, opts: any?)
 	local o = opts or {}
-	add({ kind = "meter", face = face, x = x, y = y, w = 0.8, h = o.h or 2.5, label = label, sig = sig, lo = lo, hi = hi, unit = unit, fmt = o.fmt or "%.0f", red = o.red, amber = o.amber, low = o.low, tip = o.tip })
+	add({ kind = "meter", face = face, x = x, y = y, w = o.w or 0.8, h = o.h or 2.5, label = label, sig = sig, lo = lo, hi = hi, unit = unit, fmt = o.fmt or "%.0f", red = o.red, amber = o.amber, low = o.low, tip = o.tip })
 end
 
 -- A digital panel meter: a seven-segment display with `cells` digits.
@@ -119,8 +120,34 @@ local function pen(sig: string, lo: number, hi: number, color: string, name: str
 end
 
 local function annunciators()
-	add({ kind = "ann", face = "ann", x = 0, y = 0, w = PanelLayout.PANEL_WIDTH, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
-	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = 15.6, h = 0.42, label = current.number .. "   " .. current.title, title = true })
+	add({ kind = "ann", face = "ann", x = 0, y = 0, w = current.width, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
+	add({ kind = "label", face = "vert", x = 0.2, y = 0.08, w = current.width - 0.4, h = 0.42, label = current.number .. "   " .. current.title, title = true })
+end
+
+-- The annunciator pushbuttons of the ISA ringback sequence: ACKNOWLEDGE
+-- silences the horn and steadies the flashing windows, RESET puts out the
+-- windows whose conditions have cleared (they flash slowly until then),
+-- and TEST lights every window on the panel while held.
+local function annunciatorControls(x: number, y: number, w: number)
+	section("bench", x, y, w, 2.2, "ANNUNCIATOR")
+	local bw = 0.68
+	local gap = (w - 3 * bw) / 4
+	button("bench", x + gap, y + 0.5, "ACK", "ann.ack", { color = "yellow", w = bw })
+	button("bench", x + 2 * gap + bw, y + 0.5, "RESET", "ann.reset", { color = "black", w = bw })
+	add({ kind = "lamptest", face = "bench", x = x + 3 * gap + 2 * bw, y = y + 0.5, w = bw, h = 1.0, label = "TEST" })
+end
+
+-- A manual/automatic control station of the period: a vertical scale with
+-- the measured value and the setpoint, an output meter, and A / M / lower /
+-- raise pushbuttons. The arrows move the output in manual, or the setpoint
+-- where the controller has one the operator sets.
+local function station(face: string, x: number, y: number, label: string, o: any)
+	add({
+		kind = "station", face = face, x = x, y = y, w = 1.4, h = 1.9, label = label,
+		sig = o.pv, lo = o.lo, hi = o.hi, unit = o.unit or "", fmt = o.fmt or "%.0f",
+		sp = o.sp, spValue = o.spValue, out = o.out, auto = o.auto, autoCmd = o.auto,
+		cmd = o.adj, adjusts = o.adjusts or "OUTPUT", tip = o.tip,
+	})
 end
 
 -- ------------------------------------------------------------------ P1
@@ -176,8 +203,7 @@ for g = 1, 3 do
 	toggle("bench", 0.6 + (g - 1) * 1.9, 3.1, "GROUP " .. g, "srv." .. g, "srv." .. g .. ".sw", { labels = { "AUTO", "OPEN" } })
 	lamp("bench", 1.65 + (g - 1) * 1.9, 3.5, "OPEN", "srv." .. g .. ".open", "red", { w = 0.8 })
 end
-section("bench", 6.9, 2.6, 2.3, 2.2, "ANNUNCIATORS")
-button("bench", 7.45, 3.1, "ALARM\nACK", "ann.ack", { color = "yellow", w = 1.2 })
+annunciatorControls(6.9, 2.6, 2.3)
 section("bench", 9.4, 2.6, 6.3, 2.2, "ACCIDENT LOCALISATION")
 digital("bench", 9.95, 3.05, "BUBBLER POOL TEMP", "pool.temp", "%.1f", "C", 2.0, 4)
 digital("bench", 12.75, 3.05, "REACTOR SPACE PRESS", "rs.press", "%.0f", "kPa", 2.4, 4)
@@ -208,11 +234,13 @@ recorder("vert", 0.4, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -6
 recorder("vert", 2.85, 4.05, REC_W, REC_H, "LOOP FLOW", { pen("loop.1.flow", 0, 20000, "red", "LOOP A", "t/h"), pen("loop.2.flow", 0, 20000, "blue", "LOOP B", "t/h") })
 recorder("vert", 5.3, 4.05, REC_W, REC_H, "CORE FLOW AND STEAM", { pen("pri.flow", 0, 40000, "red", "CORE FLOW", "t/h"), pen("steam.total", 0, 5000, "blue", "STEAM", "t/h") })
 recorder("vert", 7.75, 4.05, REC_W, REC_H, "CORE INLET TEMP", { pen("loop.1.tin", 0, 300, "red", "LOOP A", "C"), pen("loop.2.tin", 0, 300, "blue", "LOOP B", "C") })
-section("vert", 10.2, 4.05, 5.5, 2.52, "PUMP HEAD AND CORE FLOW")
-meter("vert", 10.5, 4.35, "HEAD\nLOOP A", "loop.1.dp", 0, 2.5, "MPa", { fmt = "%.2f", h = 2.2 })
-meter("vert", 11.8, 4.35, "HEAD\nLOOP B", "loop.2.dp", 0, 2.5, "MPa", { fmt = "%.2f", h = 2.2 })
-meter("vert", 13.1, 4.35, "CORE\nFLOW", "pri.flow", 0, 40000, "t/h", { h = 2.2 })
-meter("vert", 14.4, 4.35, "CORE\nSTEAM", "core.steam", 0, 5000, "t/h", { h = 2.2 })
+section("vert", 10.2, 4.05, 5.5, 2.52, "MCP MOTOR CURRENT")
+for l = 1, 2 do
+	for i = 1, 4 do
+		local n = (l - 1) * 4 + i
+		meter("vert", 10.32 + (n - 1) * 0.67, 4.35, string.format("MCP\n%d%d", l, i), string.format("mcp.%d%d.current", l, i), 0, 800, "A", { w = 0.6, h = 2.2, red = 700 })
+	end
+end
 for l = 1, 2 do
 	local x0 = if l == 1 then 0.2 else 8.1
 	section("bench", x0, 0.15, 7.7, 4.7, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
@@ -236,63 +264,78 @@ for l = 1, 2 do
 end
 
 -- ------------------------------------------------------------------ P3
-panel("P3", "REACTOR CONTROL")
+-- The reactor operator's board, the widest section, set across the corner.
+-- Its vertical board carries the rod position indicators (a synchro dial
+-- for every rod, laid out as the core, as on the RBMK's rod position
+-- board), the channel cartogram, the axial power bargraph and the neutron
+-- monitoring. Its bench carries rod selection and motion in the GE manner
+-- (a select matrix in core geometry, a spring-return rod movement switch
+-- and a four-rod display), the rod groups, the power regulators, the
+-- emergency protection and the bypass keys.
+panel("P3", "REACTOR CONTROL", 24)
 annunciators()
-add({ kind = "coremap", face = "vert", x = 0.3, y = 0.62, w = 5.85, h = 5.85, label = "CORE MAP" })
-add({ kind = "axial", face = "vert", x = 6.3, y = 0.62, w = 1.3, h = 5.85, label = "AXIAL" })
-section("vert", 7.8, 0.62, 7.9, 3.05, "NEUTRON MONITORING")
-meter("vert", 8.0, 1.0, "SOURCE\nRANGE", "n.logcps", 0, 6, "log cps", { fmt = "%.1f", tip = "Source range count rate, log scale. Watch it double as rods come out on the approach to criticality." })
-meter("vert", 9.0, 1.0, "INTERM\nRANGE", "n.log", -9, 1, "log P", { fmt = "%.1f", tip = "Intermediate range: log10 of reactor power as a fraction of nominal." })
-meter("vert", 10.0, 1.0, "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f", red = 110, amber = 100 })
-meter("vert", 11.0, 1.0, "STARTUP\nRATE", "n.sur", -1, 3, "dec/min", { fmt = "%.2f", red = 2.6, amber = 1.3, tip = "Startup rate in decades per minute. 1.3 is a 20 s period (rod block), 2.6 is a 10 s period (scram)." })
-meter("vert", 12.0, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." })
-digital("vert", 13.1, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.4, 4)
-digital("vert", 13.1, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.0, 4)
-digital("vert", 14.15, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.35, 5)
-digital("vert", 13.1, 2.75, "ORM", "core.orm", "%.0f", "rods", 1.15, 3)
-digital("vert", 14.35, 2.75, "VOID COEF", "core.void", "%+.2f", "beta", 1.2, 4)
-add({ kind = "computer", face = "vert", x = 7.8, y = 3.8, w = 7.9, h = 2.67, label = "UNIT COMPUTER" })
+add({ kind = "rodpos", face = "vert", x = 0.3, y = 0.62, w = 6.2, h = 5.85, label = "ROD POSITION" })
+add({ kind = "coremap", face = "vert", x = 6.7, y = 0.62, w = 5.85, h = 5.85, label = "CORE MAP" })
+add({ kind = "axial", face = "vert", x = 12.7, y = 0.62, w = 1.3, h = 5.85, label = "AXIAL" })
+section("vert", 14.2, 0.62, 9.5, 3.05, "NEUTRON MONITORING")
+meter("vert", 14.45, 1.0, "SOURCE\nRANGE", "n.logcps", 0, 6, "log cps", { fmt = "%.1f", tip = "Source range count rate, log scale. Watch it double as rods come out on the approach to criticality." })
+meter("vert", 15.45, 1.0, "INTERM\nRANGE", "n.log", -9, 1, "log P", { fmt = "%.1f", tip = "Intermediate range: log10 of reactor power as a fraction of nominal." })
+meter("vert", 16.45, 1.0, "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f", red = 110, amber = 100 })
+meter("vert", 17.45, 1.0, "STARTUP\nRATE", "n.sur", -1, 3, "dec/min", { fmt = "%.2f", red = 2.6, amber = 1.3, tip = "Startup rate in decades per minute. 1.3 is a 20 s period (rod block), 2.6 is a 10 s period (scram)." })
+meter("vert", 18.45, 1.0, "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." })
+digital("vert", 19.55, 1.05, "THERMAL POWER", "n.thermal", "%.0f", "MW", 3.95, 4)
+digital("vert", 19.55, 1.9, "PERIOD", "n.period", "%.0f", "s", 1.9, 4)
+digital("vert", 21.6, 1.9, "REACTIVITY", "n.rho", "%+.2f", "beta", 1.9, 5)
+digital("vert", 19.55, 2.75, "ORM", "core.orm", "%.0f", "rods", 1.9, 3)
+digital("vert", 21.6, 2.75, "VOID COEF", "core.void", "%+.2f", "beta", 1.9, 4)
+add({ kind = "computer", face = "vert", x = 14.2, y = 3.8, w = 6.85, h = 2.67, label = "UNIT COMPUTER" })
+recorder("vert", 21.35, 4.0, REC_W, REC_H, "NEUTRON POWER", { pen("n.log", -9, 1, "red", "LOG POWER", "log P"), pen("n.power", 0, 125, "blue", "LINEAR", "%") })
 
 add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.25, w = 4.5, h = 4.5, label = "ROD SELECT" })
-section("bench", 5.0, 0.15, 5.3, 2.35, "ROD MOTION")
-button("bench", 5.15, 0.5, "WITHDRAW", "rod.move", { value = -1, hold = true, color = "white", w = 1.1 })
-button("bench", 6.3, 0.5, "INSERT", "rod.move", { value = 1, hold = true, color = "white", w = 1.1 })
-button("bench", 7.45, 0.5, "CLEAR\nSELECT", "rod.clear", { color = "black" })
-toggle("bench", 8.4, 0.45, "SELECT", "rod.quad", "rod.quad", { labels = { "ONE", "FOUR" } })
-digital("bench", 5.15, 1.62, "SELECTED", "rod.selCount", "%.0f", "", 0.95, 3)
-digital("bench", 6.15, 1.62, "DEPTH", "rod.selPos", "%.2f", "m", 1.25, 3)
-lamp("bench", 7.5, 1.78, "ROD BLOCK", "rod.block", "amber", { w = 1.3 })
-lamp("bench", 8.85, 1.78, "AZ RODS OUT", "rod.azOut", "green", { w = 1.4 })
-section("bench", 5.0, 2.65, 5.3, 2.25, "GROUPS AND INTERLOCKS")
-button("bench", 5.15, 2.92, "SELECT\nAZ RODS", "rod.group", { value = 1, color = "red" })
-button("bench", 6.1, 2.92, "SELECT\nUSP", "rod.group", { value = 2, color = "blue" })
-button("bench", 7.05, 2.92, "SELECT\nAR", "rod.group", { value = 3, color = "green" })
-button("bench", 8.0, 2.92, "SELECT\nLAR", "rod.group", { value = 4, color = "yellow" })
-digital("bench", 5.15, 4.0, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.2, 3)
-digital("bench", 6.4, 4.0, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.2, 3)
-digital("bench", 7.65, 4.0, "USP MEAN", "rod.meanUSP", "%.2f", "m", 1.2, 3)
-toggle("bench", 9.25, 2.72, "BLOCK", "rod.blockBypass", "rod.blockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
-toggle("bench", 9.25, 3.84, "AZ INTLK", "rod.azInterlockBypass", "rod.azInterlockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
+section("bench", 5.0, 0.15, 5.4, 2.4, "ROD MOTION")
+add({ kind = "rodswitch", face = "bench", x = 5.15, y = 0.45, w = 1.75, h = 1.5, label = "ROD MOVEMENT", cmd = "rod.move", positions = { "INSERT", "OFF", "WITHDRAW" } })
+button("bench", 7.05, 0.5, "CLEAR\nSELECT", "rod.clear", { color = "black" })
+toggle("bench", 8.0, 0.45, "SELECT", "rod.quad", "rod.quad", { labels = { "ONE", "FOUR" } })
+lamp("bench", 9.05, 0.55, "ROD BLOCK", "rod.block", "amber", { w = 1.3 })
+lamp("bench", 9.05, 1.0, "AZ RODS OUT", "rod.azOut", "green", { w = 1.3 })
+digital("bench", 9.05, 1.5, "SELECTED", "rod.selCount", "%.0f", "", 1.3, 3)
+section("bench", 5.0, 2.65, 5.4, 2.25, "FOUR ROD DISPLAY")
+add({ kind = "fourrod", face = "bench", x = 5.1, y = 2.95, w = 5.2, h = 1.85, label = "FOUR ROD DISPLAY" })
+section("bench", 10.6, 0.15, 5.9, 2.4, "ROD GROUPS")
+button("bench", 10.75, 0.45, "SELECT\nAZ RODS", "rod.group", { value = 1, color = "red" })
+button("bench", 11.7, 0.45, "SELECT\nUSP", "rod.group", { value = 2, color = "blue" })
+button("bench", 12.65, 0.45, "SELECT\nAR", "rod.group", { value = 3, color = "green" })
+button("bench", 13.6, 0.45, "SELECT\nLAR", "rod.group", { value = 4, color = "yellow" })
+toggle("bench", 14.6, 0.4, "BLOCK", "rod.blockBypass", "rod.blockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
+toggle("bench", 15.55, 0.4, "AZ INTLK", "rod.azInterlockBypass", "rod.azInterlockBypass", { labels = { "NORM", "BYP" }, key = true, compact = true })
+digital("bench", 10.75, 1.6, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.35, 3)
+digital("bench", 12.2, 1.6, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.35, 3)
+digital("bench", 13.65, 1.6, "USP MEAN", "rod.meanUSP", "%.2f", "m", 1.35, 3)
+digital("bench", 15.1, 1.6, "LAR MEAN", "rod.meanLAR", "%.2f", "m", 1.35, 3)
+section("bench", 10.6, 2.65, 5.9, 2.25, "POWER REGULATORS")
+selector("bench", 10.7, 2.95, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
+jog("bench", 12.1, 2.95, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digits = true })
+toggle("bench", 13.7, 2.95, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
+selector("bench", 14.95, 2.95, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
 
-section("bench", 10.5, 0.15, 5.3, 1.9, "EMERGENCY PROTECTION")
-button("bench", 10.65, 0.45, "AZ-5", "az5.button", { color = "red", big = true, w = 1.3, h = 1.45 })
-button("bench", 12.05, 0.6, "AZ\nRESET", "az.reset", { color = "black" })
-toggle("bench", 13.05, 0.5, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", "DROP" }, key = true })
+section("bench", 16.7, 0.15, 5.4, 2.4, "EMERGENCY PROTECTION")
+button("bench", 16.85, 0.45, "AZ-5", "az5.button", { color = "red", big = true, w = 1.3, h = 1.45 })
+button("bench", 18.3, 0.6, "AZ\nRESET", "az.reset", { color = "black" })
+toggle("bench", 19.3, 0.5, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", "DROP" }, key = true })
 for n = 1, 5 do
-	lamp("bench", 14.2, 0.42 + (5 - n) * 0.31, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.4, h = 0.3 })
+	lamp("bench", 20.5, 0.42 + (5 - n) * 0.31, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.45, h = 0.3 })
 end
-section("bench", 10.5, 2.15, 5.3, 1.35, "")
-selector("bench", 10.6, 2.2, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
-jog("bench", 11.95, 2.2, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digits = true })
-toggle("bench", 13.5, 2.2, "LOCAL REG", "lar.sw", "lar.on", { labels = { "OFF", "ON" } })
-selector("bench", 14.5, 2.2, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
-section("bench", 10.5, 3.58, 5.3, 1.4, "PROTECTION BYPASS KEYS")
+section("bench", 16.7, 2.65, 5.4, 2.25, "PROTECTION BYPASS KEYS")
 do
 	local keys = { { "period", "PERIOD" }, { "press", "PRESS" }, { "level", "LEVEL" }, { "feed", "FEED" }, { "mcp", "MCP" }, { "turbines", "2 TG" }, { "cps", "CPS" } }
 	for i, k in keys do
-		add({ kind = "toggle", face = "bench", x = 10.55 + (i - 1) * 0.74, y = 3.84, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
+		add({ kind = "toggle", face = "bench", x = 16.78 + (i - 1) * 0.75, y = 3.0, w = 0.72, h = 1.12, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
 	end
 end
+section("bench", 22.3, 0.15, 1.5, 4.75, "ANNUNCIATOR")
+button("bench", 22.6, 0.5, "ACK", "ann.ack", { color = "yellow" })
+button("bench", 22.6, 1.65, "RESET", "ann.reset", { color = "black" })
+add({ kind = "lamptest", face = "bench", x = 22.6, y = 2.8, w = 0.9, h = 1.0, label = "TEST" })
 
 -- ------------------------------------------------------------------ P4
 panel("P4", "FEEDWATER AND CONDENSATE")
@@ -309,11 +352,10 @@ meter("vert", 7.1, 1.1, "DEAER\nLEVEL", "da.level", 0, 100, "%", { low = 25 })
 meter("vert", 8.1, 1.1, "COND\nFLOW", "cond.flow", 0, 5000, "t/h")
 meter("vert", 9.1, 1.1, "HOTWELL\n1", "tg.1.hotwell", 0, 100, "%")
 meter("vert", 10.1, 1.1, "HOTWELL\n2", "tg.2.hotwell", 0, 100, "%")
-section("vert", 11.5, 0.7, 4.2, 3.2, "DRUM LEVEL")
-meter("vert", 11.8, 1.1, "DRUM A", "loop.1.level", -600, 600, "mm")
-meter("vert", 12.8, 1.1, "DRUM B", "loop.2.level", -600, 600, "mm")
-meter("vert", 13.8, 1.1, "VALVE A", "lvl.1.valve", 0, 100, "%")
-meter("vert", 14.8, 1.1, "VALVE B", "lvl.2.valve", 0, 100, "%")
+section("vert", 11.5, 0.7, 4.2, 3.2, "FEED PUMP FLOW")
+for i = 1, 4 do
+	meter("vert", 11.8 + (i - 1) * 1.0, 1.1, "FWP-" .. i, "fw.pump." .. i .. ".flow", 0, 2000, "t/h")
+end
 recorder("vert", 0.4, 4.05, REC_W, REC_H, "FEEDWATER FLOW", { pen("loop.1.feed", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.feed", 0, 2500, "blue", "DRUMS B", "t/h") })
 recorder("vert", 2.85, 4.05, REC_W, REC_H, "STEAM FLOW", { pen("loop.1.steam", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.steam", 0, 2500, "blue", "DRUMS B", "t/h") })
 recorder("vert", 5.3, 4.05, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
@@ -336,12 +378,14 @@ section("bench", 10.7, 0.15, 5.1, 2.3, "CONDENSATE PUMPS")
 for i = 1, 3 do
 	pump("bench", 10.95 + (i - 1) * 1.2, 0.5, "CP-" .. i, "cond.pump." .. i, "cond.pump." .. i .. ".run")
 end
+section("bench", 0.2, 2.6, 5.4, 2.25, "DRUM LEVEL CONTROL")
 for l = 1, 2 do
-	local x0 = if l == 1 then 0.2 else 5.4
-	section("bench", x0, 2.6, 5.0, 2.25, "DRUM " .. (if l == 1 then "A" else "B") .. " LEVEL CONTROL")
-	toggle("bench", x0 + 0.3, 3.05, "CONTROLLER", "lvl." .. l .. ".auto", "lvl." .. l .. ".auto", { labels = { "MAN", "AUTO" } })
-	jog("bench", x0 + 1.5, 3.05, "FEED VALVE", "lvl." .. l .. ".valve", "lvl." .. l .. ".valve", "%.0f", "%")
-	digital("bench", x0 + 3.3, 3.25, "LEVEL", "loop." .. l .. ".level", "%.0f", "mm", 1.4, 4)
+	station("bench", 0.4 + (l - 1) * 1.55, 2.9, "DRUM " .. (if l == 1 then "A" else "B") .. " LEVEL", {
+		pv = "loop." .. l .. ".level", lo = -600, hi = 600, unit = "mm", spValue = 0,
+		out = "lvl." .. l .. ".valve", auto = "lvl." .. l .. ".auto", adj = "lvl." .. l .. ".valve",
+		tip = "Drum level controller: the feed regulating valve. A for automatic (three-element), M for manual; in manual the arrows move the valve.",
+	})
+	digital("bench", 3.6, 2.9 + (l - 1) * 0.95, "LEVEL " .. (if l == 1 then "A" else "B"), "loop." .. l .. ".level", "%.0f", "mm", 1.85, 4)
 end
 -- Feedwater train: condensate pumps to the deaerator, feed pumps to the
 -- drum level control valves.
@@ -349,14 +393,22 @@ mimic("bench", "feed", { { 0.95, 2.52 }, { 13.85, 2.52 } })
 for _, x in { 0.95, 2.15, 3.35, 4.55, 6.15, 7.35, 8.55, 11.45, 12.65, 13.85 } do
 	mimic("bench", "feed", { { x, 2.05 }, { x, 2.52 } })
 end
-for _, x in { 3.0, 8.2, 14.5 } do
+for _, x in { 1.1, 2.65, 7.85 } do
 	mimic("bench", "feed", { { x, 2.52 }, { x, 2.6 } })
 end
-section("bench", 10.7, 2.6, 5.1, 2.25, "DEAERATOR")
-toggle("bench", 10.95, 3.05, "PEGGING\nSTEAM", "da.peg", "da.peg")
-toggle("bench", 12.05, 3.05, "LEVEL\nCONTROL", "da.levelAuto", "da.levelAuto", { labels = { "MAN", "AUTO" } })
-jog("bench", 13.2, 3.05, "COND VALVE", "da.valve", "da.valve", "%.0f", "%")
-digital("bench", 14.75, 3.25, "TEMP", "da.temp", "%.0f", "C", 0.95, 3)
+section("bench", 5.8, 2.6, 5.2, 2.25, "DEAERATOR")
+toggle("bench", 6.0, 3.0, "PEGGING\nSTEAM", "da.peg", "da.peg")
+station("bench", 7.15, 2.9, "DEAERATOR LEVEL", {
+	pv = "da.level", lo = 0, hi = 100, unit = "%", spValue = 50,
+	out = "da.valve", auto = "da.levelAuto", adj = "da.valve",
+	tip = "Deaerator level controller: the condensate valve. A for automatic, M for manual; in manual the arrows move the valve.",
+})
+digital("bench", 8.75, 2.9, "TEMP", "da.temp", "%.0f", "C", 2.05, 3)
+digital("bench", 8.75, 3.85, "LEVEL", "da.level", "%.0f", "%", 2.05, 3)
+annunciatorControls(11.2, 2.6, 2.3)
+section("bench", 13.7, 2.6, 2.1, 2.25, "FEED HEADER")
+digital("bench", 13.85, 2.9, "PRESSURE", "fw.header", "%.1f", "MPa", 1.8, 3)
+digital("bench", 13.85, 3.85, "TEMP", "fw.temp", "%.0f", "C", 1.8, 3)
 
 -- ------------------------------------------------------------------ P5
 panel("P5", "TURBINE-GENERATORS")
@@ -386,9 +438,13 @@ recorder("vert", 7.6, 4.05, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0,
 recorder("vert", 10.1, 4.05, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
 recorder("vert", 12.6, 4.05, REC_W, REC_H, "SHELL METAL TEMP", { pen("tg.1.metal", 0, 300, "red", "TG-1", "C"), pen("tg.2.metal", 0, 300, "blue", "TG-2", "C") })
 section("bench", 6.9, 0.15, 2.2, 4.7, "PRESSURE REG")
-toggle("bench", 7.5, 0.5, "REGULATOR", "ehc.pressAuto", "ehc.pressAuto", { labels = { "OUT", "IN" } })
-jog("bench", 7.25, 2.0, "PRESS SET", "ehc.press", "ehc.pressSet", "%.2f", "MPa", { digits = true })
-digital("bench", 7.3, 3.6, "DEMAND", "ehc.demand", "%.0f", "%", 1.4, 3)
+station("bench", 7.3, 0.45, "DRUM PRESSURE", {
+	pv = "pri.press", lo = 0, hi = 10, unit = "MPa", fmt = "%.2f", sp = "ehc.pressSet",
+	out = "ehc.demand", auto = "ehc.pressAuto", adj = "ehc.press", adjusts = "SETPOINT",
+	tip = "Pressure regulator: holds drum pressure at the setpoint by moving the turbine steam demand. A puts it in, M takes it out; the arrows move the setpoint.",
+})
+digital("bench", 7.25, 2.55, "PRESS SET", "ehc.pressSet", "%.2f", "MPa", 1.5, 3)
+digital("bench", 7.25, 3.55, "DEMAND", "ehc.demand", "%.0f", "%", 1.5, 3)
 for k = 1, 2 do
 	local x0 = if k == 1 then 0.15 else 9.25
 	local key = "tg." .. k
@@ -518,6 +574,12 @@ for _, p in panels do
 	for _, w in p.widgets do
 		needSignal(w.sig)
 		needSignal(w.lit)
+		if w.kind == "station" then
+			needSignal(w.sp)
+			needSignal(w.out)
+			needSignal(w.auto)
+			commandSet[w.autoCmd] = true
+		end
 		if w.pens then
 			for _, pen in w.pens do
 				needSignal(pen.sig)
@@ -525,7 +587,7 @@ for _, p in panels do
 		end
 		if w.cmd then
 			commandSet[w.cmd] = true
-			if w.hold or w.kind == "jog" then
+			if w.hold or w.kind == "jog" or w.kind == "station" or w.kind == "rodswitch" then
 				holdSet[w.cmd] = true
 			end
 		end
@@ -577,22 +639,31 @@ export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vecto
 -- the left hand and the back wall on the right. The cabinets behind it are
 -- filled out to the square corner.
 function PanelLayout.designFrame(index: number): (Vector3, Vector3, Vector3)
-	local W = PanelLayout.PANEL_WIDTH
 	local z = PanelLayout.BACK_WALL_Z
 	local cx = PanelLayout.CORNER_X
 	local corner = PanelLayout.CORNER_PANEL
+	local function width(i: number): number
+		return panels[i].width
+	end
 	-- How far the corner section reaches along each run from the corner point.
-	local reach = W / math.sqrt(2)
+	local reach = width(corner) / math.sqrt(2)
 	if index < corner then
 		-- On the wing, facing east.
-		local fromCorner = reach + (corner - index - 0.5) * W
+		local fromCorner = reach + width(index) / 2
+		for j = index + 1, corner - 1 do
+			fromCorner += width(j)
+		end
 		return Vector3.new(cx, 0, z + fromCorner), Vector3.new(0, 0, -1), Vector3.new(1, 0, 0)
 	elseif index == corner then
 		local d = 1 / math.sqrt(2)
 		return Vector3.new(cx + reach / 2, 0, z + reach / 2), Vector3.new(d, 0, -d), Vector3.new(d, 0, d)
 	end
 	-- On the back wall, facing south.
-	return Vector3.new(cx + reach + (index - corner - 0.5) * W, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
+	local along = reach + width(index) / 2
+	for j = corner + 1, index - 1 do
+		along += width(j)
+	end
+	return Vector3.new(cx + along, 0, z), Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
 end
 
 -- The same, in studs.
@@ -619,7 +690,7 @@ function PanelLayout.designFace(index: number, face: string): Face
 			right = right,
 			up = up * math.sin(s) - back * math.cos(s),
 			normal = up * math.cos(s) + back * math.sin(s),
-			width = PanelLayout.PANEL_WIDTH,
+			width = panels[index].width,
 			height = depth,
 			scale = 1,
 		}
@@ -629,7 +700,7 @@ function PanelLayout.designFace(index: number, face: string): Face
 			right = right,
 			up = up,
 			normal = back,
-			width = PanelLayout.PANEL_WIDTH,
+			width = panels[index].width,
 			height = PanelLayout.VERT_HEIGHT,
 			scale = 1,
 		}
@@ -639,7 +710,7 @@ function PanelLayout.designFace(index: number, face: string): Face
 			right = right,
 			up = up,
 			normal = back,
-			width = PanelLayout.PANEL_WIDTH,
+			width = panels[index].width,
 			height = PanelLayout.ANN_HEIGHT,
 			scale = 1,
 		}
