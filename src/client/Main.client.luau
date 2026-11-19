@@ -90,7 +90,7 @@ do
 	local screenPart = room:WaitForChild("DeskScreen1", 10)
 	if screenPart then
 		terminalText = typed(surface(screenPart, 330), 14, Color3.fromRGB(110, 255, 140))
-		terminalText.Text = "UNIT COMPUTER\nNOT READY"
+		terminalText.Text = "SKALA\nNOT READY"
 	end
 	local alarmPart = room:WaitForChild("DeskScreen2", 10)
 	if alarmPart then

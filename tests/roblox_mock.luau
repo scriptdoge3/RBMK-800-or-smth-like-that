@@ -329,10 +329,10 @@ local controlsFolder = room:FindFirstChild("PanelControls")
 -- The panel hardware is blocks and cylinders: no spheres anywhere in the
 -- room, neither ball parts nor sphere meshes.
 do
-	local discs, spheres = 0, 0
+	local hardware, spheres = 0, 0
 	for _, d in controlsFolder:GetChildren() do
-		if d:IsA("Part") and d.Shape == Enum.PartType.Cylinder then
-			discs += 1
+		if d:IsA("BasePart") then
+			hardware += 1
 		end
 	end
 	for _, d in room:GetDescendants() do
@@ -340,7 +340,7 @@ do
 			spheres += 1
 		end
 	end
-	H.check(discs > 1200 and spheres == 0, string.format("panel hardware: %d cylinders, %d spheres", discs, spheres))
+	H.check(hardware > 1500 and spheres == 0, string.format("panel hardware: %d parts, %d spheres", hardware, spheres))
 end
 
 -- The scram button is under a hinged cover: the first click lifts the

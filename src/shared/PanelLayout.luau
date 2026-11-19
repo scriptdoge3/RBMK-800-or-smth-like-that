@@ -39,11 +39,14 @@ export type Panel = { id: string, title: string, index: number, widgets: { Widge
 local panels: { Panel } = {}
 local current: Panel
 
--- Panels carry GE-style numbers on their title plates: H11-P601 and on.
+-- Panels are numbered 1 to 6 along the L; a title plate names each one and,
+-- on the operators' own panels, the operator's post: SIUR (senior reactor
+-- control engineer), SIUB (senior unit engineer), SIUT (senior turbine
+-- engineer).
 -- Most sections are PANEL_WIDTH wide; the reactor panel is wider.
 local function panel(id: string, title: string, width: number?)
 	local index = #panels + 1
-	current = { id = id, title = title, index = index, number = "H11-P60" .. index, width = width or PanelLayout.PANEL_WIDTH, widgets = {} }
+	current = { id = id, title = title, index = index, number = "PANEL " .. index, width = width or PanelLayout.PANEL_WIDTH, widgets = {} }
 	table.insert(panels, current)
 end
 
@@ -62,7 +65,7 @@ local function group(face: string, x: number, y: number, w: number, title: strin
 	section(face, x, y, w, 0.26, title)
 end
 
--- An edgewise meter (GE type 180 style): 0.6 wide, nameplate on top.
+-- A vertical profile meter: 0.6 wide, nameplate on top.
 local function meter(face: string, x: number, y: number, label: string, sig: string, lo: number, hi: number, unit: string, opts: any?)
 	local o = opts or {}
 	add({ kind = "meter", face = face, x = x, y = y, w = o.w or 0.6, h = o.h or 2.5, label = label, sig = sig, lo = lo, hi = hi, unit = unit, fmt = o.fmt or "%.0f", red = o.red, amber = o.amber, low = o.low, tip = o.tip })
@@ -145,7 +148,7 @@ end
 
 local function annunciators()
 	add({ kind = "ann", face = "ann", x = 0, y = 0, w = current.width, h = PanelLayout.ANN_HEIGHT, alarms = AlarmList.forPanel(current.id) })
-	add({ kind = "label", face = "vert", x = 0.2, y = 0.06, w = current.width - 0.4, h = 0.42, label = current.number .. "   " .. current.title, title = true })
+	add({ kind = "label", face = "vert", x = 0.2, y = 0.06, w = current.width - 0.4, h = 0.42, label = current.number .. "  ·  " .. current.title, title = true })
 end
 
 -- The annunciator pushbuttons of the ISA ringback sequence: ACKNOWLEDGE
@@ -289,7 +292,7 @@ mimic("bench", "steam", { { 2.175, 4.08 }, { 2.175, 4.3 } })
 mimic("bench", "steam", { { 3.575, 4.08 }, { 3.575, 4.3 } })
 
 -- ------------------------------------------------------------------ P2
-panel("P2", "MAIN CIRCULATION")
+panel("P2", "MAIN CIRCULATION CIRCUIT  ·  SIUB")
 annunciators()
 for l = 1, 2 do
 	local k = "loop." .. l
@@ -353,11 +356,11 @@ end
 -- Its vertical board carries the rod position indicators (a synchro dial
 -- for every rod, laid out as the core, as on the RBMK's rod position
 -- board), the channel cartogram, the axial power bargraph and the neutron
--- monitoring. Its bench carries rod selection and motion in the GE manner
--- (a select matrix in core geometry, a spring-return rod movement switch
--- and a four-rod display), the rod groups, the power regulators, the
--- emergency protection and the bypass keys.
-panel("P3", "REACTOR CONTROL", 24)
+-- monitoring. Its bench is the SIUR's desk: rod selection keys in core
+-- geometry, a spring-return rod movement key and a four-rod display, the
+-- rod groups, the power regulators, the emergency protection (AZ-5 under
+-- its cover) and the bypass keys.
+panel("P3", "REACTOR CONTROL  ·  SIUR", 24)
 annunciators()
 add({ kind = "rodpos", face = "vert", x = 0.3, y = 0.62, w = 6.2, h = 5.85, label = "ROD POSITION" })
 add({ kind = "coremap", face = "vert", x = 6.7, y = 0.62, w = 5.85, h = 5.85, label = "CORE MAP" })
@@ -370,14 +373,14 @@ meterGroup(14.35, PLATE_A, ROW_A, "NEUTRON MONITORING", {
 	{ "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." } },
 	{ "AXIAL\nOFFSET", "core.offset", -50, 50, "%", { tip = "Axial power offset: positive is top-heavy." } },
 })
-group("vert", 19.0, PLATE_A, 4.7, "PROCESS COMPUTER")
+group("vert", 19.0, PLATE_A, 4.7, "SKALA")
 digital("vert", 19.05, 0.95, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.2, 4)
 digital("vert", 21.45, 0.95, "PERIOD", "n.period", "%.0f", "s", 2.2, 4)
 digital("vert", 19.05, 1.85, "ORM", "core.orm", "%.0f", "rods", 2.2, 3)
 digital("vert", 21.45, 1.85, "VOID COEF", "core.void", "%+.2f", "beta", 2.2, 4)
 digital("vert", 19.05, 2.75, "XENON", "core.xenon", "%+.2f", "% dk", 2.2, 4)
 digital("vert", 21.45, 2.75, "REACTIVITY", "n.rho", "%+.2f", "beta", 2.2, 5)
-add({ kind = "computer", face = "vert", x = 14.35, y = 3.75, w = 6.6, h = 2.7, label = "UNIT COMPUTER" })
+add({ kind = "computer", face = "vert", x = 14.35, y = 3.75, w = 6.6, h = 2.7, label = "SKALA" })
 recorder("vert", 21.45, ROW_B, REC_W, REC_H, "NEUTRON POWER", { pen("n.log", -9, 1, "red", "LOG POWER", "log P"), pen("n.power", 0, 125, "blue", "LINEAR", "%") })
 
 add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.25, w = 4.5, h = 4.5, label = "ROD SELECT" })
@@ -424,7 +427,7 @@ group("bench", 22.3, 0.06, 1.55, "ANNUNCIATOR")
 annunciatorButtons(22.7, 0.4, 1.05, true)
 
 -- ------------------------------------------------------------------ P4
-panel("P4", "FEEDWATER AND CONDENSATE")
+panel("P4", "FEEDWATER AND CONDENSATE  ·  SIUB")
 annunciators()
 meterGroup(0.3, PLATE_A, ROW_A, "FEEDWATER", {
 	{ "FEED\nFLOW A", "loop.1.feed", 0, 2500, "t/h" },
@@ -527,7 +530,7 @@ hmeter("bench", 8.85, 3.06, "FEED TEMP", "fw.temp", 0, 250, "C", { w = 1.45 })
 hmeter("bench", 8.85, 3.78, "DEAER TEMP", "da.temp", 0, 200, "C", { w = 1.45 })
 
 -- ------------------------------------------------------------------ P5
-panel("P5", "TURBINE-GENERATORS")
+panel("P5", "TURBINE-GENERATORS  ·  SIUT")
 annunciators()
 for k = 1, 2 do
 	local key = "tg." .. k

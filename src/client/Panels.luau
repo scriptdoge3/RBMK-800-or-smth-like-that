@@ -21,11 +21,12 @@ local S = PanelLayout.SCALE
 
 local INK = Color3.fromRGB(24, 26, 28)
 local PAPER = Color3.fromRGB(236, 232, 214)
--- Period hardware: numeric readouts are red LED panel meters, the unit
--- computer is a green-phosphor tube, and nothing has a colour screen.
-local SCREEN = Color3.fromRGB(22, 8, 8)
-local DIGIT = Color3.fromRGB(255, 62, 44)
-local DIGIT_DIM = Color3.fromRGB(46, 14, 12)
+-- Soviet hardware of the period: numeric readouts are orange gas-discharge
+-- indicators, the SKALA computer shows on a green-phosphor tube, and
+-- nothing has a colour screen.
+local SCREEN = Color3.fromRGB(18, 9, 5)
+local DIGIT = Color3.fromRGB(255, 132, 40)
+local DIGIT_DIM = Color3.fromRGB(52, 22, 10)
 local TUBE = Color3.fromRGB(8, 18, 12)
 local PHOSPHOR = Color3.fromRGB(110, 255, 140)
 local LAMP = {
@@ -44,15 +45,20 @@ local BUTTON = {
 	black = Color3.fromRGB(34, 34, 36),
 }
 local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50), violet = Color3.fromRGB(120, 40, 150) }
--- Mimic line colours: reactor water blue, steam red, feedwater and
--- condensate green, emergency cooling orange, power black.
+-- Mimic line colours, after the Soviet pipeline colour standard: water
+-- green, steam red; emergency core cooling orange so it stands apart, and
+-- electrical lines black.
 local MIMIC = {
-	water = Color3.fromRGB(46, 84, 168),
-	steam = Color3.fromRGB(190, 48, 36),
-	feed = Color3.fromRGB(36, 120, 64),
-	eccs = Color3.fromRGB(222, 128, 26),
+	water = Color3.fromRGB(34, 120, 60),
+	steam = Color3.fromRGB(196, 44, 36),
+	feed = Color3.fromRGB(70, 150, 70),
+	eccs = Color3.fromRGB(226, 128, 24),
 	power = Color3.fromRGB(28, 28, 30),
 }
+-- Lettering: condensed capitals like the stencilled and engraved labels on
+-- Soviet boards, and a narrow face for the figures on scales.
+local PLATE_FONT = Enum.Font.Oswald
+local FIGURE_FONT = Enum.Font.RobotoCondensed
 local ROD_COLOR = {
 	RR = Color3.fromRGB(200, 200, 200),
 	AR = Color3.fromRGB(70, 220, 100),
@@ -106,15 +112,14 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	return t
 end
 
--- Engraved laminate nameplates, the way every label in a real control room
--- is made: black lettering on white for each device, white on black for
--- system titles and panel numbers.
-local PLATE = Color3.fromRGB(238, 236, 228)
+-- Engraved plastic nameplates: condensed black capitals on white for each
+-- device, white on dark slate for system titles and panel names.
+local PLATE = Color3.fromRGB(236, 236, 228)
 local PLATE_TEXT = Color3.fromRGB(22, 22, 24)
-local TITLE_PLATE = Color3.fromRGB(22, 22, 24)
+local TITLE_PLATE = Color3.fromRGB(38, 44, 50)
 local TITLE_TEXT = Color3.fromRGB(240, 240, 232)
 local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number, dark: boolean?): TextLabel
-	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT, Enum.Font.ArialBold)
+	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT, PLATE_FONT)
 	t.BackgroundTransparency = 0
 	t.BackgroundColor3 = if dark then TITLE_PLATE else PLATE
 	local c = Instance.new("UICorner")
@@ -189,15 +194,17 @@ end
 -- The hardware standing proud of the panels is built from parts in the
 -- frame of each device: X to the operator's right, Y up the panel, Z out of
 -- it, in board units, with the origin at the device's mounting point on the
--- panel face. The style is deliberately simple: blocks and cylinders only,
--- no spheres. Round parts are discs standing out of the panel, and rings,
--- caps and lenses are stepped like turned parts.
+-- panel face. It follows Soviet control-room hardware, simplified: square
+-- signal lamps and square pushbuttons in black housings, control keys with
+-- black bar handles on square mounting plates, a big round AZ-5 under a
+-- hinged cover. Blocks and cylinders only, no spheres.
 local CHROME = Color3.fromRGB(200, 202, 206)
-local PHENOLIC = Color3.fromRGB(20, 20, 22) -- black moulded handles and knobs
+local PHENOLIC = Color3.fromRGB(22, 22, 24) -- black bakelite handles and knobs
+local HOUSING = Color3.fromRGB(46, 48, 50) -- lamp and button housings, mounting plates
 local BRASS = Color3.fromRGB(200, 168, 84)
 local BEZEL = Color3.fromRGB(34, 35, 38)
-local GUARD_YELLOW = Color3.fromRGB(232, 196, 40)
-local GUARD_BLACK = Color3.fromRGB(30, 30, 32)
+local INDEX_WHITE = Color3.fromRGB(236, 236, 228)
+local GUARD_BASE = Color3.fromRGB(40, 42, 44)
 local COVER_RED = Color3.fromRGB(214, 44, 30)
 local COVER_TRANSPARENCY = 0.45
 local COVER_OPEN = 100 -- degrees a lifted guard cover stands open
@@ -273,16 +280,15 @@ local function turned(angle: number): CFrame
 	return CFrame.Angles(0, 0, -math.rad(angle))
 end
 
--- An indicating light: a coloured lens with a stepped face in a stepped
--- chrome bezel, glass when dark and glowing when lit. `diameter` is the
--- lens's.
-local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, diameter: number, colors: { Color3 }): (boolean) -> ()
+-- A signal lamp: a square coloured lens with a raised face in a square black
+-- housing; glass when dark, glowing when lit. `size` is the lens's side.
+local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, size: number, colors: { Color3 }): (boolean) -> ()
 	local frame = blockCFrame(face, x, y, 0, 0)
-	local d = diameter
-	piece(folder, frame, "disc", v3(d + 0.11, d + 0.11, 0.025), v3(0, 0, 0.0125), CHROME, METAL)
-	piece(folder, frame, "disc", v3(d + 0.065, d + 0.065, 0.06), v3(0, 0, 0.03), CHROME, METAL)
-	local body = piece(folder, frame, "disc", v3(d, d, 0.07), v3(0, 0, 0.035), colors[2], GLASS)
-	local top = piece(folder, frame, "disc", v3(d * 0.72, d * 0.72, 0.03), v3(0, 0, 0.085), colors[2], GLASS)
+	local d = size
+	piece(folder, frame, "block", v3(d + 0.09, d + 0.09, 0.035), v3(0, 0, 0.0175), HOUSING)
+	piece(folder, frame, "block", v3(d + 0.04, d + 0.04, 0.055), v3(0, 0, 0.0275), PHENOLIC)
+	local body = piece(folder, frame, "block", v3(d, d, 0.075), v3(0, 0, 0.0375), colors[2], GLASS)
+	local top = piece(folder, frame, "block", v3(d * 0.7, d * 0.7, 0.02), v3(0, 0, 0.085), colors[2], GLASS)
 	return function(on: boolean)
 		for _, p in { body, top } do
 			p.Color = colors[if on then 1 else 2]
@@ -291,30 +297,26 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 	end
 end
 
--- An oiltight pushbutton standing at `frame`: a chrome locking ring with a
--- stepped edge, a dark gap, and a coloured cap with a stepped face. Returns
--- the cap, which moves in when the button is pressed.
+-- A pushbutton standing at `frame`: a square coloured cap with a raised
+-- face in a square black housing. Returns the cap, which moves in when the
+-- button is pressed.
 local function pushbutton(folder: Instance, frame: CFrame, color: Color3): Assembly
-	piece(folder, frame, "disc", v3(0.44, 0.44, 0.03), v3(0, 0, 0.015), CHROME, METAL)
-	piece(folder, frame, "disc", v3(0.4, 0.4, 0.07), v3(0, 0, 0.035), CHROME, METAL)
-	piece(folder, frame, "disc", v3(0.33, 0.33, 0.072), v3(0, 0, 0.036), PHENOLIC)
+	piece(folder, frame, "block", v3(0.4, 0.4, 0.035), v3(0, 0, 0.0175), HOUSING)
+	piece(folder, frame, "block", v3(0.33, 0.33, 0.06), v3(0, 0, 0.03), PHENOLIC)
 	local cap = assembly(folder, frame)
-	cap.add("disc", v3(0.3, 0.3, 0.12), v3(0, 0, 0.06), color)
-	cap.add("disc", v3(0.24, 0.24, 0.03), v3(0, 0, 0.135), color)
+	cap.add("block", v3(0.27, 0.27, 0.12), v3(0, 0, 0.06), color)
+	cap.add("block", v3(0.2, 0.2, 0.025), v3(0, 0, 0.1325), color)
 	return cap
 end
 
--- The scram button: a large mushroom head on a stem, in a wide chrome ring,
--- the head stepped in towards its face.
-local function mushroom(folder: Instance, frame: CFrame, color: Color3): Assembly
-	piece(folder, frame, "disc", v3(0.56, 0.56, 0.03), v3(0, 0, 0.015), CHROME, METAL)
-	piece(folder, frame, "disc", v3(0.48, 0.48, 0.08), v3(0, 0, 0.04), CHROME, METAL)
-	piece(folder, frame, "disc", v3(0.38, 0.38, 0.082), v3(0, 0, 0.041), PHENOLIC)
+-- The AZ-5 button: a big round red button in a black ring, stepped in
+-- towards its face.
+local function scramButton(folder: Instance, frame: CFrame, color: Color3): Assembly
+	piece(folder, frame, "disc", v3(0.6, 0.6, 0.035), v3(0, 0, 0.0175), PHENOLIC)
+	piece(folder, frame, "disc", v3(0.52, 0.52, 0.08), v3(0, 0, 0.04), HOUSING)
 	local cap = assembly(folder, frame)
-	cap.add("disc", v3(0.3, 0.3, 0.2), v3(0, 0, 0.1), color)
-	cap.add("disc", v3(0.66, 0.66, 0.1), v3(0, 0, 0.23), color)
-	cap.add("disc", v3(0.56, 0.56, 0.05), v3(0, 0, 0.305), color)
-	cap.add("disc", v3(0.42, 0.42, 0.03), v3(0, 0, 0.345), color)
+	cap.add("disc", v3(0.44, 0.44, 0.2), v3(0, 0, 0.1), color)
+	cap.add("disc", v3(0.34, 0.34, 0.04), v3(0, 0, 0.22), color)
 	return cap
 end
 
@@ -635,13 +637,13 @@ function Panels.build(room: Instance, ctx: Context)
 				else
 					label = string.format("%.0f", v)
 				end
-				local n = text(gui, sx + sw * 0.36, ty - 0.065, sw * 0.5, 0.13, label, 0.074, INK, Enum.Font.Arial)
+				local n = text(gui, sx + sw * 0.36, ty - 0.065, sw * 0.5, 0.13, label, 0.074, INK, FIGURE_FONT)
 				n.TextXAlignment = Enum.TextXAlignment.Left
 				n.ZIndex = 2
 			end
 		end
 		if hasUnit then
-			local u = text(gui, sx, bottom + 0.08, sw, 0.13, w.unit, 0.072, Color3.fromRGB(50, 50, 50), Enum.Font.ArialBold)
+			local u = text(gui, sx, bottom + 0.08, sw, 0.13, w.unit, 0.072, Color3.fromRGB(50, 50, 50), PLATE_FONT)
 			u.ZIndex = 2
 		end
 		-- The case flange and the glass are parts standing off the board.
@@ -681,14 +683,14 @@ function Panels.build(room: Instance, ctx: Context)
 			local major = i % 5 == 0
 			box(gui, mx + 0.05 + (mw - 0.1) * i / 10 - 0.004, my + mh - (if major then 0.12 else 0.065), 0.008, if major then 0.12 else 0.065, INK).ZIndex = 2
 		end
-		local lo = text(gui, mx + 0.02, my + 0.03, 0.45, 0.1, string.format("%g", w.lo), 0.068, INK, Enum.Font.Arial)
+		local lo = text(gui, mx + 0.02, my + 0.03, 0.45, 0.1, string.format("%g", w.lo), 0.068, INK, FIGURE_FONT)
 		lo.TextXAlignment = Enum.TextXAlignment.Left
 		lo.ZIndex = 2
-		local hi = text(gui, mx + mw - 0.47, my + 0.03, 0.45, 0.1, string.format("%g", w.hi), 0.068, INK, Enum.Font.Arial)
+		local hi = text(gui, mx + mw - 0.47, my + 0.03, 0.45, 0.1, string.format("%g", w.hi), 0.068, INK, FIGURE_FONT)
 		hi.TextXAlignment = Enum.TextXAlignment.Right
 		hi.ZIndex = 2
 		if (w.unit or "") ~= "" then
-			text(gui, mx + mw / 2 - 0.3, my + 0.03, 0.6, 0.1, w.unit, 0.062, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold).ZIndex = 2
+			text(gui, mx + mw / 2 - 0.3, my + 0.03, 0.6, 0.1, w.unit, 0.062, Color3.fromRGB(70, 70, 70), PLATE_FONT).ZIndex = 2
 		end
 		bezel(controls, face, mx - 0.025, my - 0.025, mw + 0.05, mh + 0.05, 0.08, BEZEL, 0.03)
 		glassOver(face, mx + mw / 2, my + mh / 2, mw, mh)
@@ -721,7 +723,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local x0 = bx + bw - 0.06 - cw * cells
 			local drums = {}
 			for k = 1, cells do
-				local d = text(gui, x0 + (k - 1) * cw + 0.008, by + 0.06, cw - 0.016, bh - 0.12, "0", (bh - 0.12) * 0.8, Color3.fromRGB(236, 236, 228), Enum.Font.ArialBold)
+				local d = text(gui, x0 + (k - 1) * cw + 0.008, by + 0.06, cw - 0.016, bh - 0.12, "0", (bh - 0.12) * 0.8, Color3.fromRGB(236, 236, 228), PLATE_FONT)
 				d.BackgroundTransparency = 0
 				d.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
 				d.ZIndex = 2
@@ -779,16 +781,16 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	-- An oiltight pushbutton with its nameplate below. The protective
-	-- functions (the scram, ECCS initiation, the turbine trips) are guarded:
-	-- the button stands on a guard base under a hinged translucent cover,
-	-- which has to be lifted before the button can be pressed. The scram
-	-- button is a large red mushroom head in a yellow guard.
+	-- A pushbutton with its nameplate below. The protective functions (AZ-5,
+	-- ECCS initiation, the turbine trips) are guarded: the button stands on
+	-- a guard base under a hinged translucent cover, which has to be lifted
+	-- before the button can be pressed, as the AZ-5 cover was on the real
+	-- unit. AZ-5 itself is a big round red button with a red nameplate.
 	builders.button = function(gui, face, part, w)
 		local big, guarded = w.big, w.guard
 		local k = if big then 1.65 else 1
 		local half = 0.31 * k
-		local ring = if big then 0.28 else 0.22 -- radius of the chrome ring
+		local ring = if big then 0.3 else 0.2 -- half the width of the housing
 		local cx = w.x + w.w / 2
 		local cy = if guarded then w.y + half + 0.07 else w.y + ring + 0.02
 		local mount = blockCFrame(face, cx, cy, 0, 0)
@@ -796,14 +798,18 @@ function Panels.build(room: Instance, ctx: Context)
 		local seat = mount
 		local swing: (number) -> () = function(_angle: number) end
 		if guarded then
-			local base, cover, swingCover = guard(controls, mount, k, if big then GUARD_YELLOW else GUARD_BLACK, if big then 0.43 else 0.24)
+			local base, cover, swingCover = guard(controls, mount, k, GUARD_BASE, if big then 0.36 else 0.24)
 			seat = mount * CFrame.new(0, 0, base * S)
 			swing = swingCover
 			cover.parts[1]:SetAttribute("Guard", w.cmd)
 		end
-		local cap = if big then mushroom(controls, seat, color) else pushbutton(controls, seat, color)
+		local cap = if big then scramButton(controls, seat, color) else pushbutton(controls, seat, color)
 		local plateY = (if guarded then cy + half else cy + ring) + 0.05
-		plate(gui, w.x - 0.02, plateY, w.w + 0.04, math.min(0.3, w.y + w.h - plateY), w.label, if big then 0.13 else 0.075)
+		local name = plate(gui, w.x - 0.02, plateY, w.w + 0.04, math.min(0.3, w.y + w.h - plateY), w.label, if big then 0.13 else 0.075)
+		if big then
+			name.BackgroundColor3 = Color3.fromRGB(176, 30, 26)
+			name.TextColor3 = Color3.fromRGB(250, 250, 244)
+		end
 
 		-- The cover swings about the hinge along the top edge of the guard.
 		local open = false
@@ -864,19 +870,21 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	-- A pistol-grip handle on its hub, pointing up and turned `angle`
+	-- A control key of the Soviet kind, pointing up and turned `angle`
 	-- degrees, `k` times the standard size; returns a function that turns
-	-- it. The handle is a round boss over the shaft and a straight grip with
-	-- a round end, the end that points at the position.
-	local function pistolGrip(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
+	-- it. A square black mounting plate and a round boss carry a flat black
+	-- bar handle, rounded at the end that points at the position and marked
+	-- along it with a white line.
+	local function controlKey(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
 		local s = k or 1
 		local frame = blockCFrame(face, hx, hy, 0, 0)
-		piece(controls, frame, "disc", v3(0.26 * s, 0.26 * s, 0.03), v3(0, 0, 0.015), PHENOLIC)
-		piece(controls, frame, "disc", v3(0.19 * s, 0.19 * s, 0.07), v3(0, 0, 0.035), PHENOLIC)
+		piece(controls, frame, "block", v3(0.34 * s, 0.34 * s, 0.03), v3(0, 0, 0.015), HOUSING)
+		piece(controls, frame, "disc", v3(0.2 * s, 0.2 * s, 0.06), v3(0, 0, 0.03), PHENOLIC)
 		local handle = assembly(controls, frame)
-		handle.add("disc", v3(0.2 * s, 0.2 * s, 0.12 * s), v3(0, 0, 0.07 + 0.06 * s), PHENOLIC)
-		handle.add("block", v3(0.13 * s, 0.26 * s, 0.1 * s), v3(0, 0.13 * s, 0.07 + 0.05 * s), PHENOLIC)
-		handle.add("disc", v3(0.13 * s, 0.13 * s, 0.1 * s), v3(0, 0.26 * s, 0.07 + 0.05 * s), PHENOLIC)
+		local z = 0.06 + 0.04 * s
+		handle.add("block", v3(0.11 * s, 0.4 * s, 0.08 * s), v3(0, 0.07 * s, z), PHENOLIC)
+		handle.add("disc", v3(0.11 * s, 0.11 * s, 0.08 * s), v3(0, 0.27 * s, z), PHENOLIC)
+		handle.add("block", v3(0.024 * s, 0.2 * s, 0.082 * s), v3(0, 0.17 * s, z), INDEX_WHITE)
 		local function turn(a: number)
 			handle.move(turned(a))
 		end
@@ -907,10 +915,10 @@ function Panels.build(room: Instance, ctx: Context)
 		box(gui, cx - ew / 2, ey, ew, eh, Color3.fromRGB(22, 22, 24))
 		local white = Color3.fromRGB(232, 232, 224)
 		local pos = w.positions or { "OFF", "ON" }
-		local left = text(gui, cx - ew / 2 + 0.03, ey + 0.025, ew / 2 - 0.03, 0.11, pos[1], 0.062, white, Enum.Font.ArialBold)
+		local left = text(gui, cx - ew / 2 + 0.03, ey + 0.025, ew / 2 - 0.03, 0.11, pos[1], 0.062, white, PLATE_FONT)
 		left.TextXAlignment = Enum.TextXAlignment.Left
 		left.TextWrapped = false
-		local right = text(gui, cx, ey + 0.025, ew / 2 - 0.03, 0.11, pos[2], 0.062, white, Enum.Font.ArialBold)
+		local right = text(gui, cx, ey + 0.025, ew / 2 - 0.03, 0.11, pos[2], 0.062, white, PLATE_FONT)
 		right.TextXAlignment = Enum.TextXAlignment.Right
 		right.TextWrapped = false
 		local hx, hy = cx, ey + eh * 0.62
@@ -929,7 +937,7 @@ function Panels.build(room: Instance, ctx: Context)
 				keyParts.move(turned(if on then 45 else -45))
 			end
 		else
-			local turn = pistolGrip(face, hx, hy, -45, 0.78)
+			local turn = controlKey(face, hx, hy, -45, 0.78)
 			set = function(on: boolean)
 				turn(if on then 45 else -45)
 			end
@@ -1055,14 +1063,14 @@ function Panels.build(room: Instance, ctx: Context)
 				local major = i % 5 == 0
 				box(gui, mx + 0.05 + (mw - 0.1) * i / 10 - 0.004, my + mh - (if major then 0.13 else 0.07), 0.008, if major then 0.13 else 0.07, INK).ZIndex = 2
 			end
-			local lo = text(gui, mx + 0.02, my + 0.015, 0.4, 0.11, string.format("%g", w.lo or 0), 0.072, INK, Enum.Font.Arial)
+			local lo = text(gui, mx + 0.02, my + 0.015, 0.4, 0.11, string.format("%g", w.lo or 0), 0.072, INK, FIGURE_FONT)
 			lo.TextXAlignment = Enum.TextXAlignment.Left
 			lo.ZIndex = 2
-			local hi = text(gui, mx + mw - 0.42, my + 0.015, 0.4, 0.11, string.format("%g", w.hi or 100), 0.072, INK, Enum.Font.Arial)
+			local hi = text(gui, mx + mw - 0.42, my + 0.015, 0.4, 0.11, string.format("%g", w.hi or 100), 0.072, INK, FIGURE_FONT)
 			hi.TextXAlignment = Enum.TextXAlignment.Right
 			hi.ZIndex = 2
 			if w.unit ~= "" then
-				text(gui, mx + mw / 2 - 0.3, my + 0.015, 0.6, 0.11, w.unit, 0.066, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold).ZIndex = 2
+				text(gui, mx + mw / 2 - 0.3, my + 0.015, 0.6, 0.11, w.unit, 0.066, Color3.fromRGB(70, 70, 70), PLATE_FONT).ZIndex = 2
 			end
 			bezel(controls, face, mx - 0.02, my - 0.02, mw + 0.04, mh + 0.04, 0.08, BEZEL, 0.03)
 			glassOver(face, mx + mw / 2, my + mh / 2, mw, mh)
@@ -1079,11 +1087,11 @@ function Panels.build(room: Instance, ctx: Context)
 		local ew, eh = math.min(w.w - 0.1, 0.9), math.max(0.4, w.y + w.h - ey - 0.02)
 		box(gui, cx - ew / 2, ey, ew, eh, Color3.fromRGB(22, 22, 24))
 		local white = Color3.fromRGB(232, 232, 224)
-		local l = text(gui, cx - ew / 2 + 0.03, ey + 0.02, ew / 2, 0.11, "LOWER", 0.062, white, Enum.Font.ArialBold)
+		local l = text(gui, cx - ew / 2 + 0.03, ey + 0.02, ew / 2, 0.11, "LESS", 0.066, white, PLATE_FONT)
 		l.TextXAlignment = Enum.TextXAlignment.Left
-		local r = text(gui, cx - 0.03, ey + 0.02, ew / 2, 0.11, "RAISE", 0.062, white, Enum.Font.ArialBold)
+		local r = text(gui, cx - 0.03, ey + 0.02, ew / 2, 0.11, "MORE", 0.066, white, PLATE_FONT)
 		r.TextXAlignment = Enum.TextXAlignment.Right
-		local turn = pistolGrip(face, cx, ey + eh * 0.66, 0, 0.85)
+		local turn = controlKey(face, cx, ey + eh * 0.66, 0, 0.85)
 		local last = math.huge
 		table.insert(updaters, function()
 			local v = get(w.sig)
@@ -1104,7 +1112,7 @@ function Panels.build(room: Instance, ctx: Context)
 				end,
 			}
 		end, function()
-			return string.format("%s: " .. w.fmt .. "%s\nhold the switch to the left to lower, to the right to raise", cleanLabel(w.label), get(w.sig), suffix)
+			return string.format("%s: " .. w.fmt .. "%s\nhold the key to the left for LESS, to the right for MORE", cleanLabel(w.label), get(w.sig), suffix)
 		end)
 	end
 
@@ -1233,7 +1241,7 @@ function Panels.build(room: Instance, ctx: Context)
 			local c, r = (i - 1) % cols, (i - 1) // cols
 			if r < rows then
 				local tile = box(gui, c * tw + 0.04, r * th + 0.04, tw - 0.08, th - 0.08, ANN_DARK)
-				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.14, ANN_DARK_TEXT, Enum.Font.ArialBold)
+				local label = text(gui, c * tw + 0.06, r * th + 0.05, tw - 0.12, th - 0.1, alarm.text, 0.14, ANN_DARK_TEXT, PLATE_FONT)
 				local index = AlarmList.index[alarm.id]
 				local urgent = alarm.id == "az5" or alarm.id == "chan.rupture" or alarm.id == "core.damage" or alarm.id == "rs.press"
 				annTiles[index] = { tile = tile, label = label, state = 0, urgent = urgent, panel = panelId }
@@ -1479,11 +1487,9 @@ function Panels.build(room: Instance, ctx: Context)
 			hand.Size = UDim2.fromScale(1, 0.5)
 			hand.ZIndex = 3
 			hand.Parent = pivot
-			local outLamp = box(gui, cx - d * 0.42, cy - d * 0.42, d * 0.2, d * 0.2, Color3.fromRGB(70, 22, 20))
-			round(outLamp)
+			local outLamp = box(gui, cx - d * 0.42, cy - d * 0.42, d * 0.18, d * 0.18, Color3.fromRGB(70, 22, 20))
 			outLamp.ZIndex = 4
-			local inLamp = box(gui, cx - d * 0.42, cy + d * 0.22, d * 0.2, d * 0.2, Color3.fromRGB(20, 60, 28))
-			round(inLamp)
+			local inLamp = box(gui, cx - d * 0.42, cy + d * 0.24, d * 0.18, d * 0.18, Color3.fromRGB(20, 60, 28))
 			inLamp.ZIndex = 4
 			dials[i] = { pivot = pivot, outLamp = outLamp, inLamp = inLamp, depth = -1 }
 			centers[i] = { cx, cy }
@@ -1541,7 +1547,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local columns = {}
 		for k = 1, 4 do
 			local x0 = w.x + (k - 1) * cw
-			local id = text(gui, x0 + 0.08, w.y + 0.08, cw - 0.16, 0.28, "--", 0.17, Color3.fromRGB(236, 236, 226), Enum.Font.ArialBold)
+			local id = text(gui, x0 + 0.08, w.y + 0.08, cw - 0.16, 0.28, "--", 0.17, Color3.fromRGB(236, 236, 226), PLATE_FONT)
 			id.BackgroundTransparency = 0
 			id.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 			local screen = box(gui, x0 + 0.08, w.y + 0.44, cw - 0.16, 0.6, SCREEN)
@@ -1551,8 +1557,8 @@ function Panels.build(room: Instance, ctx: Context)
 			for j, def in { { "IN", LAMP.green }, { "OUT", LAMP.red }, { "STUCK", LAMP.amber } } do
 				local lx = x0 + 0.1 + (j - 1) * (cw - 0.2) / 3
 				local bulb = box(gui, lx + (cw - 0.2) / 6 - 0.08, w.y + 1.16, 0.16, 0.16, def[2][2])
-				round(bulb)
-				local t = text(gui, lx, w.y + 1.36, (cw - 0.2) / 3, 0.14, def[1], 0.075, Color3.fromRGB(210, 210, 200), Enum.Font.ArialBold)
+				outline(bulb, Color3.fromRGB(20, 20, 22), 2)
+				local t = text(gui, lx, w.y + 1.36, (cw - 0.2) / 3, 0.14, def[1], 0.075, Color3.fromRGB(210, 210, 200), PLATE_FONT)
 				t.TextWrapped = false
 				lamps[j] = { bulb = bulb, colors = def[2] }
 			end
@@ -1604,12 +1610,12 @@ function Panels.build(room: Instance, ctx: Context)
 		local ey, ew, eh = w.y + 0.3, math.min(w.w - 0.06, 1.3), w.h - 0.32
 		box(gui, cx - ew / 2, ey, ew, eh, Color3.fromRGB(22, 22, 24))
 		local white = Color3.fromRGB(232, 232, 224)
-		local l = text(gui, cx - ew / 2 + 0.04, ey + eh - 0.2, ew / 2, 0.13, w.positions[1], 0.075, white, Enum.Font.ArialBold)
+		local l = text(gui, cx - ew / 2 + 0.04, ey + eh - 0.2, ew / 2, 0.13, w.positions[1], 0.075, white, PLATE_FONT)
 		l.TextXAlignment = Enum.TextXAlignment.Left
-		text(gui, cx - 0.3, ey + 0.03, 0.6, 0.13, w.positions[2], 0.075, white, Enum.Font.ArialBold)
-		local r = text(gui, cx - 0.04, ey + eh - 0.2, ew / 2, 0.13, w.positions[3], 0.075, white, Enum.Font.ArialBold)
+		text(gui, cx - 0.3, ey + 0.03, 0.6, 0.13, w.positions[2], 0.075, white, PLATE_FONT)
+		local r = text(gui, cx - 0.04, ey + eh - 0.2, ew / 2, 0.13, w.positions[3], 0.075, white, PLATE_FONT)
 		r.TextXAlignment = Enum.TextXAlignment.Right
-		local turn = pistolGrip(face, cx, ey + eh * 0.62, 0, 1.25)
+		local turn = controlKey(face, cx, ey + eh * 0.62, 0, 1.25)
 		region(part, w, function(_button: number, u: number)
 			ctx.click()
 			local insert = u < cx
@@ -1645,13 +1651,13 @@ function Panels.build(room: Instance, ctx: Context)
 			local tw = if major then 0.2 else 0.12
 			box(gui, sx + sw - tw, yOf(w.lo + span * i / 10) - 0.005, tw, 0.01, INK).ZIndex = 2
 		end
-		local hiText = text(gui, sx + 0.03, yOf(w.hi) - 0.02, 0.3, 0.1, string.format("%g", w.hi), 0.075, INK, Enum.Font.Arial)
+		local hiText = text(gui, sx + 0.03, yOf(w.hi) - 0.02, 0.3, 0.1, string.format("%g", w.hi), 0.075, INK, FIGURE_FONT)
 		hiText.TextXAlignment = Enum.TextXAlignment.Left
 		hiText.ZIndex = 2
-		local loText = text(gui, sx + 0.03, yOf(w.lo) - 0.08, 0.3, 0.1, string.format("%g", w.lo), 0.075, INK, Enum.Font.Arial)
+		local loText = text(gui, sx + 0.03, yOf(w.lo) - 0.08, 0.3, 0.1, string.format("%g", w.lo), 0.075, INK, FIGURE_FONT)
 		loText.TextXAlignment = Enum.TextXAlignment.Left
 		loText.ZIndex = 2
-		local unitText = text(gui, sx + 0.03, sy + sh / 2 - 0.05, 0.3, 0.1, w.unit, 0.07, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold)
+		local unitText = text(gui, sx + 0.03, sy + sh / 2 - 0.05, 0.3, 0.1, w.unit, 0.07, Color3.fromRGB(70, 70, 70), PLATE_FONT)
 		unitText.TextXAlignment = Enum.TextXAlignment.Left
 		unitText.ZIndex = 2
 		local spMark = box(gui, sx, sy, 0.09, 0.05, Color3.fromRGB(215, 30, 26))
@@ -1661,15 +1667,15 @@ function Panels.build(room: Instance, ctx: Context)
 		local setAuto = lens(controls, face, x0 + 1.02, y0 + 0.28, 0.16, LAMP.white)
 		local setMan = lens(controls, face, x0 + 1.02, y0 + 0.66, 0.16, LAMP.amber)
 		local light = Color3.fromRGB(220, 220, 210)
-		text(gui, x0 + 0.74, y0 + 0.4, 0.56, 0.1, "AUTO", 0.07, light, Enum.Font.ArialBold).ZIndex = 2
-		text(gui, x0 + 0.74, y0 + 0.78, 0.56, 0.1, "MAN", 0.07, light, Enum.Font.ArialBold).ZIndex = 2
+		text(gui, x0 + 0.74, y0 + 0.4, 0.56, 0.1, "AUTO", 0.07, light, PLATE_FONT).ZIndex = 2
+		text(gui, x0 + 0.74, y0 + 0.78, 0.56, 0.1, "MAN", 0.07, light, PLATE_FONT).ZIndex = 2
 		-- Output meter, 0 to 100 per cent.
 		local ox, oy, ow, oh = x0 + 0.1, y0 + 1.04, cw - 0.2, 0.18
 		box(gui, ox, oy, ow, oh, PAPER)
 		for i = 0, 4 do
 			box(gui, ox + 0.04 + (ow - 0.08) * i / 4 - 0.005, oy + oh - (if i % 2 == 0 then 0.1 else 0.06), 0.01, if i % 2 == 0 then 0.1 else 0.06, INK).ZIndex = 2
 		end
-		local outLabel = text(gui, ox + 0.03, oy + 0.01, 0.6, 0.08, "OUTPUT %", 0.06, Color3.fromRGB(70, 70, 70), Enum.Font.ArialBold)
+		local outLabel = text(gui, ox + 0.03, oy + 0.01, 0.6, 0.08, "OUTPUT %", 0.06, Color3.fromRGB(70, 70, 70), PLATE_FONT)
 		outLabel.TextXAlignment = Enum.TextXAlignment.Left
 		outLabel.ZIndex = 2
 		local outPointer = block(controls, face, ox, oy + oh / 2, 0.025, oh + 0.02, 0.03, Color3.fromRGB(215, 25, 25))
@@ -1680,7 +1686,7 @@ function Panels.build(room: Instance, ctx: Context)
 		local caps = {}
 		for k = 1, 4 do
 			local bx = x0 + 0.1 + (k - 0.5) * bw
-			text(gui, bx - bw / 2, y0 + 1.25, bw, 0.1, legends[k], 0.09, light, Enum.Font.ArialBold).ZIndex = 2
+			text(gui, bx - bw / 2, y0 + 1.25, bw, 0.1, legends[k], 0.09, light, PLATE_FONT).ZIndex = 2
 			caps[k] = block(controls, face, bx, y0 + 1.47, bw - 0.06, 0.16, 0.05, capColors[k])
 		end
 		local last = ""
@@ -1919,8 +1925,8 @@ function Panels.build(room: Instance, ctx: Context)
 			if lit ~= t.lit then
 				t.lit = lit
 				if lit then
-					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(240, 40, 30) else Color3.fromRGB(255, 252, 226)
-					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(10, 10, 10)
+					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(236, 40, 30) else Color3.fromRGB(255, 212, 70)
+					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(14, 12, 8)
 				else
 					t.tile.BackgroundColor3 = ANN_DARK
 					t.label.TextColor3 = ANN_DARK_TEXT

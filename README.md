@@ -1,9 +1,10 @@
 # RBMK-800
 
-A Roblox control-room simulator of an "Americanized" pre-1986 RBMK: the full-size
-graphite core (1,661 fuel channels, 211 control rods) derated to 2,560 MW thermal /
-800 MW electric, run from a control room laid out like a US boiling-water-reactor
-plant. Only the physics and the control room exist; there is no building around it.
+A Roblox control-room simulator of a pre-1986 RBMK: the full-size graphite core (1,661
+fuel channels, 211 control rods) derated to 2,560 MW thermal / 800 MW electric, run from
+a control room styled after the Soviet RBMK plants, in a clean, stylized form and
+labelled in English. Only the physics and the control room exist; there is no building
+around it.
 
 It keeps the reactor's real character: a positive void coefficient that grows as rods
 come out, a 16-second scram whose first seconds can add reactivity ("positive scram"),
@@ -60,66 +61,65 @@ from parts now. The game also takes it out of the room by itself when it starts.
 | Mouse wheel | While seated: zoom. |
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
-The room is set in 1979: an RBMK built in the United States, with an American control
-room of the period, laid out and equipped the way General Electric boiling-water-reactor
-plants were. The boards form an L, numbered GE-style: **H11-P601** reactor auxiliaries
-and emergency cooling and **H11-P602** main circulation on the left wing, and **H11-P604**
-feedwater, **H11-P605** turbines and **H11-P606** electrical along the back wall, the two
-runs square to each other. **H11-P603** reactor control (rod controls, AZ-5, cartogram)
-stands in the corner itself, set across it at 45 degrees, with the cabinets behind it
-filled out to the square corner. The operators' desks face the corner, so the reactor
-panel is straight ahead. RBMK terms (AZ-5, KOM, ORM, cartogram) are kept. Every server
-runs one shared unit; anyone can operate any panel.
+The room follows the Soviet RBMK unit control rooms, simplified into a stylized look:
+simple shapes (blocks and cylinders, no spheres), flat colours and clear lettering, not an
+attempt at photo-realism. The boards form an L. On the left wing: **Panel 1** reactor
+auxiliaries and emergency cooling and **Panel 2** main circulation (the SIUB's, the senior
+unit engineer). Along the back wall: **Panel 4** feedwater (SIUB), **Panel 5** turbines
+(SIUT, the senior turbine engineer) and **Panel 6** electrical. **Panel 3**, reactor control,
+is the SIUR's post (the senior reactor control engineer): it stands in the corner itself,
+set across it at 45 degrees, with the cabinets behind it filled out to the square corner.
+The operators' desks face the corner, so the reactor panel is straight ahead. RBMK terms
+(AZ-5, KOM, ORM, SKALA, cartogram) are kept. Every server runs one shared unit; anyone can
+operate any panel.
 
-The room is life-size around a standard Roblox character: the bench front is at hip
-height (0.9 m), the annunciator windows top out a little under 3 m, desks are 0.74 m
-high and the ceiling is 3.8 m up. Nothing in it is later than 1979:
+The room is life-size around a standard Roblox character: the console front is at hip
+height (0.9 m), the light boxes top out a little under 3 m, desks are 0.74 m high and the
+ceiling is 3.8 m up.
 
-- **Boards** are laid out the way GE boards of the period were: on each vertical board,
-  rows of identical narrow black-cased edgewise meters (GE type 180 style: white scale
-  behind glass, twenty divisions, the unit on the dial, red pointer), each under its own
-  engraved nameplate, a black group plate over each system, and a row of strip-chart
-  recorders; on each bench, rows of control switch modules, each a nameplate, a pair of
-  domed red and green indicating lamps (white on mode switches) and a black escutcheon
-  engraved with its two positions carrying a pistol-grip handle or a key lock. Valves and
-  setpoints are moved with spring-return LOWER / RAISE switches under small horizontal
-  position meters. Pushbuttons are oiltight, with chrome collars. Coloured mimic lines
-  trace the flow paths (reactor water blue, steam red, feedwater green, emergency
-  cooling orange, power black). Every large pump has a motor ammeter. Digital readouts
-  are few: small red LED panel meters for the process computer's figures and for rod
-  positions and setpoints, and mechanical counters for ruptured, damaged and
-  flow-blocked channels. Boards are pale gray-green with a black rubber bumper and kick
-  strip. Hover over any instrument for its exact reading.
-- **Reactor board (H11-P603)**, the widest section: on the vertical board, the rod
-  position indicators (a synchro dial for every one of the 211 rods, laid out as in the
-  core, with a red lamp at full out and a green one at full in, as on the RBMK's rod
-  position board), the channel cartogram, the axial power bargraph, neutron monitoring
-  meters and a neutron power recorder. On the bench, rod control in the GE manner: a rod
-  select matrix of pushbuttons in core geometry, a spring-return rod movement switch
-  (INSERT / OFF / WITHDRAW) and a four-rod display giving each selected rod's
-  coordinates, position and FULL IN / FULL OUT / STUCK lamps; then rod group selection,
-  the power regulators, the emergency protection and the bypass keys.
+- **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
+  scale, red pointer, coloured limit bands) under white engraved nameplates in condensed
+  capitals, a dark title plate over each system, and a row of strip-chart recorders. On
+  each console, control keys: a black bar handle with a white index line on a square
+  mounting plate, under a pair of square signal lamps (green off, red on) and an engraved
+  plate with its two positions; key switches with brass keys; square pushbuttons in black
+  housings. Valves and setpoints are moved with spring-return keys marked LESS / MORE.
+  Mimic lines trace the flow paths in the Soviet pipeline colours (water green, steam red;
+  emergency cooling orange, power black). Every large pump has a motor ammeter. Digital
+  readouts are orange gas-discharge indicators, and mechanical counters count ruptured,
+  damaged and flow-blocked channels. Boards and consoles are pale blue-green with dark
+  slate trim. Hover over any instrument for its exact reading.
+- **Reactor board (Panel 3)**, the widest section: on the vertical board, the rod position
+  indicators (a dial for every one of the 211 rods, laid out as in the core, with a red
+  lamp at full out and a green one at full in), the channel cartogram, the axial power
+  bargraph, neutron monitoring meters, the SKALA figures and display, and a neutron power
+  recorder. On the console, the SIUR's desk: rod selection keys in core geometry, the
+  spring-return rod movement key (INSERT / OFF / WITHDRAW) and a four-rod display giving
+  each selected rod's coordinates, position and FULL IN / FULL OUT / STUCK lamps; then rod
+  group selection, the power regulators, the emergency protection and the bypass keys.
+- **Guarded buttons**: AZ-5, a big round red button with a red nameplate, sits under a
+  hinged red cover, as the real one did (the operator lifted the cover before pressing
+  it); ECCS MANUAL INITIATE and the turbine TRIP buttons are guarded the same way. Click
+  once to lift the cover, again to press, right-click to close it.
 - **Controllers** are manual/automatic stations: a process scale with a red setpoint
   index, AUTO and MAN lamps, an output meter, and A / M / lower / raise pushbuttons (drum
   level A and B, deaerator level, the pressure regulator).
 - **Pumps**: motor current meters for every large pump (main circulation, feed,
   emergency feed, condensate, emergency core cooling, rod channel cooling), and flow
   meters for each main circulation and feed pump.
-- **Annunciators** follow the ringback sequence of ISA S18.1 (1979): a new alarm flashes
-  fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it flashes
-  slowly until RESET; TEST lights every window on the panel while held. The pushbuttons
-  are on H11-P601, P603 and P604. In Roblox the board artwork takes the room's lighting,
-  while the self-lit displays (annunciator windows, LED digits, the cartogram, the
-  computer's tube) glow on their own.
-- **Room**: waxed vinyl tile floor with a black rubber cove base, walnut paneling on the
-  back wall, an acoustic tile ceiling with fluorescent troffers, a lit exit sign and an
-  electric wall clock.
-- **Furniture**: two steel operators' desks with key telephones (the red one is the
-  direct line to the grid dispatcher), logbooks and binders; the plant process
-  computer's console with two green CRTs (unit summary and alarm summary); a GE TermiNet
-  alarm typer printing the event log; a floor-standing ashtray; the shift supervisor's
-  desk; steel shelving of procedures; file cabinets; and a chalkboard where the shift
-  status is kept up to date.
+- **Light boxes** run along the top of every panel and follow a ringback sequence: a new
+  alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
+  flashes slowly until RESET; TEST lights every window on the panel while held. Emergency
+  windows light red, the rest yellow. The pushbuttons are on Panels 1, 3 and 4. In Roblox
+  the board artwork takes the room's lighting, while the self-lit displays (light boxes,
+  digits, the cartogram, the SKALA tube) glow on their own.
+- **Room**: brown linoleum floor, walls in green oil paint to shoulder height with
+  whitewash above, a luminous ceiling grid, an electric wall clock and a green exit sign.
+- **Furniture**: two operators' desks with rotary telephones (the red one, with no dial,
+  is the direct line to the grid dispatcher), logbooks and binders; the SKALA computer's
+  console with two green displays (unit summary and alarm summary); the alarm printer
+  printing the event log; an ashtray stand; the shift supervisor's desk; shelving of
+  procedures; file cabinets; and a chalkboard where the shift status is kept up to date.
 
 The place is set up for Roblox's Future lighting.
 
@@ -127,19 +127,20 @@ Where the RBMK features are on the boards:
 
 | Feature | Where |
 | --- | --- |
-| AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | P603 bench, EMERGENCY PROTECTION |
-| Shutdown (AZ) rods, shortened rods (USP), regulators | P603 bench: ROD GROUPS, ROD MOTION, POWER REGULATORS |
-| Rod positions | P603 board: ROD POSITION INDICATORS, one dial per rod; FOUR ROD DISPLAY on the bench |
-| Void coefficient, operational reactivity margin (ORM) | P603 board, beside reactivity |
-| Channel ruptures and reactor space pressure | P601 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
-| Positive scram | watch POWER RANGE and PERIOD on P603 in the first seconds after AZ-5 |
+| AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | Panel 3 console, EMERGENCY PROTECTION |
+| Shutdown (AZ) rods, shortened rods (USP), regulators | Panel 3 console: ROD GROUPS, ROD MOTION, POWER REGULATORS |
+| Rod positions | Panel 3 board: ROD POSITION INDICATORS, one dial per rod; FOUR ROD DISPLAY on the console |
+| Void coefficient, operational reactivity margin (ORM) | Panel 3 board, SKALA figures |
+| Channel ruptures and reactor space pressure | Panel 1 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
+| Positive scram | watch POWER RANGE and PERIOD on Panel 3 in the first seconds after AZ-5 |
 
-The panel equipment follows published descriptions of GE boiling-water-reactor control
-rooms of the period (the NRC's GE BWR/4 technology manuals: rod select matrix, rod
-movement and notch override switches, four-rod and full-core displays, reactor
-protection controls, manual/automatic controller stations), the ISA S18.1-1979
-annunciator sequences, and descriptions of the RBMK control room (rod position synchro
-indicators laid out as the core, with limit lamps; the core mimic of channel lamps).
+The look follows descriptions and photographs of the Soviet RBMK control rooms: the
+SIUR's console with rod selection keys, the board of rod position dials laid out as the
+core, the cartogram of channel lamps (on the real units white for fuel channels, yellow
+for channels with in-core detectors, green for rod channels, as on the
+[mnemonic display lamp cover kept by the ORAU museum](https://orau.org/health-physics-museum/collection/accidents/light-cover-from-chernobyl.html)),
+light boxes along the top of the boards, and an AZ-5 button under a protective cover that
+the operator lifted before pressing it ([Dyatlov's account](https://www.scribd.com/document/708251356/How-it-was-Anatoly-Dyatlov)).
 
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,
@@ -165,9 +166,9 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
   three-element level control, safety valves.
 - **Electrical**: generator excitation and synchronising, auxiliary buses with reserve
   transfer, emergency buses and diesels, islanded "rundown" operation.
-- **Control room**: a walkable 3D room. Buttons, switch levers, key switches, knobs, lamp
-  lenses, meter needles and the bezels around every instrument are physical parts; scales,
-  legends and screens are drawn on the panel faces.
+- **Control room**: a walkable 3D room. Buttons and their covers, control keys, key
+  switches, knobs, lamp lenses, meter needles and the bezels around every instrument are
+  physical parts; scales, legends and screens are drawn on the panel faces.
 - **Protection**: AZ-1 to AZ-5 with first-out logging and key-switch bypasses, ECCS,
   rod-channel cooling, about 85 annunciators.
 - **Failures**: random equipment faults roughly every half hour of operation, more often on
@@ -175,7 +176,7 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
 
 Deliberate departures from a real plant, all in `src/shared/Config.luau`: the circuit's
 thermal mass is about a tenth of the real figure so heatup fits in a session, and the grid
-is American (60 Hz, 1,800 rpm). Fast physics, rod speeds, xenon and graphite run in real time.
+is 60 Hz with 1,800 rpm turbines (the Soviet units ran on 50 Hz at 3,000 rpm). Fast physics, rod speeds, xenon and graphite run in real time.
 
 ## Layout of the repository
 
