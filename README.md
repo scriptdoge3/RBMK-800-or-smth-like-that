@@ -1,10 +1,10 @@
 # RBMK-800
 
-A Roblox control-room simulator of a pre-1986 RBMK: the full-size graphite core (1,661
-fuel channels, 211 control rods) derated to 2,560 MW thermal / 800 MW electric, run from
-a control room styled after the Soviet RBMK plants, in a clean, stylized form and
-labelled in English. Only the physics and the control room exist; there is no building
-around it.
+A Roblox control-room simulator of an "Americanized" pre-1986 RBMK: the full-size
+graphite core (1,661 fuel channels, 211 control rods) derated to 2,560 MW thermal /
+800 MW electric, built for the American 60 Hz grid. It keeps the Soviet design's control
+room, in a clean, stylized form and labelled in English. Only the physics and the control
+room exist; there is no building around it.
 
 It keeps the reactor's real character: a positive void coefficient that grows as rods
 come out, a 16-second scram whose first seconds can add reactivity ("positive scram"),
@@ -61,7 +61,8 @@ from parts now. The game also takes it out of the room by itself when it starts.
 | Mouse wheel | While seated: zoom. |
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
-The room follows the Soviet RBMK unit control rooms, simplified into a stylized look:
+The unit is Americanized (English labels, the 60 Hz grid), but its control room follows
+the Soviet RBMK unit control rooms, simplified into a stylized look:
 simple shapes (blocks and cylinders, no spheres), flat colours and clear lettering, not an
 attempt at photo-realism. The boards form an L. On the left wing: **Panel 1** reactor
 auxiliaries and emergency cooling and **Panel 2** main circulation (the SIUB's, the senior
@@ -176,7 +177,8 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
 
 Deliberate departures from a real plant, all in `src/shared/Config.luau`: the circuit's
 thermal mass is about a tenth of the real figure so heatup fits in a session, and the grid
-is 60 Hz with 1,800 rpm turbines (the Soviet units ran on 50 Hz at 3,000 rpm). Fast physics, rod speeds, xenon and graphite run in real time.
+is American, as befits an Americanized unit: 60 Hz with 1,800 rpm turbines (the Soviet
+units ran on 50 Hz at 3,000 rpm). Fast physics, rod speeds, xenon and graphite run in real time.
 
 ## Layout of the repository
 

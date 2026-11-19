@@ -9,7 +9,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-19a (Soviet-style control room)"
+Config.VERSION = "2026-11-19b (Americanized RBMK, Soviet-style control room)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross

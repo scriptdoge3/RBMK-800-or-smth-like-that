@@ -7,8 +7,8 @@ Procedures.pages = {
 	{
 		title = "1  Read this first",
 		lines = {
-			"RBMK-800: a graphite-moderated channel reactor, 2560 MW thermal, 800 MW electric,",
-			"run from a control room in the style of the Soviet RBMK plants, labelled in English.",
+			"RBMK-800: an Americanized RBMK, 2560 MW thermal, 800 MW electric, on the American",
+			"60 Hz grid. Its control room follows the Soviet RBMK plants, labelled in English.",
 			"",
 			"The boards form an L. On the left wing: Panel 1 auxiliaries and emergency cooling, then",
 			"Panel 2 main circulation. In the corner, facing the desks: Panel 3 reactor control, the",
