@@ -3,41 +3,42 @@
     <Properties>
       <string name="Name">Lighting</string>
       <Color3 name="Ambient">
-        <R>0.34</R>
-        <G>0.32</G>
-        <B>0.29</B>
+        <R>0.13</R>
+        <G>0.13</G>
+        <B>0.125</B>
       </Color3>
       <float name="Brightness">1</float>
       <float name="ClockTime">12</float>
-      <float name="EnvironmentDiffuseScale">0.15</float>
-      <float name="EnvironmentSpecularScale">0.35</float>
-      <float name="ExposureCompensation">0.1</float>
+      <float name="EnvironmentDiffuseScale">0.12</float>
+      <float name="EnvironmentSpecularScale">0.45</float>
+      <float name="ExposureCompensation">0</float>
       <bool name="GlobalShadows">true</bool>
       <Color3 name="OutdoorAmbient">
-        <R>0.2</R>
-        <G>0.2</G>
-        <B>0.2</B>
+        <R>0.16</R>
+        <G>0.16</G>
+        <B>0.16</B>
       </Color3>
-      <float name="ShadowSoftness">0.6</float>
+      <float name="ShadowSoftness">0.45</float>
       <token name="Technology">4</token>
     </Properties>
     <Item class="BloomEffect" referent="1">
       <Properties>
         <string name="Name">Bloom</string>
-        <float name="Intensity">0.25</float>
-        <float name="Size">18</float>
-        <float name="Threshold">1.8</float>
+        <float name="Intensity">0.45</float>
+        <float name="Size">22</float>
+        <float name="Threshold">1.3</float>
       </Properties>
     </Item>
     <Item class="ColorCorrectionEffect" referent="2">
       <Properties>
         <string name="Name">Grade</string>
-        <float name="Contrast">0.08</float>
-        <float name="Saturation">0.05</float>
+        <float name="Brightness">-0.03</float>
+        <float name="Contrast">0.2</float>
+        <float name="Saturation">-0.08</float>
         <Color3 name="TintColor">
           <R>1</R>
-          <G>0.975</G>
-          <B>0.93</B>
+          <G>0.985</G>
+          <B>0.95</B>
         </Color3>
       </Properties>
     </Item>
@@ -188,7 +189,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-19b (Americanized RBMK, Soviet-style control room)"
+Config.VERSION = "2026-11-20a (moody stylized control room)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
@@ -2123,14 +2124,17 @@ end)
 -- are plain parts with known names; each client dresses them with
 -- instruments and controls from the shared layout.
 --
--- The look is a Soviet RBMK unit control room, simplified into a clean,
--- stylized form: boards and consoles in pale blue-green with dark slate
--- trim, in an L around a square corner with the reactor panel set across
--- the corner itself, light boxes along the top, a luminous ceiling grid,
--- walls painted in two tones, a linoleum floor, and plain office furniture:
--- two operators' desks with rotary telephones, the SKALA computer's
--- console with its two displays, the alarm printer, the shift supervisor's
--- desk, shelving of procedures and a chalkboard.
+-- The look follows the Soviet RBMK unit control rooms, given a moody,
+-- atmospheric art direction rather than a flat or photo-real one: warm
+-- beige boards and consoles packed with instruments, in an L around a
+-- square corner with the reactor panel set across the corner itself, light
+-- boxes along the top that stay dark until they light, a bright ceiling of
+-- square luminous panels over a dim room, warm gray walls, a dark floor
+-- with yellow and black hazard stripes along the boards, and plain office
+-- furniture: two operators' desks with rotary telephones, the SKALA
+-- computer's console with its two displays, the alarm printer, the shift
+-- supervisor's desk, shelving of procedures and a chalkboard. The lighting
+-- and colour grade that finish the look are in default.project.json.
 --
 -- Everything is laid out in board units (see PanelLayout) and scaled to
 -- studs at the end, so the room comes out life-size around a standard
@@ -2143,25 +2147,27 @@ local RoomBuilder = {}
 -- Board units per metre.
 local M = 5.5
 
--- Boards and consoles in the pale blue-green of Soviet control rooms, with
--- a dark slate edge along the consoles and a dark kick strip.
-local PANEL_COLOR = Color3.fromRGB(168, 188, 184)
-local BENCH_COLOR = Color3.fromRGB(176, 195, 191)
-local CABINET_COLOR = Color3.fromRGB(150, 170, 166)
-local BASE_COLOR = Color3.fromRGB(134, 152, 149)
-local CAP_COLOR = Color3.fromRGB(104, 120, 118)
-local RUBBER = Color3.fromRGB(52, 58, 60)
-local ANN_COLOR = Color3.fromRGB(46, 52, 56)
-local DARK = Color3.fromRGB(40, 40, 42)
--- Brown linoleum, walls in green oil paint to shoulder height and
--- whitewash above, a white luminous ceiling.
-local FLOOR_TILE = Color3.fromRGB(140, 108, 82)
-local WALL = Color3.fromRGB(230, 230, 220)
-local DADO = Color3.fromRGB(144, 170, 156)
-local TILE = Color3.fromRGB(244, 244, 236)
--- Office furniture: light gray enamel with wood-veneer tops.
+-- Boards and consoles in putty beige, with dark trim along the consoles and
+-- a dark kick strip.
+local PANEL_COLOR = Color3.fromRGB(194, 188, 168)
+local BENCH_COLOR = Color3.fromRGB(188, 182, 162)
+local CABINET_COLOR = Color3.fromRGB(150, 144, 126)
+local BASE_COLOR = Color3.fromRGB(128, 122, 106)
+local CAP_COLOR = Color3.fromRGB(60, 58, 54)
+local RUBBER = Color3.fromRGB(54, 50, 44)
+local ANN_COLOR = Color3.fromRGB(36, 34, 30)
+local DARK = Color3.fromRGB(38, 36, 34)
+-- A dark floor with hazard stripes along the boards, dark gray walls with a
+-- darker band to shoulder height, a ceiling of luminous panels.
+local FLOOR_TILE = Color3.fromRGB(52, 51, 50)
+local WALL = Color3.fromRGB(78, 76, 72)
+local DADO = Color3.fromRGB(58, 56, 53)
+local TILE = Color3.fromRGB(150, 148, 140)
+local HAZARD_YELLOW = Color3.fromRGB(226, 182, 40)
+local HAZARD_BLACK = Color3.fromRGB(28, 28, 28)
+-- Office furniture: beige-gray enamel with wood-veneer tops.
 local LAMINATE = Color3.fromRGB(150, 102, 64)
-local DESK_STEEL = Color3.fromRGB(170, 174, 166)
+local DESK_STEEL = Color3.fromRGB(176, 170, 152)
 local STEEL = Color3.fromRGB(150, 152, 150)
 local CHROME = Color3.fromRGB(196, 198, 200)
 
@@ -2350,8 +2356,8 @@ function RoomBuilder.build(): Folder
 	local cx, cz = (west + east) / 2, (north + south) / 2
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
 	floor.Reflectance = 0.04
-	-- Linoleum laid in 0.6 m squares.
-	local tileJoint = Color3.fromRGB(118, 90, 68)
+	-- Floor tiles in 0.6 m squares.
+	local tileJoint = Color3.fromRGB(42, 41, 40)
 	local ft = 0.6 * M
 	for x = west + ft, east - 0.1, ft do
 		prop(room, "FloorJoint", Vector3.new(0.05, 0.02, length), CFrame.new(x, 0.01, cz), tileJoint)
@@ -2364,33 +2370,36 @@ function RoomBuilder.build(): Folder
 	part(room, "WallSouth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, south + 0.5), WALL, Enum.Material.Plaster)
 	part(room, "WallWest", Vector3.new(1, height, length), CFrame.new(west - 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
 	part(room, "WallEast", Vector3.new(1, height, length), CFrame.new(east + 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
-	-- Walls in two tones: green oil paint to 1.6 m with a dark line above
-	-- it, whitewash to the ceiling; a dark skirting at the floor.
+	-- Walls in two tones: a darker band to 1.6 m with a dark line above it,
+	-- lighter to the ceiling; a dark skirting at the floor.
 	local dadoH = 1.6 * M
 	for _, z in { north + 0.04, south - 0.04 } do
 		prop(room, "Dado", Vector3.new(width, dadoH, 0.08), CFrame.new(cx, dadoH / 2, z), DADO)
-		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(80, 96, 88))
+		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(62, 58, 50))
 		prop(room, "Skirting", Vector3.new(width, 0.5, 0.12), CFrame.new(cx, 0.25, z), DARK)
 	end
 	for _, x in { west + 0.04, east - 0.04 } do
 		prop(room, "Dado", Vector3.new(0.08, dadoH, length), CFrame.new(x, dadoH / 2, cz), DADO)
-		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(80, 96, 88))
+		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(62, 58, 50))
 		prop(room, "Skirting", Vector3.new(0.12, 0.5, length), CFrame.new(x, 0.25, cz), DARK)
 	end
 
-	-- A luminous ceiling: rows of diffuser panels lit from above, divided
-	-- into squares by a dark grid. The room light comes from fittings
-	-- hidden behind the panels.
-	local module = 1.2 * M
-	local grid = Color3.fromRGB(110, 116, 114)
-	for z = north + module / 2, south - module / 2 + 0.01, module do
-		prop(room, "CeilingPanel", Vector3.new(width, 0.06, module - 0.5), CFrame.new(cx, height - 0.12, z), Color3.fromRGB(255, 250, 236), Enum.Material.Neon)
+	-- A luminous ceiling: square diffuser panels in a dark grid, the
+	-- brightest thing in the room. The room light comes from fittings
+	-- hidden behind them.
+	local nx, nz = math.floor(width / (1.2 * M) + 0.5), math.floor(length / (1.2 * M) + 0.5)
+	local mx, mz = width / nx, length / nz
+	local grid = Color3.fromRGB(44, 44, 44)
+	for ix = 0, nx - 1 do
+		for iz = 0, nz - 1 do
+			prop(room, "CeilingPanel", Vector3.new(mx - 0.32, 0.06, mz - 0.32), CFrame.new(west + (ix + 0.5) * mx, height - 0.12, north + (iz + 0.5) * mz), Color3.fromRGB(146, 148, 138), Enum.Material.Neon)
+		end
 	end
-	for x = west, east + 0.01, module do
-		prop(room, "CeilingGrid", Vector3.new(0.4, 0.3, length), CFrame.new(x, height - 0.2, cz), grid)
+	for ix = 0, nx do
+		prop(room, "CeilingGrid", Vector3.new(0.32, 0.26, length), CFrame.new(west + ix * mx, height - 0.18, cz), grid)
 	end
-	for z = north, south + 0.01, module do
-		prop(room, "CeilingGrid", Vector3.new(width, 0.3, 0.4), CFrame.new(cx, height - 0.2, z), grid)
+	for iz = 0, nz do
+		prop(room, "CeilingGrid", Vector3.new(width, 0.26, 0.32), CFrame.new(cx, height - 0.18, north + iz * mz), grid)
 	end
 	local tileSize = 0.61 * M
 	for ix = 0, 6 do
@@ -2404,8 +2413,8 @@ function RoomBuilder.build(): Folder
 				glow.Face = Enum.NormalId.Bottom
 				glow.Angle = 140
 				glow.Range = 34
-				glow.Brightness = 1.15
-				glow.Color = Color3.fromRGB(255, 246, 228)
+				glow.Brightness = 0.72
+				glow.Color = Color3.fromRGB(255, 244, 226)
 				glow.Shadows = false
 				glow.Parent = light
 			end
@@ -2513,6 +2522,34 @@ function RoomBuilder.build(): Folder
 					local centre = o + r * (dir * (sw / 2 + ext / 2)) + up * (h0 + depth / 2 * math.sin(s)) - b * (depth / 2 * math.cos(s)) - slopeNormal * 0.6
 					part(room, tag .. "Bench", Vector3.new(ext, depth, 1.2 + T), CFrame.fromMatrix(centre, slopeUp:Cross(-slopeNormal), slopeUp, -slopeNormal), BENCH_COLOR)
 				end
+			end
+		end
+	end
+
+	-- Yellow and black hazard stripes on the floor along the boards, a little
+	-- in front of the consoles, mitred where the run turns.
+	do
+		local gap = 0.55 * M
+		local bandW = 0.14 * M
+		local stripe = 0.22 * M
+		local n = #PanelLayout.panels
+		for _, p in PanelLayout.panels do
+			local origin, right, back = PanelLayout.designFrame(p.index)
+			local function cut(other: number): number
+				if other < 1 or other > n then
+					return 0
+				end
+				local _, _, otherBack = PanelLayout.designFrame(other)
+				local turn = math.acos(math.clamp(back:Dot(otherBack), -1, 1))
+				return gap * math.tan(turn / 2)
+			end
+			local x0 = -p.width / 2 + cut(p.index - 1)
+			local x1 = p.width / 2 - cut(p.index + 1)
+			local count = math.max(1, math.floor((x1 - x0) / stripe + 0.5))
+			local step = (x1 - x0) / count
+			for k = 0, count - 1 do
+				local at = origin + right * (x0 + (k + 0.5) * step) + back * gap + up * 0.015
+				prop(room, "HazardStripe", Vector3.new(step, 0.03, bandW), CFrame.fromMatrix(at, right, up, back), if k % 2 == 0 then HAZARD_YELLOW else HAZARD_BLACK)
 			end
 		end
 	end
@@ -8735,7 +8772,7 @@ local PPS = PanelLayout.PIXELS_PER_STUD
 local S = PanelLayout.SCALE
 
 local INK = Color3.fromRGB(24, 26, 28)
-local PAPER = Color3.fromRGB(236, 232, 214)
+local PAPER = Color3.fromRGB(232, 224, 198)
 -- Soviet hardware of the period: numeric readouts are orange gas-discharge
 -- indicators, the SKALA computer shows on a green-phosphor tube, and
 -- nothing has a colour screen.
@@ -8827,12 +8864,12 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	return t
 end
 
--- Engraved plastic nameplates: condensed black capitals on white for each
--- device, white on dark slate for system titles and panel names.
-local PLATE = Color3.fromRGB(236, 236, 228)
-local PLATE_TEXT = Color3.fromRGB(22, 22, 24)
-local TITLE_PLATE = Color3.fromRGB(38, 44, 50)
-local TITLE_TEXT = Color3.fromRGB(240, 240, 232)
+-- Engraved plastic nameplates: condensed white capitals on black for each
+-- device, cream on dark brown-gray for system titles and panel names.
+local PLATE = Color3.fromRGB(28, 28, 28)
+local PLATE_TEXT = Color3.fromRGB(232, 230, 220)
+local TITLE_PLATE = Color3.fromRGB(46, 42, 36)
+local TITLE_TEXT = Color3.fromRGB(236, 226, 198)
 local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number, dark: boolean?): TextLabel
 	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT, PLATE_FONT)
 	t.BackgroundTransparency = 0
@@ -8842,7 +8879,7 @@ local function plate(parent: Instance, x: number, y: number, w: number, h: numbe
 	c.Parent = t
 	if not dark then
 		local edge = Instance.new("UIStroke")
-		edge.Color = Color3.fromRGB(120, 116, 104)
+		edge.Color = Color3.fromRGB(64, 62, 58)
 		edge.Thickness = 1
 		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		edge.Parent = t
@@ -9082,9 +9119,11 @@ end
 -- running or open: these switches get red and green lamps.
 local EQUIPMENT_STATES = { ON = true, OPEN = true, CLOSE = true, RUN = true, START = true }
 -- Annunciator windows are milky white plastic, lit from behind.
-local ANN_DARK = Color3.fromRGB(204, 200, 186)
-local ANN_DARK_TEXT = Color3.fromRGB(58, 56, 50)
-local ANN_SPARE = Color3.fromRGB(196, 192, 178)
+-- Light boxes stay dark until they light: smoked windows with their
+-- legends faintly visible.
+local ANN_DARK = Color3.fromRGB(62, 58, 50)
+local ANN_DARK_TEXT = Color3.fromRGB(156, 148, 124)
+local ANN_SPARE = Color3.fromRGB(50, 47, 41)
 
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
@@ -10169,7 +10208,7 @@ function Panels.build(room: Instance, ctx: Context)
 	-- lights at full out and a green one at full in.
 	builders.rodpos = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
-		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(70, 76, 72))
+		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(52, 48, 42))
 		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "ROD POSITION INDICATORS   METRES INSERTED", 0.115, true)
 		local L = CoreLayout.get()
 		local G = L.grid

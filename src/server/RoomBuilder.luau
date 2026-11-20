@@ -4,14 +4,17 @@
 -- are plain parts with known names; each client dresses them with
 -- instruments and controls from the shared layout.
 --
--- The look is a Soviet RBMK unit control room, simplified into a clean,
--- stylized form: boards and consoles in pale blue-green with dark slate
--- trim, in an L around a square corner with the reactor panel set across
--- the corner itself, light boxes along the top, a luminous ceiling grid,
--- walls painted in two tones, a linoleum floor, and plain office furniture:
--- two operators' desks with rotary telephones, the SKALA computer's
--- console with its two displays, the alarm printer, the shift supervisor's
--- desk, shelving of procedures and a chalkboard.
+-- The look follows the Soviet RBMK unit control rooms, given a moody,
+-- atmospheric art direction rather than a flat or photo-real one: warm
+-- beige boards and consoles packed with instruments, in an L around a
+-- square corner with the reactor panel set across the corner itself, light
+-- boxes along the top that stay dark until they light, a bright ceiling of
+-- square luminous panels over a dim room, warm gray walls, a dark floor
+-- with yellow and black hazard stripes along the boards, and plain office
+-- furniture: two operators' desks with rotary telephones, the SKALA
+-- computer's console with its two displays, the alarm printer, the shift
+-- supervisor's desk, shelving of procedures and a chalkboard. The lighting
+-- and colour grade that finish the look are in default.project.json.
 --
 -- Everything is laid out in board units (see PanelLayout) and scaled to
 -- studs at the end, so the room comes out life-size around a standard
@@ -24,25 +27,27 @@ local RoomBuilder = {}
 -- Board units per metre.
 local M = 5.5
 
--- Boards and consoles in the pale blue-green of Soviet control rooms, with
--- a dark slate edge along the consoles and a dark kick strip.
-local PANEL_COLOR = Color3.fromRGB(168, 188, 184)
-local BENCH_COLOR = Color3.fromRGB(176, 195, 191)
-local CABINET_COLOR = Color3.fromRGB(150, 170, 166)
-local BASE_COLOR = Color3.fromRGB(134, 152, 149)
-local CAP_COLOR = Color3.fromRGB(104, 120, 118)
-local RUBBER = Color3.fromRGB(52, 58, 60)
-local ANN_COLOR = Color3.fromRGB(46, 52, 56)
-local DARK = Color3.fromRGB(40, 40, 42)
--- Brown linoleum, walls in green oil paint to shoulder height and
--- whitewash above, a white luminous ceiling.
-local FLOOR_TILE = Color3.fromRGB(140, 108, 82)
-local WALL = Color3.fromRGB(230, 230, 220)
-local DADO = Color3.fromRGB(144, 170, 156)
-local TILE = Color3.fromRGB(244, 244, 236)
--- Office furniture: light gray enamel with wood-veneer tops.
+-- Boards and consoles in putty beige, with dark trim along the consoles and
+-- a dark kick strip.
+local PANEL_COLOR = Color3.fromRGB(194, 188, 168)
+local BENCH_COLOR = Color3.fromRGB(188, 182, 162)
+local CABINET_COLOR = Color3.fromRGB(150, 144, 126)
+local BASE_COLOR = Color3.fromRGB(128, 122, 106)
+local CAP_COLOR = Color3.fromRGB(60, 58, 54)
+local RUBBER = Color3.fromRGB(54, 50, 44)
+local ANN_COLOR = Color3.fromRGB(36, 34, 30)
+local DARK = Color3.fromRGB(38, 36, 34)
+-- A dark floor with hazard stripes along the boards, dark gray walls with a
+-- darker band to shoulder height, a ceiling of luminous panels.
+local FLOOR_TILE = Color3.fromRGB(52, 51, 50)
+local WALL = Color3.fromRGB(78, 76, 72)
+local DADO = Color3.fromRGB(58, 56, 53)
+local TILE = Color3.fromRGB(150, 148, 140)
+local HAZARD_YELLOW = Color3.fromRGB(226, 182, 40)
+local HAZARD_BLACK = Color3.fromRGB(28, 28, 28)
+-- Office furniture: beige-gray enamel with wood-veneer tops.
 local LAMINATE = Color3.fromRGB(150, 102, 64)
-local DESK_STEEL = Color3.fromRGB(170, 174, 166)
+local DESK_STEEL = Color3.fromRGB(176, 170, 152)
 local STEEL = Color3.fromRGB(150, 152, 150)
 local CHROME = Color3.fromRGB(196, 198, 200)
 
@@ -231,8 +236,8 @@ function RoomBuilder.build(): Folder
 	local cx, cz = (west + east) / 2, (north + south) / 2
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
 	floor.Reflectance = 0.04
-	-- Linoleum laid in 0.6 m squares.
-	local tileJoint = Color3.fromRGB(118, 90, 68)
+	-- Floor tiles in 0.6 m squares.
+	local tileJoint = Color3.fromRGB(42, 41, 40)
 	local ft = 0.6 * M
 	for x = west + ft, east - 0.1, ft do
 		prop(room, "FloorJoint", Vector3.new(0.05, 0.02, length), CFrame.new(x, 0.01, cz), tileJoint)
@@ -245,33 +250,36 @@ function RoomBuilder.build(): Folder
 	part(room, "WallSouth", Vector3.new(width, height, 1), CFrame.new(cx, height / 2, south + 0.5), WALL, Enum.Material.Plaster)
 	part(room, "WallWest", Vector3.new(1, height, length), CFrame.new(west - 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
 	part(room, "WallEast", Vector3.new(1, height, length), CFrame.new(east + 0.5, height / 2, cz), WALL, Enum.Material.Plaster)
-	-- Walls in two tones: green oil paint to 1.6 m with a dark line above
-	-- it, whitewash to the ceiling; a dark skirting at the floor.
+	-- Walls in two tones: a darker band to 1.6 m with a dark line above it,
+	-- lighter to the ceiling; a dark skirting at the floor.
 	local dadoH = 1.6 * M
 	for _, z in { north + 0.04, south - 0.04 } do
 		prop(room, "Dado", Vector3.new(width, dadoH, 0.08), CFrame.new(cx, dadoH / 2, z), DADO)
-		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(80, 96, 88))
+		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(62, 58, 50))
 		prop(room, "Skirting", Vector3.new(width, 0.5, 0.12), CFrame.new(cx, 0.25, z), DARK)
 	end
 	for _, x in { west + 0.04, east - 0.04 } do
 		prop(room, "Dado", Vector3.new(0.08, dadoH, length), CFrame.new(x, dadoH / 2, cz), DADO)
-		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(80, 96, 88))
+		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(62, 58, 50))
 		prop(room, "Skirting", Vector3.new(0.12, 0.5, length), CFrame.new(x, 0.25, cz), DARK)
 	end
 
-	-- A luminous ceiling: rows of diffuser panels lit from above, divided
-	-- into squares by a dark grid. The room light comes from fittings
-	-- hidden behind the panels.
-	local module = 1.2 * M
-	local grid = Color3.fromRGB(110, 116, 114)
-	for z = north + module / 2, south - module / 2 + 0.01, module do
-		prop(room, "CeilingPanel", Vector3.new(width, 0.06, module - 0.5), CFrame.new(cx, height - 0.12, z), Color3.fromRGB(255, 250, 236), Enum.Material.Neon)
+	-- A luminous ceiling: square diffuser panels in a dark grid, the
+	-- brightest thing in the room. The room light comes from fittings
+	-- hidden behind them.
+	local nx, nz = math.floor(width / (1.2 * M) + 0.5), math.floor(length / (1.2 * M) + 0.5)
+	local mx, mz = width / nx, length / nz
+	local grid = Color3.fromRGB(44, 44, 44)
+	for ix = 0, nx - 1 do
+		for iz = 0, nz - 1 do
+			prop(room, "CeilingPanel", Vector3.new(mx - 0.32, 0.06, mz - 0.32), CFrame.new(west + (ix + 0.5) * mx, height - 0.12, north + (iz + 0.5) * mz), Color3.fromRGB(146, 148, 138), Enum.Material.Neon)
+		end
 	end
-	for x = west, east + 0.01, module do
-		prop(room, "CeilingGrid", Vector3.new(0.4, 0.3, length), CFrame.new(x, height - 0.2, cz), grid)
+	for ix = 0, nx do
+		prop(room, "CeilingGrid", Vector3.new(0.32, 0.26, length), CFrame.new(west + ix * mx, height - 0.18, cz), grid)
 	end
-	for z = north, south + 0.01, module do
-		prop(room, "CeilingGrid", Vector3.new(width, 0.3, 0.4), CFrame.new(cx, height - 0.2, z), grid)
+	for iz = 0, nz do
+		prop(room, "CeilingGrid", Vector3.new(width, 0.26, 0.32), CFrame.new(cx, height - 0.18, north + iz * mz), grid)
 	end
 	local tileSize = 0.61 * M
 	for ix = 0, 6 do
@@ -285,8 +293,8 @@ function RoomBuilder.build(): Folder
 				glow.Face = Enum.NormalId.Bottom
 				glow.Angle = 140
 				glow.Range = 34
-				glow.Brightness = 1.15
-				glow.Color = Color3.fromRGB(255, 246, 228)
+				glow.Brightness = 0.72
+				glow.Color = Color3.fromRGB(255, 244, 226)
 				glow.Shadows = false
 				glow.Parent = light
 			end
@@ -394,6 +402,34 @@ function RoomBuilder.build(): Folder
 					local centre = o + r * (dir * (sw / 2 + ext / 2)) + up * (h0 + depth / 2 * math.sin(s)) - b * (depth / 2 * math.cos(s)) - slopeNormal * 0.6
 					part(room, tag .. "Bench", Vector3.new(ext, depth, 1.2 + T), CFrame.fromMatrix(centre, slopeUp:Cross(-slopeNormal), slopeUp, -slopeNormal), BENCH_COLOR)
 				end
+			end
+		end
+	end
+
+	-- Yellow and black hazard stripes on the floor along the boards, a little
+	-- in front of the consoles, mitred where the run turns.
+	do
+		local gap = 0.55 * M
+		local bandW = 0.14 * M
+		local stripe = 0.22 * M
+		local n = #PanelLayout.panels
+		for _, p in PanelLayout.panels do
+			local origin, right, back = PanelLayout.designFrame(p.index)
+			local function cut(other: number): number
+				if other < 1 or other > n then
+					return 0
+				end
+				local _, _, otherBack = PanelLayout.designFrame(other)
+				local turn = math.acos(math.clamp(back:Dot(otherBack), -1, 1))
+				return gap * math.tan(turn / 2)
+			end
+			local x0 = -p.width / 2 + cut(p.index - 1)
+			local x1 = p.width / 2 - cut(p.index + 1)
+			local count = math.max(1, math.floor((x1 - x0) / stripe + 0.5))
+			local step = (x1 - x0) / count
+			for k = 0, count - 1 do
+				local at = origin + right * (x0 + (k + 0.5) * step) + back * gap + up * 0.015
+				prop(room, "HazardStripe", Vector3.new(step, 0.03, bandW), CFrame.fromMatrix(at, right, up, back), if k % 2 == 0 then HAZARD_YELLOW else HAZARD_BLACK)
 			end
 		end
 	end

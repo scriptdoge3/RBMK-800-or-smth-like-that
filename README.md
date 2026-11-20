@@ -3,7 +3,7 @@
 A Roblox control-room simulator of an "Americanized" pre-1986 RBMK: the full-size
 graphite core (1,661 fuel channels, 211 control rods) derated to 2,560 MW thermal /
 800 MW electric, built for the American 60 Hz grid. It keeps the Soviet design's control
-room, in a clean, stylized form and labelled in English. Only the physics and the control
+room, given a moody, stylized look and labelled in English. Only the physics and the control
 room exist; there is no building around it.
 
 It keeps the reactor's real character: a positive void coefficient that grows as rods
@@ -27,8 +27,9 @@ in real time, and fuel channels that burst when you starve or overheat them.
 
 *Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
 the game's scripts create, so the geometry is the game's; Roblox's own lighting and
-materials will look different. The blocky figures are added to the previews only, at the
-size of a standard Roblox character, to show the scale.*
+materials will look different, though the previews imitate the game's bloom and colour
+grade. The blocky figures are added to the previews only, at the size of a standard
+Roblox character, to show the scale.*
 
 ## Getting it into Roblox Studio
 
@@ -62,9 +63,11 @@ from parts now. The game also takes it out of the room by itself when it starts.
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
 The unit is Americanized (English labels, the 60 Hz grid), but its control room follows
-the Soviet RBMK unit control rooms, simplified into a stylized look:
-simple shapes (blocks and cylinders, no spheres), flat colours and clear lettering, not an
-attempt at photo-realism. The boards form an L. On the left wing: **Panel 1** reactor
+the Soviet RBMK unit control rooms, with a moody, stylized art direction rather than
+photo-realism: putty-beige boards packed with instruments, light boxes that stay dark until
+they light, glowing lamps and screens, a bright ceiling of luminous panels over a dimmer
+room, a dark floor with yellow and black hazard stripes, and a warm, contrasty colour
+grade. Shapes are kept simple (blocks and cylinders, no spheres). The boards form an L. On the left wing: **Panel 1** reactor
 auxiliaries and emergency cooling and **Panel 2** main circulation (the SIUB's, the senior
 unit engineer). Along the back wall: **Panel 4** feedwater (SIUB), **Panel 5** turbines
 (SIUT, the senior turbine engineer) and **Panel 6** electrical. **Panel 3**, reactor control,
@@ -79,7 +82,7 @@ height (0.9 m), the light boxes top out a little under 3 m, desks are 0.74 m hig
 ceiling is 3.8 m up.
 
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
-  scale, red pointer, coloured limit bands) under white engraved nameplates in condensed
+  scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
   capitals, a dark title plate over each system, and a row of strip-chart recorders. On
   each console, control keys: a black bar handle with a white index line on a square
   mounting plate, under a pair of square signal lamps (green off, red on) and an engraved
@@ -88,8 +91,8 @@ ceiling is 3.8 m up.
   Mimic lines trace the flow paths in the Soviet pipeline colours (water green, steam red;
   emergency cooling orange, power black). Every large pump has a motor ammeter. Digital
   readouts are orange gas-discharge indicators, and mechanical counters count ruptured,
-  damaged and flow-blocked channels. Boards and consoles are pale blue-green with dark
-  slate trim. Hover over any instrument for its exact reading.
+  damaged and flow-blocked channels. Boards and consoles are putty beige with dark
+  trim. Hover over any instrument for its exact reading.
 - **Reactor board (Panel 3)**, the widest section: on the vertical board, the rod position
   indicators (a dial for every one of the 211 rods, laid out as in the core, with a red
   lamp at full out and a green one at full in), the channel cartogram, the axial power
@@ -110,19 +113,23 @@ ceiling is 3.8 m up.
   meters for each main circulation and feed pump.
 - **Light boxes** run along the top of every panel and follow a ringback sequence: a new
   alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
-  flashes slowly until RESET; TEST lights every window on the panel while held. Emergency
-  windows light red, the rest yellow. The pushbuttons are on Panels 1, 3 and 4. In Roblox
+  flashes slowly until RESET; TEST lights every window on the panel while held. Unlit
+  windows are dark, with the legend faintly visible; emergency windows light red, the
+  rest yellow. The pushbuttons are on Panels 1, 3 and 4. In Roblox
   the board artwork takes the room's lighting, while the self-lit displays (light boxes,
   digits, the cartogram, the SKALA tube) glow on their own.
-- **Room**: brown linoleum floor, walls in green oil paint to shoulder height with
-  whitewash above, a luminous ceiling grid, an electric wall clock and a green exit sign.
+- **Room**: a dark tiled floor with yellow and black hazard stripes along the boards, dark
+  gray walls, a ceiling of square luminous panels, an electric wall clock and a green exit
+  sign.
 - **Furniture**: two operators' desks with rotary telephones (the red one, with no dial,
   is the direct line to the grid dispatcher), logbooks and binders; the SKALA computer's
   console with two green displays (unit summary and alarm summary); the alarm printer
   printing the event log; an ashtray stand; the shift supervisor's desk; shelving of
   procedures; file cabinets; and a chalkboard where the shift status is kept up to date.
 
-The place is set up for Roblox's Future lighting.
+The place is set up for Roblox's Future lighting, with a low warm ambient light, bloom
+on everything that glows, and a warm, contrasty colour grade (the `Lighting` settings in
+`default.project.json`).
 
 Where the RBMK features are on the boards:
 

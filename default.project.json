@@ -23,40 +23,41 @@
       "$properties": {
         "Technology": "Future",
         "Ambient": [
-          0.34,
-          0.32,
-          0.29
+          0.13,
+          0.13,
+          0.125
         ],
         "OutdoorAmbient": [
-          0.2,
-          0.2,
-          0.2
+          0.16,
+          0.16,
+          0.16
         ],
         "Brightness": 1,
         "GlobalShadows": true,
-        "ShadowSoftness": 0.6,
+        "ShadowSoftness": 0.45,
         "ClockTime": 12,
-        "EnvironmentDiffuseScale": 0.15,
-        "EnvironmentSpecularScale": 0.35,
-        "ExposureCompensation": 0.1
+        "EnvironmentDiffuseScale": 0.12,
+        "EnvironmentSpecularScale": 0.45,
+        "ExposureCompensation": 0.0
       },
       "Bloom": {
         "$className": "BloomEffect",
         "$properties": {
-          "Intensity": 0.25,
-          "Size": 18,
-          "Threshold": 1.8
+          "Intensity": 0.45,
+          "Size": 22,
+          "Threshold": 1.3
         }
       },
       "Grade": {
         "$className": "ColorCorrectionEffect",
         "$properties": {
-          "Contrast": 0.08,
-          "Saturation": 0.05,
+          "Brightness": -0.03,
+          "Contrast": 0.2,
+          "Saturation": -0.08,
           "TintColor": [
             1.0,
-            0.975,
-            0.93
+            0.985,
+            0.95
           ]
         }
       }

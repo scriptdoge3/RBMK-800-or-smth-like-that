@@ -20,7 +20,7 @@ local PPS = PanelLayout.PIXELS_PER_STUD
 local S = PanelLayout.SCALE
 
 local INK = Color3.fromRGB(24, 26, 28)
-local PAPER = Color3.fromRGB(236, 232, 214)
+local PAPER = Color3.fromRGB(232, 224, 198)
 -- Soviet hardware of the period: numeric readouts are orange gas-discharge
 -- indicators, the SKALA computer shows on a green-phosphor tube, and
 -- nothing has a colour screen.
@@ -112,12 +112,12 @@ local function text(parent: Instance, x: number, y: number, w: number, h: number
 	return t
 end
 
--- Engraved plastic nameplates: condensed black capitals on white for each
--- device, white on dark slate for system titles and panel names.
-local PLATE = Color3.fromRGB(236, 236, 228)
-local PLATE_TEXT = Color3.fromRGB(22, 22, 24)
-local TITLE_PLATE = Color3.fromRGB(38, 44, 50)
-local TITLE_TEXT = Color3.fromRGB(240, 240, 232)
+-- Engraved plastic nameplates: condensed white capitals on black for each
+-- device, cream on dark brown-gray for system titles and panel names.
+local PLATE = Color3.fromRGB(28, 28, 28)
+local PLATE_TEXT = Color3.fromRGB(232, 230, 220)
+local TITLE_PLATE = Color3.fromRGB(46, 42, 36)
+local TITLE_TEXT = Color3.fromRGB(236, 226, 198)
 local function plate(parent: Instance, x: number, y: number, w: number, h: number, str: string, size: number, dark: boolean?): TextLabel
 	local t = text(parent, x, y, w, h, str, size, if dark then TITLE_TEXT else PLATE_TEXT, PLATE_FONT)
 	t.BackgroundTransparency = 0
@@ -127,7 +127,7 @@ local function plate(parent: Instance, x: number, y: number, w: number, h: numbe
 	c.Parent = t
 	if not dark then
 		local edge = Instance.new("UIStroke")
-		edge.Color = Color3.fromRGB(120, 116, 104)
+		edge.Color = Color3.fromRGB(64, 62, 58)
 		edge.Thickness = 1
 		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		edge.Parent = t
@@ -367,9 +367,11 @@ end
 -- running or open: these switches get red and green lamps.
 local EQUIPMENT_STATES = { ON = true, OPEN = true, CLOSE = true, RUN = true, START = true }
 -- Annunciator windows are milky white plastic, lit from behind.
-local ANN_DARK = Color3.fromRGB(204, 200, 186)
-local ANN_DARK_TEXT = Color3.fromRGB(58, 56, 50)
-local ANN_SPARE = Color3.fromRGB(196, 192, 178)
+-- Light boxes stay dark until they light: smoked windows with their
+-- legends faintly visible.
+local ANN_DARK = Color3.fromRGB(62, 58, 50)
+local ANN_DARK_TEXT = Color3.fromRGB(156, 148, 124)
+local ANN_SPARE = Color3.fromRGB(50, 47, 41)
 
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
@@ -1454,7 +1456,7 @@ function Panels.build(room: Instance, ctx: Context)
 	-- lights at full out and a green one at full in.
 	builders.rodpos = function(gui, face, part, w)
 		bezel(controls, face, w.x, w.y, w.w, w.h, 0.14, BEZEL, 0.08)
-		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(70, 76, 72))
+		box(gui, w.x, w.y, w.w, w.h, Color3.fromRGB(52, 48, 42))
 		plate(gui, w.x + 0.06, w.y + 0.04, w.w - 0.12, 0.22, "ROD POSITION INDICATORS   METRES INSERTED", 0.115, true)
 		local L = CoreLayout.get()
 		local G = L.grid
