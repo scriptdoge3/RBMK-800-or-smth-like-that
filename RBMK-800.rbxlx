@@ -189,7 +189,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-20a (moody stylized control room)"
+Config.VERSION = "2026-11-20b (chunky panel hardware)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
@@ -8776,9 +8776,9 @@ local PAPER = Color3.fromRGB(232, 224, 198)
 -- Soviet hardware of the period: numeric readouts are orange gas-discharge
 -- indicators, the SKALA computer shows on a green-phosphor tube, and
 -- nothing has a colour screen.
-local SCREEN = Color3.fromRGB(18, 9, 5)
-local DIGIT = Color3.fromRGB(255, 132, 40)
-local DIGIT_DIM = Color3.fromRGB(52, 22, 10)
+local SCREEN = Color3.fromRGB(16, 6, 6)
+local DIGIT = Color3.fromRGB(255, 58, 40)
+local DIGIT_DIM = Color3.fromRGB(50, 14, 10)
 local TUBE = Color3.fromRGB(8, 18, 12)
 local PHOSPHOR = Color3.fromRGB(110, 255, 140)
 local LAMP = {
@@ -8797,13 +8797,12 @@ local BUTTON = {
 	black = Color3.fromRGB(34, 34, 36),
 }
 local PEN = { red = Color3.fromRGB(200, 30, 30), blue = Color3.fromRGB(30, 60, 200), green = Color3.fromRGB(20, 140, 50), violet = Color3.fromRGB(120, 40, 150) }
--- Mimic line colours, after the Soviet pipeline colour standard: water
--- green, steam red; emergency core cooling orange so it stands apart, and
--- electrical lines black.
+-- Mimic line colours: water light blue, steam red, emergency core cooling
+-- orange so it stands apart, electrical lines black.
 local MIMIC = {
-	water = Color3.fromRGB(34, 120, 60),
-	steam = Color3.fromRGB(196, 44, 36),
-	feed = Color3.fromRGB(70, 150, 70),
+	water = Color3.fromRGB(78, 158, 210),
+	steam = Color3.fromRGB(200, 50, 40),
+	feed = Color3.fromRGB(60, 136, 196),
 	eccs = Color3.fromRGB(226, 128, 24),
 	power = Color3.fromRGB(28, 28, 30),
 }
@@ -8946,10 +8945,11 @@ end
 -- The hardware standing proud of the panels is built from parts in the
 -- frame of each device: X to the operator's right, Y up the panel, Z out of
 -- it, in board units, with the origin at the device's mounting point on the
--- panel face. It follows Soviet control-room hardware, simplified: square
--- signal lamps and square pushbuttons in black housings, control keys with
--- black bar handles on square mounting plates, a big round AZ-5 under a
--- hinged cover. Blocks and cylinders only, no spheres.
+-- panel face. The style is bold and chunky so that it reads from across
+-- the room: black levers that stand up off the console and tip towards
+-- their position, round lamps that glow, square pushbuttons with tall caps,
+-- black knobs with a tall fin, a big round AZ-5 under a hinged cover.
+-- Blocks and cylinders only, no spheres.
 local CHROME = Color3.fromRGB(200, 202, 206)
 local PHENOLIC = Color3.fromRGB(22, 22, 24) -- black bakelite handles and knobs
 local HOUSING = Color3.fromRGB(46, 48, 50) -- lamp and button housings, mounting plates
@@ -9032,15 +9032,14 @@ local function turned(angle: number): CFrame
 	return CFrame.Angles(0, 0, -math.rad(angle))
 end
 
--- A signal lamp: a square coloured lens with a raised face in a square black
--- housing; glass when dark, glowing when lit. `size` is the lens's side.
+-- A signal lamp: a round coloured lens with a raised face in a black ring;
+-- glass when dark, glowing when lit. `size` is the lens's diameter.
 local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, size: number, colors: { Color3 }): (boolean) -> ()
 	local frame = blockCFrame(face, x, y, 0, 0)
 	local d = size
-	piece(folder, frame, "block", v3(d + 0.09, d + 0.09, 0.035), v3(0, 0, 0.0175), HOUSING)
-	piece(folder, frame, "block", v3(d + 0.04, d + 0.04, 0.055), v3(0, 0, 0.0275), PHENOLIC)
-	local body = piece(folder, frame, "block", v3(d, d, 0.075), v3(0, 0, 0.0375), colors[2], GLASS)
-	local top = piece(folder, frame, "block", v3(d * 0.7, d * 0.7, 0.02), v3(0, 0, 0.085), colors[2], GLASS)
+	piece(folder, frame, "disc", v3(d + 0.08, d + 0.08, 0.05), v3(0, 0, 0.025), PHENOLIC)
+	local body = piece(folder, frame, "disc", v3(d, d, 0.09), v3(0, 0, 0.045), colors[2], GLASS)
+	local top = piece(folder, frame, "disc", v3(d * 0.7, d * 0.7, 0.03), v3(0, 0, 0.1), colors[2], GLASS)
 	return function(on: boolean)
 		for _, p in { body, top } do
 			p.Color = colors[if on then 1 else 2]
@@ -9049,15 +9048,15 @@ local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: numb
 	end
 end
 
--- A pushbutton standing at `frame`: a square coloured cap with a raised
--- face in a square black housing. Returns the cap, which moves in when the
--- button is pressed.
+-- A pushbutton standing at `frame`: a tall square coloured cap with a
+-- raised face in a square black housing. Returns the cap, which moves in
+-- when the button is pressed.
 local function pushbutton(folder: Instance, frame: CFrame, color: Color3): Assembly
-	piece(folder, frame, "block", v3(0.4, 0.4, 0.035), v3(0, 0, 0.0175), HOUSING)
-	piece(folder, frame, "block", v3(0.33, 0.33, 0.06), v3(0, 0, 0.03), PHENOLIC)
+	piece(folder, frame, "block", v3(0.4, 0.4, 0.04), v3(0, 0, 0.02), HOUSING)
+	piece(folder, frame, "block", v3(0.33, 0.33, 0.07), v3(0, 0, 0.035), PHENOLIC)
 	local cap = assembly(folder, frame)
-	cap.add("block", v3(0.27, 0.27, 0.12), v3(0, 0, 0.06), color)
-	cap.add("block", v3(0.2, 0.2, 0.025), v3(0, 0, 0.1325), color)
+	cap.add("block", v3(0.27, 0.27, 0.16), v3(0, 0, 0.08), color)
+	cap.add("block", v3(0.2, 0.2, 0.03), v3(0, 0, 0.175), color)
 	return cap
 end
 
@@ -9119,11 +9118,12 @@ end
 -- running or open: these switches get red and green lamps.
 local EQUIPMENT_STATES = { ON = true, OPEN = true, CLOSE = true, RUN = true, START = true }
 -- Annunciator windows are milky white plastic, lit from behind.
--- Light boxes stay dark until they light: smoked windows with their
--- legends faintly visible.
-local ANN_DARK = Color3.fromRGB(62, 58, 50)
-local ANN_DARK_TEXT = Color3.fromRGB(156, 148, 124)
-local ANN_SPARE = Color3.fromRGB(50, 47, 41)
+-- Light boxes: gray windows on black, the legends dark until they light
+-- white (red for the emergency ones).
+local ANN_DARK = Color3.fromRGB(92, 90, 86)
+local ANN_DARK_TEXT = Color3.fromRGB(34, 33, 31)
+local ANN_SPARE = Color3.fromRGB(66, 64, 61)
+local ANN_FRAME = Color3.fromRGB(176, 170, 150)
 
 local function cleanLabel(s: string?): string
 	return (string.gsub(s or "", "\n", " "))
@@ -9624,23 +9624,24 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	-- A control key of the Soviet kind, pointing up and turned `angle`
-	-- degrees, `k` times the standard size; returns a function that turns
-	-- it. A square black mounting plate and a round boss carry a flat black
-	-- bar handle, rounded at the end that points at the position and marked
-	-- along it with a white line.
+	-- A control lever, `k` times the standard size: a square black base and
+	-- a round hub carrying a black lever that stands up off the panel, a
+	-- stalk with a tall paddle grip on top. It tips left or right towards
+	-- its position; `angle` is in switch degrees (-45 to 45, 0 upright).
+	-- Returns a function that moves it.
+	local LEVER_TIP = 0.62 -- degrees of tip per switch degree
 	local function controlKey(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
 		local s = k or 1
 		local frame = blockCFrame(face, hx, hy, 0, 0)
-		piece(controls, frame, "block", v3(0.34 * s, 0.34 * s, 0.03), v3(0, 0, 0.015), HOUSING)
-		piece(controls, frame, "disc", v3(0.2 * s, 0.2 * s, 0.06), v3(0, 0, 0.03), PHENOLIC)
-		local handle = assembly(controls, frame)
-		local z = 0.06 + 0.04 * s
-		handle.add("block", v3(0.11 * s, 0.4 * s, 0.08 * s), v3(0, 0.07 * s, z), PHENOLIC)
-		handle.add("disc", v3(0.11 * s, 0.11 * s, 0.08 * s), v3(0, 0.27 * s, z), PHENOLIC)
-		handle.add("block", v3(0.024 * s, 0.2 * s, 0.082 * s), v3(0, 0.17 * s, z), INDEX_WHITE)
+		piece(controls, frame, "block", v3(0.32 * s, 0.32 * s, 0.035), v3(0, 0, 0.0175), HOUSING)
+		piece(controls, frame, "disc", v3(0.19 * s, 0.19 * s, 0.07), v3(0, 0, 0.035), PHENOLIC)
+		local pivot = 0.06
+		local lever = assembly(controls, frame)
+		lever.add("block", v3(0.07 * s, 0.07 * s, 0.26 * s), v3(0, 0, pivot + 0.13 * s), PHENOLIC)
+		lever.add("block", v3(0.16 * s, 0.085 * s, 0.22 * s), v3(0, 0, pivot + 0.33 * s), PHENOLIC)
+		local hz = pivot * S
 		local function turn(a: number)
-			handle.move(turned(a))
+			lever.move(CFrame.new(0, 0, hz) * CFrame.Angles(0, math.rad(a * LEVER_TIP), 0) * CFrame.new(0, 0, -hz))
 		end
 		turn(angle)
 		return turn
@@ -9660,8 +9661,8 @@ function Panels.build(room: Instance, ctx: Context)
 		local ey = w.y + plateH + 0.06
 		if lamps then
 			local ly = w.y + plateH + 0.15
-			setA = lens(controls, face, cx - 0.2, ly, 0.15, lamps[1])
-			setB = lens(controls, face, cx + 0.2, ly, 0.15, lamps[2])
+			setA = lens(controls, face, cx - 0.2, ly, 0.16, lamps[1])
+			setB = lens(controls, face, cx + 0.2, ly, 0.16, lamps[2])
 			ey = ly + 0.13
 		end
 		local ew = math.min(w.w - 0.06, 0.74)
@@ -9760,17 +9761,14 @@ function Panels.build(room: Instance, ctx: Context)
 		local esc = box(gui, cx - 0.32, cy - 0.3, 0.64, 0.6, Color3.fromRGB(22, 22, 24))
 		local _ = esc
 		local n = #w.positions
-		-- A black knob: a skirt, a body with a stepped top, and a bar across
-		-- it, rounded at the ends, with a white line on the end that points.
+		-- A black knob: a skirt and a round body carrying a tall fin that
+		-- turns with it, the end that points marked white.
 		local frame = blockCFrame(face, cx, cy, 0, 0)
-		piece(controls, frame, "disc", v3(0.44, 0.44, 0.035), v3(0, 0, 0.0175), PHENOLIC)
-		piece(controls, frame, "disc", v3(0.34, 0.34, 0.11), v3(0, 0, 0.055), PHENOLIC)
-		piece(controls, frame, "disc", v3(0.28, 0.28, 0.02), v3(0, 0, 0.12), PHENOLIC)
+		piece(controls, frame, "disc", v3(0.44, 0.44, 0.04), v3(0, 0, 0.02), PHENOLIC)
+		piece(controls, frame, "disc", v3(0.32, 0.32, 0.1), v3(0, 0, 0.05), PHENOLIC)
 		local pointer = assembly(controls, frame)
-		pointer.add("block", v3(0.08, 0.34, 0.05), v3(0, 0.02, 0.14), PHENOLIC)
-		pointer.add("disc", v3(0.08, 0.08, 0.05), v3(0, 0.19, 0.14), PHENOLIC)
-		pointer.add("disc", v3(0.08, 0.08, 0.05), v3(0, -0.15, 0.14), PHENOLIC)
-		pointer.add("block", v3(0.024, 0.15, 0.052), v3(0, 0.105, 0.14), Color3.fromRGB(235, 235, 228))
+		pointer.add("block", v3(0.09, 0.4, 0.18), v3(0, 0.02, 0.19), PHENOLIC)
+		pointer.add("block", v3(0.094, 0.12, 0.1), v3(0, 0.17, 0.22), INDEX_WHITE)
 		local readout = plate(gui, w.x + 0.08, w.y + 0.93, w.w - 0.16, 0.26, "", 0.12, true)
 		local function index(): number
 			return math.clamp(math.floor(get(w.sig) - w.base + 1.5), 1, n)
@@ -9971,7 +9969,7 @@ function Panels.build(room: Instance, ctx: Context)
 	-- Mimic lines: coloured strips painted on the board that trace a flow
 	-- path between the switches of the equipment on it.
 	builders.mimic = function(gui, _face, _part, w)
-		local t = w.width or 0.07
+		local t = w.width or 0.085
 		local pts = w.pts
 		for i = 1, #pts - 1 do
 			local x1, y1, x2, y2 = pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2]
@@ -9984,12 +9982,17 @@ function Panels.build(room: Instance, ctx: Context)
 		local cols, rows = math.max(4, math.floor(w.w / 1.6 + 0.5)), 3
 		local panelId = part:GetAttribute("Panel")
 		local tw, th = w.w / cols, w.h / rows
-		-- Window frames: each legend sits in its own recess.
+		-- The windows are grouped in boxes four columns wide, each box in a
+		-- beige frame, with black bars between its windows.
 		for c = 0, cols do
-			block(controls, face, math.clamp(c * tw, 0.04, w.w - 0.04), w.h / 2, 0.08, w.h, 0.14, BEZEL)
+			local outer = c % 4 == 0 or c == cols
+			local t = if outer then 0.2 else 0.06
+			block(controls, face, math.clamp(c * tw, t / 2, w.w - t / 2), w.h / 2, t, w.h, if outer then 0.18 else 0.12, if outer then ANN_FRAME else BEZEL)
 		end
 		for r = 0, rows do
-			block(controls, face, w.w / 2, math.clamp(r * th, 0.04, w.h - 0.04), w.w, 0.08, 0.14, BEZEL)
+			local outer = r == 0 or r == rows
+			local t = if outer then 0.14 else 0.06
+			block(controls, face, w.w / 2, math.clamp(r * th, t / 2, w.h - t / 2), w.w, t, if outer then 0.18 else 0.12, if outer then ANN_FRAME else BEZEL)
 		end
 		for i, alarm in w.alarms do
 			local c, r = (i - 1) % cols, (i - 1) // cols
@@ -10241,9 +10244,11 @@ function Panels.build(room: Instance, ctx: Context)
 			hand.Size = UDim2.fromScale(1, 0.5)
 			hand.ZIndex = 3
 			hand.Parent = pivot
-			local outLamp = box(gui, cx - d * 0.42, cy - d * 0.42, d * 0.18, d * 0.18, Color3.fromRGB(70, 22, 20))
+			local outLamp = box(gui, cx - d * 0.42, cy - d * 0.42, d * 0.2, d * 0.2, Color3.fromRGB(70, 22, 20))
+			round(outLamp)
 			outLamp.ZIndex = 4
-			local inLamp = box(gui, cx - d * 0.42, cy + d * 0.24, d * 0.18, d * 0.18, Color3.fromRGB(20, 60, 28))
+			local inLamp = box(gui, cx - d * 0.42, cy + d * 0.22, d * 0.2, d * 0.2, Color3.fromRGB(20, 60, 28))
+			round(inLamp)
 			inLamp.ZIndex = 4
 			dials[i] = { pivot = pivot, outLamp = outLamp, inLamp = inLamp, depth = -1 }
 			centers[i] = { cx, cy }
@@ -10311,7 +10316,7 @@ function Panels.build(room: Instance, ctx: Context)
 			for j, def in { { "IN", LAMP.green }, { "OUT", LAMP.red }, { "STUCK", LAMP.amber } } do
 				local lx = x0 + 0.1 + (j - 1) * (cw - 0.2) / 3
 				local bulb = box(gui, lx + (cw - 0.2) / 6 - 0.08, w.y + 1.16, 0.16, 0.16, def[2][2])
-				outline(bulb, Color3.fromRGB(20, 20, 22), 2)
+				round(bulb)
 				local t = text(gui, lx, w.y + 1.36, (cw - 0.2) / 3, 0.14, def[1], 0.075, Color3.fromRGB(210, 210, 200), PLATE_FONT)
 				t.TextWrapped = false
 				lamps[j] = { bulb = bulb, colors = def[2] }
@@ -10679,7 +10684,7 @@ function Panels.build(room: Instance, ctx: Context)
 			if lit ~= t.lit then
 				t.lit = lit
 				if lit then
-					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(236, 40, 30) else Color3.fromRGB(255, 212, 70)
+					t.tile.BackgroundColor3 = if t.urgent then Color3.fromRGB(236, 40, 30) else Color3.fromRGB(255, 248, 226)
 					t.label.TextColor3 = if t.urgent then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(14, 12, 8)
 				else
 					t.tile.BackgroundColor3 = ANN_DARK

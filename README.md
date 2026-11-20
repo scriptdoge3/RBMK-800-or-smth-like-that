@@ -84,13 +84,14 @@ ceiling is 3.8 m up.
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
   scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
   capitals, a dark title plate over each system, and a row of strip-chart recorders. On
-  each console, control keys: a black bar handle with a white index line on a square
-  mounting plate, under a pair of square signal lamps (green off, red on) and an engraved
-  plate with its two positions; key switches with brass keys; square pushbuttons in black
-  housings. Valves and setpoints are moved with spring-return keys marked LESS / MORE.
-  Mimic lines trace the flow paths in the Soviet pipeline colours (water green, steam red;
-  emergency cooling orange, power black). Every large pump has a motor ammeter. Digital
-  readouts are orange gas-discharge indicators, and mechanical counters count ruptured,
+  each console, chunky hardware that reads from across the room: black levers that stand
+  up off the console and tip towards their position, under a pair of round lamps that
+  glow (green off, red on) and an engraved plate with its two positions; key switches
+  with brass keys; square pushbuttons with tall caps; black knobs with a tall fin.
+  Valves and setpoints are moved with spring-return levers marked LESS / MORE. Thick
+  mimic lines trace the flow paths (water light blue, steam red, emergency cooling
+  orange, power black). Every large pump has a motor ammeter. Digital readouts are red,
+  and mechanical counters count ruptured,
   damaged and flow-blocked channels. Boards and consoles are putty beige with dark
   trim. Hover over any instrument for its exact reading.
 - **Reactor board (Panel 3)**, the widest section: on the vertical board, the rod position
@@ -113,11 +114,12 @@ ceiling is 3.8 m up.
   meters for each main circulation and feed pump.
 - **Light boxes** run along the top of every panel and follow a ringback sequence: a new
   alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
-  flashes slowly until RESET; TEST lights every window on the panel while held. Unlit
-  windows are dark, with the legend faintly visible; emergency windows light red, the
-  rest yellow. The pushbuttons are on Panels 1, 3 and 4. In Roblox
-  the board artwork takes the room's lighting, while the self-lit displays (light boxes,
-  digits, the cartogram, the SKALA tube) glow on their own.
+  flashes slowly until RESET; TEST lights every window on the panel while held. The
+  windows are grouped in boxes of four columns in beige frames: gray with a dark legend
+  when unlit, white when lit, red for the emergency ones. The pushbuttons are on
+  Panels 1, 3 and 4. In Roblox the board artwork takes the room's lighting, while the
+  self-lit displays (light boxes, digits, the cartogram, the SKALA tube) glow on their
+  own.
 - **Room**: a dark tiled floor with yellow and black hazard stripes along the boards, dark
   gray walls, a ceiling of square luminous panels, an electric wall clock and a green exit
   sign.
@@ -174,7 +176,7 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
   three-element level control, safety valves.
 - **Electrical**: generator excitation and synchronising, auxiliary buses with reserve
   transfer, emergency buses and diesels, islanded "rundown" operation.
-- **Control room**: a walkable 3D room. Buttons and their covers, control keys, key
+- **Control room**: a walkable 3D room. Buttons and their covers, levers, key
   switches, knobs, lamp lenses, meter needles and the bezels around every instrument are
   physical parts; scales, legends and screens are drawn on the panel faces.
 - **Protection**: AZ-1 to AZ-5 with first-out logging and key-switch bypasses, ECCS,
