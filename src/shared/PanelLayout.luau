@@ -16,7 +16,7 @@ local PanelLayout = {}
 
 -- Sizes and positions are in board units; SCALE turns them into studs (see
 -- the geometry section at the end).
-PanelLayout.SCALE = 0.55 / 1.5
+PanelLayout.SCALE = 0.55
 PanelLayout.PANEL_WIDTH = 16
 PanelLayout.BENCH_DEPTH = 5
 PanelLayout.BENCH_FRONT_HEIGHT = 5
@@ -755,12 +755,10 @@ PanelLayout.holdCommands = holdSet
 
 -- ------------------------------------------------------------------ geometry
 -- Everything above, and the room built around it, is drawn in board units.
--- SCALE turns board units into studs. At 0.55 the boards, desk and chairs
--- would come out life-size beside a standard Roblox character (5.3 studs,
--- taken as 1.75 m tall); the room is built one and a half times smaller than
--- that, so the bench front comes to the character's thigh and the ceiling
--- is about one and a half characters up. The seated views are worked out
--- in board units, so at a panel everything fills the screen just the same.
+-- SCALE turns board units into studs: at 0.55 the boards, desk and chairs
+-- come out life-size beside a standard Roblox character (about 1.75 m tall
+-- at 5.3 studs), with a bench front at hip height and the top of the
+-- annunciators a little under three metres up.
 export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number, scale: number }
 
 -- Where a panel stands, in board units: its origin is the floor point under

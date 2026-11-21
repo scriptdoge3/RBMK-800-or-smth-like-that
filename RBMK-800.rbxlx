@@ -189,7 +189,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-21d (room 1.5x smaller)"
+Config.VERSION = "2026-11-21e (life-size room again)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
@@ -621,7 +621,7 @@ local PanelLayout = {}
 
 -- Sizes and positions are in board units; SCALE turns them into studs (see
 -- the geometry section at the end).
-PanelLayout.SCALE = 0.55 / 1.5
+PanelLayout.SCALE = 0.55
 PanelLayout.PANEL_WIDTH = 16
 PanelLayout.BENCH_DEPTH = 5
 PanelLayout.BENCH_FRONT_HEIGHT = 5
@@ -1360,12 +1360,10 @@ PanelLayout.holdCommands = holdSet
 
 -- ------------------------------------------------------------------ geometry
 -- Everything above, and the room built around it, is drawn in board units.
--- SCALE turns board units into studs. At 0.55 the boards, desk and chairs
--- would come out life-size beside a standard Roblox character (5.3 studs,
--- taken as 1.75 m tall); the room is built one and a half times smaller than
--- that, so the bench front comes to the character's thigh and the ceiling
--- is about one and a half characters up. The seated views are worked out
--- in board units, so at a panel everything fills the screen just the same.
+-- SCALE turns board units into studs: at 0.55 the boards, desk and chairs
+-- come out life-size beside a standard Roblox character (about 1.75 m tall
+-- at 5.3 studs), with a bench front at hip height and the top of the
+-- annunciators a little under three metres up.
 export type Face = { center: Vector3, right: Vector3, up: Vector3, normal: Vector3, width: number, height: number, scale: number }
 
 -- Where a panel stands, in board units: its origin is the floor point under
@@ -2153,10 +2151,9 @@ end)
 -- lighting and colour grade that finish the look are in
 -- default.project.json.
 --
--- Everything is laid out in board units (see PanelLayout), in real sizes
--- (bench front at 0.9 m, desks at 0.76 m, ceiling at 3.8 m), and scaled to
--- studs at the end: one and a half times smaller than life-size beside a
--- standard character.
+-- Everything is laid out in board units (see PanelLayout) and scaled to
+-- studs at the end, so the room comes out life-size around a standard
+-- character: bench front at hip height, desks at 0.76 m, ceiling at 3.8 m.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
 local PanelLayout = require(Shared.PanelLayout)
 

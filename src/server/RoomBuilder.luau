@@ -16,10 +16,9 @@
 -- lighting and colour grade that finish the look are in
 -- default.project.json.
 --
--- Everything is laid out in board units (see PanelLayout), in real sizes
--- (bench front at 0.9 m, desks at 0.76 m, ceiling at 3.8 m), and scaled to
--- studs at the end: one and a half times smaller than life-size beside a
--- standard character.
+-- Everything is laid out in board units (see PanelLayout) and scaled to
+-- studs at the end, so the room comes out life-size around a standard
+-- character: bench front at hip height, desks at 0.76 m, ceiling at 3.8 m.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("RBMK")
 local PanelLayout = require(Shared.PanelLayout)
 

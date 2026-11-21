@@ -78,11 +78,9 @@ The operators' desks face the corner, so the reactor panel is straight ahead. RB
 (AZ-5, KOM, ORM, SKALA, cartogram) are kept. Every server runs one shared unit; anyone can
 operate any panel.
 
-The room is drawn in real sizes (the console front at 0.9 m, the light boxes topping out
-a little under 3 m, desks 0.74 m high, the ceiling 3.8 m up) and built one and a half
-times smaller than that beside a standard Roblox character, so it is compact to walk
-around: the console front comes to a character's thigh and the ceiling is about one and
-a half characters up. Seated at a panel, the view fills the screen just the same.
+The room is life-size around a standard Roblox character: the console front is at hip
+height (0.9 m), the light boxes top out a little under 3 m, desks are 0.74 m high and the
+ceiling is 3.8 m up.
 
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
   scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
