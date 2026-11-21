@@ -323,7 +323,8 @@ for _ = 1, 30 do
 end
 H.check(findText("RBMK-800 UNIT"), "unit computer shows live data")
 H.check(findText("CHANNEL CARTOGRAM   FLUX"), "channel cartogram received and titled")
-H.check(findText("Unit in cold shutdown"), "event log reached the client")
+-- The alarm printer by the desks types the event log in capitals.
+H.check(findText("Unit in cold shutdown") or findText("UNIT IN COLD SHUTDOWN"), "event log reached the client")
 
 local controlsFolder = room:FindFirstChild("PanelControls")
 -- The panel hardware is plain bricks with only some cylinders, and no

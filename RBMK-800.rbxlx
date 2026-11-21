@@ -189,7 +189,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-21e (life-size room again)"
+Config.VERSION = "2026-11-21f (boards 1.4x shorter, smaller room)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
@@ -622,7 +622,7 @@ local PanelLayout = {}
 -- Sizes and positions are in board units; SCALE turns them into studs (see
 -- the geometry section at the end).
 PanelLayout.SCALE = 0.55
-PanelLayout.PANEL_WIDTH = 16
+PanelLayout.PANEL_WIDTH = 11
 PanelLayout.BENCH_DEPTH = 5
 PanelLayout.BENCH_FRONT_HEIGHT = 5
 PanelLayout.BENCH_SLOPE = math.rad(22)
@@ -632,8 +632,8 @@ PanelLayout.BACK_WALL_Z = -36 -- bench front edge of the back wall of panels
 PanelLayout.CORNER_X = -36 -- bench front edge of the left wing, square to the back wall
 PanelLayout.CORNER_PANEL = 3 -- the reactor panel stands across the corner; the panels before it are on the wing
 -- The operators' desk faces the corner, so the reactor panel is straight ahead.
-PanelLayout.DESK_X = -15
-PanelLayout.DESK_Z = -15
+PanelLayout.DESK_X = -18
+PanelLayout.DESK_Z = -18
 PanelLayout.DESK_YAW = math.rad(45)
 PanelLayout.PIXELS_PER_STUD = 80 -- artwork pixels per board unit
 PanelLayout.FACE_THICKNESS = 0.3
@@ -725,8 +725,8 @@ local function selector(face: string, x: number, y: number, label: string, cmd: 
 end
 
 -- A pump motor's breaker control switch, green lamp stopped, red running.
-local function pump(face: string, x: number, y: number, label: string, cmd: string, sig: string)
-	add({ kind = "pump", face = face, x = x, y = y, w = 1.35, h = 1.85, label = label, cmd = cmd, sig = sig })
+local function pump(face: string, x: number, y: number, label: string, cmd: string, sig: string, w: number?)
+	add({ kind = "pump", face = face, x = x, y = y, w = w or 1.35, h = 1.85, label = label, cmd = cmd, sig = sig })
 end
 
 -- A raise/lower control: spring-return switch under a position indicator
@@ -824,127 +824,102 @@ end
 -- ------------------------------------------------------------------ P1
 panel("P1", "REACTOR AUXILIARIES AND EMERGENCY COOLING")
 annunciators()
-meterGroup(0.35, PLATE_A, ROW_A, "REACTOR SPACE", {
+meterGroup(0.3, PLATE_A, ROW_A, "REACTOR SPACE", {
 	{ "SPACE\nPRESS", "rs.press", 0, 200, "kPa", { red = 5, tip = "Reactor space pressure. Any reading means a fuel channel is leaking into the graphite stack." } },
 	{ "GAS\nACTIVITY", "rad.gas", 0, 100, "", { red = 20 } },
+})
+meterGroup(2.0, PLATE_A, ROW_A, "FUEL", {
+	{ "HOTTEST\nFUEL", "core.maxFuel", 0, 3000, "C", { red = 1800 } },
 	{ "GRAPHITE\nTEMP", "core.graphT", 0, 1000, "C", { red = 750 } },
 })
-meterGroup(2.85, PLATE_A, ROW_A, "FUEL TEMPERATURE", {
-	{ "HOTTEST\nFUEL", "core.maxFuel", 0, 3000, "C", { red = 1800 } },
-	{ "HOTTEST\nCLAD", "core.maxClad", 0, 1200, "C" },
-	{ "MEAN\nFUEL", "core.fuelT", 0, 2000, "C" },
-})
-meterGroup(5.35, PLATE_A, ROW_A, "ROD CHANNEL COOLING", {
+meterGroup(3.7, PLATE_A, ROW_A, "ROD CHANNEL COOLING", {
 	{ "FLOW", "cps.flow", 0, 100, "%", { low = 50 } },
 	{ "TANK\nLEVEL", "cps.tank", 0, 100, "%", { low = 60 } },
 	{ "WATER\nTEMP", "cps.temp", 0, 150, "C", { amber = 90 } },
-	{ "PUMP 1\nAMPS", "cps.pump.1.current", 0, 100, "A" },
-	{ "PUMP 2\nAMPS", "cps.pump.2.current", 0, 100, "A" },
 })
-meterGroup(9.3, PLATE_A, ROW_A, "EMERGENCY CORE COOLING", {
+meterGroup(6.1, PLATE_A, ROW_A, "ECCS", {
 	{ "ACCUM\nLEVEL", "eccs.accum", 0, 100, "%" },
 	{ "INJECT\nFLOW", "eccs.flow", 0, 2500, "t/h" },
-	{ "PUMP 1\nAMPS", "eccs.pump.1.current", 0, 250, "A" },
-	{ "PUMP 2\nAMPS", "eccs.pump.2.current", 0, 250, "A" },
-	{ "PUMP 3\nAMPS", "eccs.pump.3.current", 0, 250, "A" },
 })
-group("vert", 13.15, PLATE_A, 2.55, "ECCS STATUS")
-lamp("vert", 13.2, 1.0, "ECCS ACTUATED", "eccs.active", "red", { w = 2.45 })
-lamp("vert", 13.2, 1.42, "AUTO ARMED", "eccs.auto", "white", { w = 2.45 })
-lamp("vert", 13.2, 1.84, "PUMP 1 RUNNING", "eccs.pump.1.run", "red", { w = 2.45 })
-lamp("vert", 13.2, 2.26, "PUMP 2 RUNNING", "eccs.pump.2.run", "red", { w = 2.45 })
-lamp("vert", 13.2, 2.68, "PUMP 3 RUNNING", "eccs.pump.3.run", "red", { w = 2.45 })
-lamp("vert", 13.2, 3.1, "INJECTING", "eccs.flow", "red", { w = 2.45, gt = 10 })
-recorder("vert", 0.35, ROW_B, REC_W, REC_H, "REACTOR SPACE", { pen("rs.press", 0, 200, "red", "SPACE PRESS", "kPa"), pen("rad.gas", 0, 100, "blue", "GAS ACTIVITY") })
-recorder("vert", 2.3, ROW_B, REC_W, REC_H, "DRUM SEPARATORS", { pen("pri.press", 0, 8, "red", "PRESSURE", "MPa"), pen("pri.temp", 0, 400, "blue", "TEMPERATURE", "C") })
-recorder("vert", 4.25, ROW_B, REC_W, REC_H, "EMERGENCY COOLING", { pen("eccs.flow", 0, 2500, "red", "INJECTION", "t/h"), pen("cps.flow", 0, 100, "blue", "CPS FLOW", "%") })
-group("vert", 6.45, PLATE_B, 3.95, "CHANNEL INTEGRITY")
-counter("vert", 6.5, ROW_B, "RUPTURED", "core.ruptured", 1.3, 4)
-counter("vert", 6.5, ROW_B + 0.86, "FUEL DAMAGED", "core.damaged", 1.3, 4)
-counter("vert", 6.5, ROW_B + 1.72, "FLOW BLOCKED", "core.blocked", 1.3, 4)
-lamp("vert", 8.0, ROW_B + 0.08, "SPACE PRESS HIGH", "rs.press", "red", { w = 2.35, gt = 5 })
-lamp("vert", 8.0, ROW_B + 0.5, "GAS ACTIVITY HIGH", "rad.gas", "amber", { w = 2.35, gt = 20 })
-lamp("vert", 8.0, ROW_B + 0.92, "CHANNEL FLOW LOW", "core.blocked", "amber", { w = 2.35 })
-lamp("vert", 8.0, ROW_B + 1.34, "FUEL FAILURE", "core.damaged", "red", { w = 2.35 })
-lamp("vert", 8.0, ROW_B + 1.76, "CHANNEL RUPTURE", "core.ruptured", "red", { w = 2.35 })
-meterGroup(10.85, PLATE_B, ROW_B, "CIRCUIT AND POOL", {
-	{ "CIRCUIT\nTEMP", "pri.temp", 0, 350, "C" },
-	{ "HEATUP\nRATE", "pri.heatup", -20, 20, "C/min", { fmt = "%.1f", red = 10 } },
-	{ "BUBBLER\nPOOL", "pool.temp", 0, 100, "C", { red = 45 } },
-}, 2.4)
-group("vert", 13.4, PLATE_B, 2.3, "SAFETY VALVES")
+group("vert", 7.8, PLATE_A, 3.0, "ECCS STATUS")
+lamp("vert", 7.85, 1.0, "ECCS ACTUATED", "eccs.active", "red", { w = 2.9 })
+lamp("vert", 7.85, 1.42, "AUTO ARMED", "eccs.auto", "white", { w = 2.9 })
+lamp("vert", 7.85, 1.84, "PUMP 1 RUNNING", "eccs.pump.1.run", "red", { w = 2.9 })
+lamp("vert", 7.85, 2.26, "PUMP 2 RUNNING", "eccs.pump.2.run", "red", { w = 2.9 })
+lamp("vert", 7.85, 2.68, "PUMP 3 RUNNING", "eccs.pump.3.run", "red", { w = 2.9 })
+lamp("vert", 7.85, 3.1, "INJECTING", "eccs.flow", "red", { w = 2.9, gt = 10 })
+recorder("vert", 0.3, ROW_B, REC_W, REC_H, "REACTOR SPACE", { pen("rs.press", 0, 200, "red", "SPACE PRESS", "kPa"), pen("rad.gas", 0, 100, "blue", "GAS ACTIVITY") })
+recorder("vert", 2.25, ROW_B, REC_W, REC_H, "EMERGENCY COOLING", { pen("eccs.flow", 0, 2500, "red", "INJECTION", "t/h"), pen("cps.flow", 0, 100, "blue", "CPS FLOW", "%") })
+group("vert", 4.4, PLATE_B, 3.7, "CHANNEL INTEGRITY")
+counter("vert", 4.45, ROW_B, "RUPTURED", "core.ruptured", 1.3, 4)
+counter("vert", 4.45, ROW_B + 0.86, "FUEL DAMAGED", "core.damaged", 1.3, 4)
+counter("vert", 4.45, ROW_B + 1.72, "FLOW BLOCKED", "core.blocked", 1.3, 4)
+lamp("vert", 5.9, ROW_B + 0.08, "SPACE PRESS HIGH", "rs.press", "red", { w = 2.15, gt = 5 })
+lamp("vert", 5.9, ROW_B + 0.5, "GAS ACTIVITY HIGH", "rad.gas", "amber", { w = 2.15, gt = 20 })
+lamp("vert", 5.9, ROW_B + 0.92, "CHANNEL FLOW LOW", "core.blocked", "amber", { w = 2.15 })
+lamp("vert", 5.9, ROW_B + 1.34, "FUEL FAILURE", "core.damaged", "red", { w = 2.15 })
+lamp("vert", 5.9, ROW_B + 1.76, "CHANNEL RUPTURE", "core.ruptured", "red", { w = 2.15 })
+group("vert", 8.4, PLATE_B, 2.4, "SAFETY VALVES")
 for g = 1, 3 do
-	lamp("vert", 13.45, ROW_B + 0.08 + (g - 1) * 0.42, "GROUP " .. g .. " OPEN", "srv." .. g .. ".open", "red", { w = 2.2 })
+	lamp("vert", 8.45, ROW_B + 0.08 + (g - 1) * 0.42, "GROUP " .. g .. " OPEN", "srv." .. g .. ".open", "red", { w = 2.3 })
 end
+lamp("vert", 8.45, ROW_B + 1.34, "POOL TEMP HIGH", "pool.temp", "amber", { w = 2.3, gt = 45 })
 
--- Bench. Rod channel cooling and the reactor space on the left; emergency
--- core cooling, which arms and actuates itself, in the middle; the safety
--- valves, which open by themselves on high pressure, on the right.
-group("bench", 0.45, BENCH_PLATE, 3.0, "ROD CHANNEL COOLING")
-hmeter("bench", 0.5, BACK_ROW, "CPS FLOW", "cps.flow", 0, 100, "%", { w = 2.9, low = 50 })
-hmeter("bench", 0.5, BACK_ROW + 0.8, "HEADER TANK LEVEL", "cps.tank", 0, 100, "%", { w = 2.9, low = 60 })
-lamp("bench", 0.5, BACK_ROW + 1.6, "TANK MAKEUP OPEN", "cps.makeup", "white", { w = 2.9 })
-pump("bench", 0.5, FRONT_ROW, "CPS\nPUMP 1", "cps.pump.1", "cps.pump.1.run")
-pump("bench", 2.05, FRONT_ROW, "CPS\nPUMP 2", "cps.pump.2", "cps.pump.2.run")
-group("bench", 4.35, BENCH_PLATE, 4.15, "EMERGENCY CORE COOLING")
-lamp("bench", 4.4, BACK_ROW, "ECCS ACTUATED", "eccs.active", "red", { w = 2.0 })
-lamp("bench", 4.4, BACK_ROW + 0.48, "INJECTING", "eccs.flow", "red", { w = 2.0, gt = 10 })
-lamp("bench", 4.4, BACK_ROW + 0.96, "AUTO ARMED", "eccs.auto", "white", { w = 2.0 })
-lamp("bench", 4.4, BACK_ROW + 1.44, "ACCUMULATOR LOW", "eccs.accum", "amber", { w = 2.0, lt = 90 })
+-- Bench. Rod channel cooling on the left; emergency core cooling, which
+-- arms and actuates itself, in the middle; the cooldown system and the
+-- safety valves, which open by themselves on high pressure, on the right.
+group("bench", 0.2, BENCH_PLATE, 2.95, "ROD CHANNEL COOLING")
+hmeter("bench", 0.25, BACK_ROW, "CPS FLOW", "cps.flow", 0, 100, "%", { w = 2.85, low = 50 })
+hmeter("bench", 0.25, BACK_ROW + 0.8, "HEADER TANK LEVEL", "cps.tank", 0, 100, "%", { w = 2.85, low = 60 })
+lamp("bench", 0.25, BACK_ROW + 1.6, "TANK MAKEUP OPEN", "cps.makeup", "white", { w = 2.85 })
+pump("bench", 0.25, FRONT_ROW, "CPS\nPUMP 1", "cps.pump.1", "cps.pump.1.run")
+pump("bench", 1.75, FRONT_ROW, "CPS\nPUMP 2", "cps.pump.2", "cps.pump.2.run")
+group("bench", 3.35, BENCH_PLATE, 3.85, "EMERGENCY CORE COOLING")
+lamp("bench", 3.4, BACK_ROW, "ECCS ACTUATED", "eccs.active", "red", { w = 1.85 })
+lamp("bench", 3.4, BACK_ROW + 0.48, "INJECTING", "eccs.flow", "red", { w = 1.85, gt = 10 })
+lamp("bench", 3.4, BACK_ROW + 0.96, "AUTO ARMED", "eccs.auto", "white", { w = 1.85 })
+lamp("bench", 3.4, BACK_ROW + 1.44, "ACCUMULATOR LOW", "eccs.accum", "amber", { w = 1.85, lt = 90 })
 for i = 1, 3 do
-	lamp("bench", 6.5, BACK_ROW + (i - 1) * 0.48, "PUMP " .. i .. " RUNNING", "eccs.pump." .. i .. ".run", "red", { w = 1.95 })
+	lamp("bench", 5.3, BACK_ROW + (i - 1) * 0.48, "PUMP " .. i .. " RUNNING", "eccs.pump." .. i .. ".run", "red", { w = 1.85 })
 end
-lamp("bench", 6.5, BACK_ROW + 1.44, "POOL TEMP HIGH", "pool.temp", "amber", { w = 1.95, gt = 45 })
-toggle("bench", 4.4, FRONT_ROW, "AUTO\nACTUATION", "eccs.auto", "eccs.auto", { labels = { "OFF", "ARMED" }, key = true })
-button("bench", 6.0, FRONT_ROW, "MANUAL\nINITIATE", "eccs.manual", { color = "red", guard = true, w = 1.1 })
-button("bench", 7.35, FRONT_ROW, "ECCS\nRESET", "eccs.reset", { color = "black", w = 1.1 })
-group("bench", 9.3, BENCH_PLATE, 1.55, "SHUTDOWN COOLING")
-digital("bench", 9.35, BACK_ROW, "CIRCUIT TEMP", "pri.temp", "%.0f", "C", 1.45, 3)
-digital("bench", 9.35, BACK_ROW + 0.9, "HEATUP RATE", "pri.heatup", "%.1f", "C/min", 1.45, 3)
-toggle("bench", 9.4, FRONT_ROW, "COOLDOWN\nSYSTEM", "pri.cooldown", "pri.cooldown")
-group("bench", 11.6, BENCH_PLATE, 1.55, "SAFETY VALVES")
+lamp("bench", 5.3, BACK_ROW + 1.44, "POOL TEMP HIGH", "pool.temp", "amber", { w = 1.85, gt = 45 })
+toggle("bench", 3.4, FRONT_ROW, "AUTO\nACTUATION", "eccs.auto", "eccs.auto", { labels = { "OFF", "ARMED" }, key = true })
+button("bench", 4.9, FRONT_ROW, "MANUAL\nINITIATE", "eccs.manual", { color = "red", guard = true, w = 1.1 })
+button("bench", 6.15, FRONT_ROW, "ECCS\nRESET", "eccs.reset", { color = "black" })
+group("bench", 7.45, BENCH_PLATE, 1.45, "COOLDOWN")
+digital("bench", 7.5, BACK_ROW, "CIRCUIT TEMP", "pri.temp", "%.0f", "C", 1.35, 3)
+digital("bench", 7.5, BACK_ROW + 0.9, "HEATUP RATE", "pri.heatup", "%.1f", "C/min", 1.35, 3)
+toggle("bench", 7.5, FRONT_ROW, "COOLDOWN\nSYSTEM", "pri.cooldown", "pri.cooldown")
+group("bench", 9.1, BENCH_PLATE, 1.75, "SAFETY VALVES")
 for g = 1, 3 do
-	lamp("bench", 11.65, BACK_ROW + (g - 1) * 0.48, "GROUP " .. g .. " OPEN", "srv." .. g .. ".open", "red", { w = 1.45 })
+	lamp("bench", 9.15, BACK_ROW + (g - 1) * 0.48, "GROUP " .. g .. " OPEN", "srv." .. g .. ".open", "red", { w = 1.65 })
 end
-lamp("bench", 11.65, BACK_ROW + 1.44, "PRESS HIGH", "pri.press", "amber", { w = 1.45, gt = 7.2 })
-toggle("bench", 11.7, FRONT_ROW, "SAFETY\nVALVES", "srv.manual", "srv.manual", { labels = { "AUTO", "OPEN" } })
-group("bench", 13.7, BENCH_PLATE, 1.95, "REACTOR SPACE")
-hmeter("bench", 13.75, BACK_ROW, "SPACE PRESS", "rs.press", 0, 200, "kPa", { w = 1.85, red = 5 })
-hmeter("bench", 13.75, BACK_ROW + 0.8, "GAS ACTIVITY", "rad.gas", 0, 100, "", { w = 1.85, red = 20 })
--- Relief steam from the safety valves goes down to the bubbler pool.
-group("bench", 13.7, FRONT_ROW + 0.4, 1.95, "BUBBLER POOL")
-hmeter("bench", 13.75, FRONT_ROW + 0.74, "POOL TEMP", "pool.temp", 0, 100, "C", { w = 1.85, red = 45 })
-mimic("bench", "steam", { { 12.375, FRONT_ROW + 1.85 }, { 12.375, FOOT }, { 14.675, FOOT }, { 14.675, FRONT_ROW + 1.46 } })
+lamp("bench", 9.15, BACK_ROW + 1.44, "PRESS HIGH", "pri.press", "amber", { w = 1.65, gt = 7.2 })
+toggle("bench", 9.3, FRONT_ROW, "SAFETY\nVALVES", "srv.manual", "srv.manual", { labels = { "AUTO", "OPEN" } })
 
 -- ------------------------------------------------------------------ P2
 panel("P2", "MAIN CIRCULATION CIRCUIT  ·  SIUB")
 annunciators()
 for l = 1, 2 do
 	local k = "loop." .. l
-	meterGroup(if l == 1 then 0.3 else 7.45, PLATE_A, ROW_A, "LOOP " .. (if l == 1 then "A (WEST" else "B (EAST") .. " HALF)", {
+	meterGroup(if l == 1 then 0.3 else 5.9, PLATE_A, ROW_A, "LOOP " .. (if l == 1 then "A (WEST" else "B (EAST") .. " HALF)", {
 		{ "DRUM\nLEVEL", k .. ".level", -600, 600, "mm", { tip = "Narrow-range drum level, the one the level controller uses. Scram at -600 and +400 mm." } },
-		{ "LEVEL\nWIDE", k .. ".levelWide", -1500, 1500, "mm" },
 		{ "LOOP\nFLOW", k .. ".flow", 0, 20000, "t/h" },
-		{ "INLET\nTEMP", k .. ".tin", 0, 300, "C" },
 		{ "INLET\nSUBCOOL", k .. ".subcool", 0, 40, "C", { fmt = "%.1f", tip = "How far below boiling the water entering the core is. Feedwater flow is what provides it." } },
 		{ "SUCTION\nMARGIN", k .. ".npsh", 0, 2, "MPa", { fmt = "%.2f", low = 0.13, tip = "Pump suction margin. Below the red mark the pumps cavitate: throttle them or restore feedwater." } },
 	})
 end
-meterGroup(4.95, PLATE_A, ROW_A, "DRUM SEPARATORS", {
+meterGroup(3.45, PLATE_A, ROW_A, "DRUM SEPARATORS", {
 	{ "PRESS", "pri.press", 0, 10, "MPa", { fmt = "%.2f", red = 7.35 } },
 	{ "TEMP", "pri.temp", 0, 350, "C" },
 	{ "HEATUP\nRATE", "pri.heatup", -20, 20, "C/min", { fmt = "%.1f", red = 10 } },
 })
-meterGroup(12.1, PLATE_A, ROW_A, "CORE FLOW", {
+meterGroup(9.05, PLATE_A, ROW_A, "CORE FLOW", {
 	{ "CORE\nFLOW", "pri.flow", 0, 40000, "t/h" },
 	{ "CORE\nSTEAM", "core.steam", 0, 5000, "t/h" },
-	{ "HEAD\nLOOP A", "loop.1.dp", 0, 2.5, "MPa", { fmt = "%.2f" } },
-	{ "HEAD\nLOOP B", "loop.2.dp", 0, 2.5, "MPa", { fmt = "%.2f" } },
 })
 recorder("vert", 0.3, ROW_B, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
 recorder("vert", 2.25, ROW_B, REC_W, REC_H, "LOOP FLOW", { pen("loop.1.flow", 0, 20000, "red", "LOOP A", "t/h"), pen("loop.2.flow", 0, 20000, "blue", "LOOP B", "t/h") })
-recorder("vert", 4.2, ROW_B, REC_W, REC_H, "CORE FLOW AND STEAM", { pen("pri.flow", 0, 40000, "red", "CORE FLOW", "t/h"), pen("steam.total", 0, 5000, "blue", "STEAM", "t/h") })
-recorder("vert", 6.15, ROW_B, REC_W, REC_H, "CORE INLET TEMP", { pen("loop.1.tin", 0, 300, "red", "LOOP A", "C"), pen("loop.2.tin", 0, 300, "blue", "LOOP B", "C") })
 do
 	local items = {}
 	for l = 1, 2 do
@@ -952,52 +927,47 @@ do
 			table.insert(items, { string.format("MCP\n%d%d", l, i), string.format("mcp.%d%d.current", l, i), 0, 800, "A", { red = 700 } })
 		end
 	end
-	meterGroup(8.45, PLATE_B, ROW_B, "MCP MOTOR CURRENT", items, 2.4)
+	meterGroup(4.45, PLATE_B, ROW_B, "MCP MOTOR CURRENT", items, 2.4)
 end
--- Bench: each loop's main circulation pumps in the front row; behind them
--- the loop's throttles (one control moves all four), its flow, suction
--- margin and cavitation lamps. The drum separators in between.
+
+-- Bench: each loop's four main circulation pumps in the front row; behind
+-- them the loop's throttles (one control moves all four), its flow and
+-- suction margin, and a cavitation lamp for each pump.
 for l = 1, 2 do
-	local x0 = if l == 1 then 0.45 else 9.55
+	local x0 = if l == 1 then 0.2 else 5.8
 	local k = "loop." .. l
-	group("bench", x0 - 0.05, BENCH_PLATE, 6.1, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
+	group("bench", x0 - 0.05, BENCH_PLATE, 5.1, "LOOP " .. (if l == 1 then "A" else "B") .. " MAIN CIRCULATION PUMPS")
 	jog("bench", x0, BACK_ROW, "THROTTLES", k .. ".throttle", k .. ".throttle", "%.0f", "%")
-	hmeter("bench", x0 + 1.95, BACK_ROW, "LOOP FLOW", k .. ".flow", 0, 20000, "t/h", { w = 2.0 })
-	hmeter("bench", x0 + 1.95, BACK_ROW + 0.8, "SUCTION MARGIN", k .. ".npsh", 0, 2, "MPa", { w = 2.0, low = 0.13, fmt = "%.2f" })
-	lamp("bench", x0 + 1.95, BACK_ROW + 1.6, "LOOP FLOW LOW", k .. ".flow", "amber", { w = 2.0, lt = 9000 })
+	hmeter("bench", x0 + 1.77, BACK_ROW, "LOOP FLOW", k .. ".flow", 0, 20000, "t/h", { w = 1.6 })
+	hmeter("bench", x0 + 1.77, BACK_ROW + 0.8, "SUCTION MARGIN", k .. ".npsh", 0, 2, "MPa", { w = 1.6, low = 0.13, fmt = "%.2f" })
+	lamp("bench", x0 + 1.77, BACK_ROW + 1.6, "FLOW LOW", k .. ".flow", "amber", { w = 1.6, lt = 9000 })
 	for i = 1, 4 do
 		local key = string.format("mcp.%d%d", l, i)
-		lamp("bench", x0 + 4.2, BACK_ROW + (i - 1) * 0.48, string.format("MCP-%d%d CAVIT", l, i), key .. ".cav", "amber", { w = 1.8 })
-		pump("bench", x0 + (i - 1) * 1.55, FRONT_ROW, string.format("MCP-%d%d", l, i), key .. ".sw", key .. ".run")
+		lamp("bench", x0 + 3.44, BACK_ROW + (i - 1) * 0.48, string.format("MCP-%d%d CAVIT", l, i), key .. ".cav", "amber", { w = 1.56 })
+		pump("bench", x0 + (i - 1) * 1.27, FRONT_ROW, string.format("MCP-%d%d", l, i), key .. ".sw", key .. ".run", 1.2)
 		-- Each pump's discharge into the loop's pressure header.
-		local cx = x0 + (i - 1) * 1.55 + 0.675
+		local cx = x0 + (i - 1) * 1.27 + 0.6
 		mimic("bench", "water", { { cx, FRONT_ROW + 1.85 }, { cx, FOOT } })
 	end
-	-- The pressure header, led off to the core.
-	local inner = if l == 1 then 7.3 else 8.7
-	mimic("bench", "water", { { x0 + 0.675 + (if l == 1 then 0 else 3 * 1.55), FOOT }, { inner, FOOT }, { inner, FRONT_ROW + 1.62 } })
+	mimic("bench", "water", { { x0 + 0.6, FOOT }, { x0 + 3 * 1.27 + 0.6, FOOT } })
 end
-group("bench", 6.75, BENCH_PLATE, 2.5, "DRUM SEPARATORS")
-digital("bench", 6.85, BACK_ROW, "PRESSURE", "pri.press", "%.2f", "MPa", 2.3, 4)
-digital("bench", 6.85, BACK_ROW + 0.9, "TEMPERATURE", "pri.temp", "%.0f", "C", 2.3, 3)
-digital("bench", 6.85, FRONT_ROW, "CORE FLOW", "pri.flow", "%.0f", "t/h", 2.3, 5)
-group("bench", 6.95, FRONT_ROW + 1.3, 2.1, "TO CORE")
 
 -- ------------------------------------------------------------------ P3
 -- The reactor operator's board, the widest section, set across the corner.
 -- Its vertical board carries the rod position indicators (a synchro dial
 -- for every rod, laid out as the core, as on the RBMK's rod position
--- board), the channel cartogram, the axial power bargraph and the neutron
--- monitoring. Its bench is the SIUR's desk: rod selection keys in core
--- geometry, a spring-return rod movement key and a four-rod display, the
--- rod groups, the power regulators, the emergency protection (AZ-5 under
--- its cover) and the bypass keys.
-panel("P3", "REACTOR CONTROL  ·  SIUR", 24)
+-- board), the channel cartogram (click it to change what it shows), the
+-- axial power bargraph, the neutron monitoring and the SKALA figures. Its
+-- bench is the SIUR's desk: rod selection keys in core geometry, the rod
+-- movement switch and a four-rod display, the group selections, the power
+-- regulators, and the emergency protection: AZ-5 under its cover, the KOM
+-- key and the bypass keys.
+panel("P3", "REACTOR CONTROL  ·  SIUR", 19)
 annunciators()
-add({ kind = "rodpos", face = "vert", x = 0.3, y = 0.62, w = 6.2, h = 5.85, label = "ROD POSITION" })
-add({ kind = "coremap", face = "vert", x = 6.7, y = 0.62, w = 5.85, h = 5.85, label = "CORE MAP" })
-add({ kind = "axial", face = "vert", x = 12.7, y = 0.62, w = 1.3, h = 5.85, label = "AXIAL" })
-meterGroup(14.35, PLATE_A, ROW_A, "NEUTRON MONITORING", {
+add({ kind = "rodpos", face = "vert", x = 0.2, y = 0.62, w = 5.8, h = 5.8, label = "ROD POSITION" })
+add({ kind = "coremap", face = "vert", x = 6.15, y = 0.62, w = 5.8, h = 5.8, label = "CORE MAP" })
+add({ kind = "axial", face = "vert", x = 12.1, y = 0.62, w = 1.0, h = 5.8, label = "AXIAL" })
+meterGroup(13.5, PLATE_A, ROW_A, "NEUTRON MONITORING", {
 	{ "SOURCE\nRANGE", "n.logcps", 0, 6, "log cps", { fmt = "%.1f", tip = "Source range count rate, log scale. Watch it double as rods come out on the approach to criticality." } },
 	{ "INTERM\nRANGE", "n.log", -9, 1, "log P", { fmt = "%.1f", tip = "Intermediate range: log10 of reactor power as a fraction of nominal." } },
 	{ "POWER\nRANGE", "n.power", 0, 125, "%", { fmt = "%.1f", red = 110, amber = 100 } },
@@ -1005,48 +975,40 @@ meterGroup(14.35, PLATE_A, ROW_A, "NEUTRON MONITORING", {
 	{ "AR\nERROR", "ar.error", -10, 10, "%", { fmt = "%.1f", tip = "Reactor power minus regulator setpoint. Null this before switching a regulator in." } },
 	{ "AXIAL\nOFFSET", "core.offset", -50, 50, "%", { tip = "Axial power offset: positive is top-heavy." } },
 })
-group("vert", 19.0, PLATE_A, 4.7, "SKALA")
-digital("vert", 19.05, 0.95, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.2, 4)
-digital("vert", 21.45, 0.95, "PERIOD", "n.period", "%.0f", "s", 2.2, 4)
-digital("vert", 19.05, 1.85, "ORM", "core.orm", "%.0f", "rods", 2.2, 3)
-digital("vert", 21.45, 1.85, "VOID COEF", "core.void", "%+.2f", "beta", 2.2, 4)
-digital("vert", 19.05, 2.75, "XENON", "core.xenon", "%+.2f", "% dk", 2.2, 4)
-digital("vert", 21.45, 2.75, "REACTIVITY", "n.rho", "%+.2f", "beta", 2.2, 5)
-add({ kind = "computer", face = "vert", x = 14.35, y = 3.75, w = 6.6, h = 2.7, label = "SKALA" })
-recorder("vert", 21.45, ROW_B, REC_W, REC_H, "NEUTRON POWER", { pen("n.log", -9, 1, "red", "LOG POWER", "log P"), pen("n.power", 0, 125, "blue", "LINEAR", "%") })
+group("vert", 13.45, PLATE_B, 5.35, "SKALA")
+digital("vert", 13.5, ROW_B, "THERMAL POWER", "n.thermal", "%.0f", "MW", 2.55, 4)
+digital("vert", 16.2, ROW_B, "PERIOD", "n.period", "%.0f", "s", 2.55, 4)
+digital("vert", 13.5, ROW_B + 0.86, "ORM", "core.orm", "%.0f", "rods", 2.55, 3)
+digital("vert", 16.2, ROW_B + 0.86, "VOID COEF", "core.void", "%+.2f", "beta", 2.55, 4)
+digital("vert", 13.5, ROW_B + 1.72, "XENON", "core.xenon", "%+.2f", "% dk", 2.55, 4)
+digital("vert", 16.2, ROW_B + 1.72, "REACTIVITY", "n.rho", "%+.2f", "beta", 2.55, 5)
 
-add({ kind = "rodmatrix", face = "bench", x = 0.25, y = 0.35, w = 4.5, h = 4.5, label = "ROD SELECT" })
-group("bench", 5.1, BENCH_PLATE, 5.55, "ROD MOTION")
-add({ kind = "fourrod", face = "bench", x = 5.15, y = BACK_ROW, w = 5.45, h = 1.85, label = "FOUR ROD DISPLAY" })
-add({ kind = "rodswitch", face = "bench", x = 5.15, y = FRONT_ROW, w = 2.0, h = 1.85, label = "ROD MOVEMENT", cmd = "rod.move", positions = { "INSERT", "OFF", "WITHDRAW" } })
-button("bench", 7.4, FRONT_ROW, "CLEAR\nSELECT", "rod.clear", { color = "black" })
-button("bench", 8.5, FRONT_ROW, "SELECT\nAZ RODS", "rod.group", { value = 1, color = "red" })
-button("bench", 9.6, FRONT_ROW, "SELECT\nUSP", "rod.group", { value = 2, color = "blue" })
-digital("bench", 7.4, FRONT_ROW + 1.12, "SELECTED", "rod.selCount", "%.0f", "", 1.3, 3)
-lamp("bench", 8.85, FRONT_ROW + 1.12, "ROD BLOCK", "rod.block", "amber", { w = 1.75 })
-lamp("bench", 8.85, FRONT_ROW + 1.56, "AZ RODS OUT", "rod.azOut", "green", { w = 1.75 })
-group("bench", 11.0, BENCH_PLATE, 5.15, "POWER REGULATORS")
-digital("bench", 11.05, BACK_ROW, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.45, 3)
-digital("bench", 12.65, BACK_ROW, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.45, 3)
-digital("bench", 11.05, BACK_ROW + 0.86, "USP MEAN", "rod.meanUSP", "%.2f", "m", 1.45, 3)
-digital("bench", 12.65, BACK_ROW + 0.86, "LAR MEAN", "rod.meanLAR", "%.2f", "m", 1.45, 3)
-selector("bench", 14.5, BACK_ROW, "MAP SHOWS", "map.mode", "map.mode", { "FLUX", "POWER", "MARGIN", "FLOW", "QUAL", "FUEL T", "XENON", "GRAPH" }, 1)
-selector("bench", 11.05, FRONT_ROW, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
-jog("bench", 12.8, FRONT_ROW, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digits = true })
-toggle("bench", 14.75, FRONT_ROW, "LOCAL\nREGULATORS", "lar.sw", "lar.on")
-group("bench", 16.5, BENCH_PLATE, 3.4, "EMERGENCY PROTECTION")
+add({ kind = "rodmatrix", face = "bench", x = 0.2, y = 0.35, w = 4.2, h = 4.5, label = "ROD SELECT" })
+group("bench", 4.55, BENCH_PLATE, 5.45, "ROD MOTION")
+add({ kind = "fourrod", face = "bench", x = 4.6, y = BACK_ROW, w = 4.0, h = 1.85, label = "FOUR ROD DISPLAY" })
+lamp("bench", 8.7, BACK_ROW, "ROD BLOCK", "rod.block", "amber", { w = 1.25 })
+lamp("bench", 8.7, BACK_ROW + 0.48, "AZ RODS OUT", "rod.azOut", "green", { w = 1.25 })
+digital("bench", 8.7, BACK_ROW + 0.98, "SELECTED", "rod.selCount", "%.0f", "", 1.25, 3)
+add({ kind = "rodswitch", face = "bench", x = 4.6, y = FRONT_ROW, w = 2.0, h = 1.85, label = "ROD MOVEMENT", cmd = "rod.move", positions = { "INSERT", "OFF", "WITHDRAW" } })
+button("bench", 6.7, FRONT_ROW, "CLEAR\nSELECT", "rod.clear", { color = "black" })
+button("bench", 7.8, FRONT_ROW, "SELECT\nAZ RODS", "rod.group", { value = 1, color = "red" })
+button("bench", 8.9, FRONT_ROW, "SELECT\nUSP", "rod.group", { value = 2, color = "blue" })
+group("bench", 10.15, BENCH_PLATE, 3.45, "POWER REGULATORS")
+toggle("bench", 10.2, BACK_ROW, "LOCAL\nREGULATORS", "lar.sw", "lar.on")
+digital("bench", 11.7, BACK_ROW, "RR MEAN", "rod.meanRR", "%.2f", "m", 1.8, 3)
+digital("bench", 11.7, BACK_ROW + 0.86, "AZ MEAN", "rod.meanAZ", "%.2f", "m", 1.8, 3)
+selector("bench", 10.2, FRONT_ROW, "REGULATOR", "ar.mode", "ar.mode", { "OFF", "AR-1", "AR-2", "AR-3" })
+jog("bench", 11.8, FRONT_ROW, "SETPOINT", "ar.sp", "ar.setpoint", "%.2f", "%", { digits = true })
+group("bench", 13.8, BENCH_PLATE, 5.1, "EMERGENCY PROTECTION")
 for n = 1, 5 do
-	lamp("bench", 16.55, BACK_ROW + (5 - n) * 0.38, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.6, h = 0.36 })
+	lamp("bench", 13.85, BACK_ROW + (5 - n) * 0.38, "AZ-" .. n, "az" .. n .. ".active", "red", { w = 1.5, h = 0.36 })
 end
-toggle("bench", 18.45, BACK_ROW, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", "DROP" }, key = true })
-button("bench", 16.55, FRONT_ROW, "AZ-5", "az5.button", { color = "red", big = true, guard = true, w = 1.5, h = 1.95 })
-button("bench", 18.4, FRONT_ROW, "AZ\nRESET", "az.reset", { color = "black" })
-group("bench", 20.25, BENCH_PLATE, 3.5, "ANNUNCIATOR")
-annunciatorButtons(20.3, BACK_ROW + 0.45, 1.15)
-group("bench", 20.25, FRONT_ROW - 0.34, 3.5, "PROTECTION BYPASS KEYS")
 for i, k in { { "turbines", "2 TG" }, { "level", "LEVEL" }, { "mcp", "MCP" } } do
-	add({ kind = "toggle", face = "bench", x = 20.3 + (i - 1) * 1.15, y = FRONT_ROW, w = 1.1, h = 1.7, label = k[2], cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
+	add({ kind = "toggle", face = "bench", x = 15.45 + (i - 1) * 1.15, y = BACK_ROW, w = 1.1, h = 1.7, label = k[2] .. "\nBYPASS", cmd = "prot.bypass." .. k[1], sig = "prot.bypass." .. k[1], positions = { "", "BYP" }, key = true, compact = true })
 end
+button("bench", 13.85, FRONT_ROW, "AZ-5", "az5.button", { color = "red", big = true, guard = true, w = 1.5, h = 1.95 })
+button("bench", 15.5, FRONT_ROW, "AZ\nRESET", "az.reset", { color = "black" })
+toggle("bench", 16.65, FRONT_ROW, "KOM\nCLUTCHES", "kom", "kom", { labels = { "NORM", "DROP" }, key = true, compact = true })
 
 -- ------------------------------------------------------------------ P4
 panel("P4", "FEEDWATER AND CONDENSATE  ·  SIUB")
@@ -1059,93 +1021,73 @@ meterGroup(0.3, PLATE_A, ROW_A, "FEEDWATER", {
 	{ "HEADER\nPRESS", "fw.header", 0, 12, "MPa", { fmt = "%.1f" } },
 	{ "FEED\nTEMP", "fw.temp", 0, 250, "C" },
 })
-do
-	local items = {}
-	for i = 1, 4 do
-		table.insert(items, { "FWP-" .. i .. "\nFLOW", "fw.pump." .. i .. ".flow", 0, 2000, "t/h" })
-	end
-	meterGroup(4.95, PLATE_A, ROW_A, "FEED PUMPS", items)
-end
-meterGroup(8.15, PLATE_A, ROW_A, "DEAERATOR AND CONDENSATE", {
+meterGroup(4.9, PLATE_A, ROW_A, "DEAERATOR", {
 	{ "DEAER\nLEVEL", "da.level", 0, 100, "%", { low = 25 } },
 	{ "DEAER\nTEMP", "da.temp", 0, 200, "C" },
 	{ "COND\nFLOW", "cond.flow", 0, 5000, "t/h" },
-	{ "HOTWELL\n1", "tg.1.hotwell", 0, 100, "%" },
-	{ "HOTWELL\n2", "tg.2.hotwell", 0, 100, "%" },
 })
 do
 	local items = {}
 	for i = 1, 3 do
 		table.insert(items, { "AFWP-" .. i .. "\nAMPS", "afw.pump." .. i .. ".current", 0, 150, "A" })
 	end
-	meterGroup(12.1, PLATE_A, ROW_A, "EMERGENCY FEED", items)
+	meterGroup(7.35, PLATE_A, ROW_A, "EMERGENCY FEED", items)
 end
 recorder("vert", 0.3, ROW_B, REC_W, REC_H, "FEEDWATER FLOW", { pen("loop.1.feed", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.feed", 0, 2500, "blue", "DRUMS B", "t/h") })
-recorder("vert", 2.25, ROW_B, REC_W, REC_H, "STEAM FLOW", { pen("loop.1.steam", 0, 2500, "red", "DRUMS A", "t/h"), pen("loop.2.steam", 0, 2500, "blue", "DRUMS B", "t/h") })
-recorder("vert", 4.2, ROW_B, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
-recorder("vert", 6.15, ROW_B, REC_W, REC_H, "DEAERATOR", { pen("da.level", 0, 100, "red", "LEVEL", "%"), pen("da.temp", 0, 200, "blue", "TEMPERATURE", "C") })
+recorder("vert", 2.25, ROW_B, REC_W, REC_H, "DRUM LEVEL", { pen("loop.1.level", -600, 600, "red", "DRUM A", "mm"), pen("loop.2.level", -600, 600, "blue", "DRUM B", "mm") })
 do
 	local items = {}
 	for i = 1, 4 do
 		table.insert(items, { "FWP-" .. i .. "\nAMPS", "fw.pump." .. i .. ".current", 0, 700, "A", { red = 620 } })
 	end
-	meterGroup(8.45, PLATE_B, ROW_B, "FEED PUMP CURRENT", items, 2.4)
+	meterGroup(4.45, PLATE_B, ROW_B, "FEED PUMP CURRENT", items, 2.4)
 	local cps = {}
 	for i = 1, 2 do
 		table.insert(cps, { "CP-" .. i .. "\nAMPS", "cond.pump." .. i .. ".current", 0, 200, "A" })
 	end
-	meterGroup(11.65, PLATE_B, ROW_B, "COND PUMPS", cps, 2.4)
+	meterGroup(7.6, PLATE_B, ROW_B, "COND PUMPS", cps, 2.4)
 end
-meterGroup(14.15, PLATE_B, ROW_B, "TOTALS", {
+meterGroup(9.3, PLATE_B, ROW_B, "TOTALS", {
 	{ "TOTAL\nFEED", "fw.total", 0, 5000, "t/h" },
 	{ "TOTAL\nSTEAM", "steam.total", 0, 5000, "t/h" },
 }, 2.4)
--- Bench: each feed pump's switch under its flow meter and ammeter; the
--- condensate pumps under the deaerator; the drum level controllers with
--- their valve and level meters. The deaerator level controller, the
--- pegging steam and the emergency feed pumps look after themselves.
-group("bench", 0.35, BENCH_PLATE, 6.1, "MAIN FEEDWATER PUMPS")
-for i = 1, 4 do
-	local x = 0.4 + (i - 1) * 1.55
-	local key = "fw.pump." .. i
-	hmeter("bench", x, BACK_ROW, "FLOW", key .. ".flow", 0, 2000, "t/h")
-	hmeter("bench", x, BACK_ROW + 0.8, "AMPS", key .. ".current", 0, 700, "A", { red = 620 })
-	pump("bench", x, FRONT_ROW, "FWP-" .. i, key, key .. ".run")
-end
-group("bench", 6.85, BENCH_PLATE, 3.0, "CONDENSATE AND DEAERATOR")
-hmeter("bench", 6.9, BACK_ROW, "DEAERATOR LEVEL", "da.level", 0, 100, "%", { w = 2.9, low = 25 })
-hmeter("bench", 6.9, BACK_ROW + 0.8, "CONDENSATE FLOW", "cond.flow", 0, 5000, "t/h", { w = 2.9 })
-lamp("bench", 6.9, BACK_ROW + 1.6, "DEAERATOR LEVEL LOW", "da.level", "amber", { w = 2.9, lt = 25 })
-for i = 1, 2 do
-	pump("bench", 6.9 + (i - 1) * 1.55, FRONT_ROW, "CP-" .. i, "cond.pump." .. i, "cond.pump." .. i .. ".run")
-end
-group("bench", 10.3, BENCH_PLATE, 3.8, "DRUM LEVEL CONTROL")
+
+-- Bench: the feed pumps under the drum level controllers and their feed
+-- valves; the condensate pumps under the deaerator; the emergency feed
+-- pumps, which start and stop by themselves, have lamps only. The
+-- deaerator level controller and the pegging steam look after themselves.
+group("bench", 0.15, BENCH_PLATE, 5.85, "FEEDWATER")
 for l = 1, 2 do
-	local x = 10.35 + (l - 1) * 1.95
 	local d = if l == 1 then "A" else "B"
-	station("bench", x, BACK_ROW, "DRUM " .. d .. " LEVEL", {
+	station("bench", 0.2 + (l - 1) * 1.8, BACK_ROW, "DRUM " .. d .. " LEVEL", {
 		pv = "loop." .. l .. ".level", lo = -600, hi = 600, unit = "mm", spValue = 0,
 		out = "lvl." .. l .. ".valve", auto = "lvl." .. l .. ".auto", adj = "lvl." .. l .. ".valve",
 		tip = "Drum level controller: the feed regulating valve. A for automatic (three-element), M for manual; in manual the arrows move the valve.",
 	})
-	hmeter("bench", x, FRONT_ROW + 0.1, "FEED VALVE " .. d, "lvl." .. l .. ".valve", 0, 100, "%", { w = 1.7 })
-	hmeter("bench", x, FRONT_ROW + 0.9, "DRUM " .. d .. " LEVEL", "loop." .. l .. ".level", -600, 600, "mm", { w = 1.7 })
+	hmeter("bench", 3.8, BACK_ROW + (l - 1) * 0.8, "FEED VALVE " .. d, "lvl." .. l .. ".valve", 0, 100, "%", { w = 2.15 })
 end
-group("bench", 14.35, BENCH_PLATE, 1.5, "EMERGENCY FEED")
+for i = 1, 4 do
+	pump("bench", 0.2 + (i - 1) * 1.45, FRONT_ROW, "FWP-" .. i, "fw.pump." .. i, "fw.pump." .. i .. ".run")
+end
+group("bench", 6.2, BENCH_PLATE, 2.95, "CONDENSATE")
+hmeter("bench", 6.25, BACK_ROW, "DEAERATOR LEVEL", "da.level", 0, 100, "%", { w = 2.85, low = 25 })
+hmeter("bench", 6.25, BACK_ROW + 0.8, "CONDENSATE FLOW", "cond.flow", 0, 5000, "t/h", { w = 2.85 })
+lamp("bench", 6.25, BACK_ROW + 1.6, "DEAERATOR LEVEL LOW", "da.level", "amber", { w = 2.85, lt = 25 })
+for i = 1, 2 do
+	pump("bench", 6.3 + (i - 1) * 1.45, FRONT_ROW, "CP-" .. i, "cond.pump." .. i, "cond.pump." .. i .. ".run")
+end
+group("bench", 9.3, BENCH_PLATE, 1.6, "EMERGENCY FEED")
 for i = 1, 3 do
-	lamp("bench", 14.4, BACK_ROW + (i - 1) * 0.48, "AFWP-" .. i .. " RUN", "afw.pump." .. i .. ".run", "red", { w = 1.4 })
+	lamp("bench", 9.35, BACK_ROW + (i - 1) * 0.48, "AFWP-" .. i .. " RUN", "afw.pump." .. i .. ".run", "red", { w = 1.5 })
 end
-lamp("bench", 14.4, BACK_ROW + 1.44, "AUTO ARMED", "afw.auto", "white", { w = 1.4 })
-group("bench", 14.35, FRONT_ROW - 0.34, 1.5, "FEEDWATER")
-hmeter("bench", 14.4, FRONT_ROW + 0.1, "FEED TEMP", "fw.temp", 0, 250, "C", { w = 1.4 })
-hmeter("bench", 14.4, FRONT_ROW + 0.9, "HEADER PRESS", "fw.header", 0, 12, "MPa", { w = 1.4, fmt = "%.1f" })
--- The feedwater train: condensate and feed pumps to the level control valves.
-mimic("bench", "feed", { { 1.075, FOOT }, { 13.2, FOOT } })
-for _, x in { 1.075, 2.625, 4.175, 5.725, 7.575, 9.125 } do
+lamp("bench", 9.35, BACK_ROW + 1.44, "AUTO ARMED", "afw.auto", "white", { w = 1.5 })
+group("bench", 9.3, FRONT_ROW - 0.34, 1.6, "FEED HEADER")
+hmeter("bench", 9.35, FRONT_ROW + 0.1, "FEED TEMP", "fw.temp", 0, 250, "C", { w = 1.5 })
+hmeter("bench", 9.35, FRONT_ROW + 0.9, "HEADER PRESS", "fw.header", 0, 12, "MPa", { w = 1.5, fmt = "%.1f" })
+-- The feedwater train: condensate pumps and feed pumps on one header.
+mimic("bench", "feed", { { 0.875, FOOT }, { 8.425, FOOT } })
+for _, x in { 0.875, 2.325, 3.775, 5.225, 6.975, 8.425 } do
 	mimic("bench", "feed", { { x, FRONT_ROW + 1.85 }, { x, FOOT } })
-end
-for _, x in { 11.2, 13.15 } do
-	mimic("bench", "feed", { { x, FRONT_ROW + 1.62 }, { x, FOOT } })
 end
 
 -- ------------------------------------------------------------------ P5
@@ -1153,144 +1095,128 @@ panel("P5", "TURBINE-GENERATORS  ·  SIUT")
 annunciators()
 for k = 1, 2 do
 	local key = "tg." .. k
-	meterGroup(if k == 1 then 0.3 else 7.45, PLATE_A, ROW_A, "TURBINE " .. k, {
+	meterGroup(if k == 1 then 0.3 else 5.95, PLATE_A, ROW_A, "TURBINE " .. k, {
 		{ "SPEED", key .. ".rpm", 0, 2200, "rpm", { red = 1980 } },
 		{ "CONTROL\nVALVES", key .. ".cv", 0, 110, "%" },
-		{ "BYPASS", key .. ".bypass", 0, 100, "%" },
 		{ "COND\nPRESS", key .. ".vac", 0, 105, "kPa", { fmt = "%.1f", red = 30, amber = 15, tip = "Condenser absolute pressure. About 5 kPa is good vacuum; the turbine trips at 30." } },
 		{ "VIBRA-\nTION", key .. ".vib", 0, 15, "mm/s", { fmt = "%.1f", red = 11.8, amber = 7.1 } },
-		{ "METAL\nTEMP", key .. ".metal", 0, 300, "C" },
 		{ "THERMAL\nSTRESS", key .. ".stress", 0, 150, "", { red = 60, tip = "Steam-to-metal temperature difference weighted by steam flow. Above the red mark the turbine is being damaged: slow down." } },
 		{ "LUBE\nOIL", key .. ".lube", 0, 0.3, "MPa", { fmt = "%.2f", low = 0.12 } },
 	})
 end
-meterGroup(6.45, PLATE_A, ROW_A, "GRID", {
+meterGroup(4.95, PLATE_A, ROW_A, "GRID", {
 	{ "GRID\nFREQ", "grid.hz", 58, 62, "Hz", { fmt = "%.2f", tip = "Grid frequency. Bring the generator to this before closing its breaker." } },
-})
-meterGroup(13.55, PLATE_A, ROW_A, "CONDENSERS", {
-	{ "COND 1\nTEMP", "tg.1.condT", 0, 100, "C" },
-	{ "COND 2\nTEMP", "tg.2.condT", 0, 100, "C" },
 })
 meterGroup(0.3, PLATE_B, ROW_B, "PRESSURE CONTROL", {
 	{ "STEAM\nPRESS", "pri.press", 0, 10, "MPa", { fmt = "%.2f", red = 7.35 } },
 	{ "PRESS\nSET", "ehc.pressSet", 0, 10, "MPa", { fmt = "%.2f" } },
 	{ "STEAM\nDEMAND", "ehc.demand", 0, 120, "%" },
-	{ "TOTAL\nSTEAM", "steam.total", 0, 5000, "t/h" },
 }, 2.4)
-recorder("vert", 3.55, ROW_B, REC_W, REC_H, "TURBINE SPEED", { pen("tg.1.rpm", 0, 2000, "red", "TG-1", "rpm"), pen("tg.2.rpm", 0, 2000, "blue", "TG-2", "rpm") })
-recorder("vert", 5.5, ROW_B, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0, 450, "red", "GEN 1", "MW"), pen("gen.2.mw", 0, 450, "blue", "GEN 2", "MW") })
-recorder("vert", 7.45, ROW_B, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
-recorder("vert", 9.4, ROW_B, REC_W, REC_H, "SHELL METAL TEMP", { pen("tg.1.metal", 0, 300, "red", "TG-1", "C"), pen("tg.2.metal", 0, 300, "blue", "TG-2", "C") })
-meterGroup(11.7, PLATE_B, ROW_B, "TURBINE STEAM", {
+recorder("vert", 2.75, ROW_B, REC_W, REC_H, "TURBINE SPEED", { pen("tg.1.rpm", 0, 2000, "red", "TG-1", "rpm"), pen("tg.2.rpm", 0, 2000, "blue", "TG-2", "rpm") })
+recorder("vert", 4.7, ROW_B, REC_W, REC_H, "GENERATOR LOAD", { pen("gen.1.mw", 0, 450, "red", "GEN 1", "MW"), pen("gen.2.mw", 0, 450, "blue", "GEN 2", "MW") })
+recorder("vert", 6.65, ROW_B, REC_W, REC_H, "CONDENSER PRESSURE", { pen("tg.1.vac", 0, 30, "red", "COND 1", "kPa"), pen("tg.2.vac", 0, 30, "blue", "COND 2", "kPa") })
+meterGroup(8.85, PLATE_B, ROW_B, "TURBINE STEAM", {
 	{ "TG-1\nSTEAM", "tg.1.steam", 0, 2500, "t/h" },
 	{ "TG-2\nSTEAM", "tg.2.steam", 0, 2500, "t/h" },
-	{ "TG-1\nISOL VLV", "tg.1.iso", 0, 100, "%" },
-	{ "TG-2\nISOL VLV", "tg.2.iso", 0, 100, "%" },
 }, 2.4)
+
 -- Bench: for each turbine, the back row holds its auxiliaries switch (circ
 -- pumps, vacuum, ejectors and gland steam together; lube oil and turning
--- gear run by themselves), the latch, the steam admission and the speed and
--- vacuum meters; the front row the trip, speed set and load set. The
--- pressure regulator stands between them. The bypass valves are automatic.
+-- gear run by themselves), the latch and the steam admission; the front
+-- row the trip, speed set and load set. The pressure regulator stands
+-- between them. The bypass valves are automatic.
 for k = 1, 2 do
-	local x0 = if k == 1 then 0.35 else 9.25
+	local x0 = if k == 1 then 0.15 else 6.45
 	local key = "tg." .. k
-	group("bench", x0 - 0.05, BENCH_PLATE, 6.5, "TURBINE " .. k)
+	group("bench", x0 - 0.05, BENCH_PLATE, 4.5, "TURBINE " .. k)
 	toggle("bench", x0, BACK_ROW, "TURBINE\nAUXILIARIES", key .. ".aux", key .. ".aux")
-	button("bench", x0 + 1.6, BACK_ROW, "RESET\nLATCH", key .. ".reset", { color = "green" })
-	lamp("bench", x0 + 1.6, BACK_ROW + 1.12, "LATCHED", key .. ".stop", "green", { w = 1.1 })
-	jog("bench", x0 + 2.95, BACK_ROW, "STEAM ISOL", key .. ".iso", key .. ".iso", "%.0f", "%")
-	hmeter("bench", x0 + 4.9, BACK_ROW, "SPEED", key .. ".rpm", 0, 2200, "rpm", { w = 1.5, red = 1980 })
-	hmeter("bench", x0 + 4.9, BACK_ROW + 0.8, "COND PRESS", key .. ".vac", 0, 105, "kPa", { w = 1.5, red = 30 })
+	button("bench", x0 + 1.45, BACK_ROW, "RESET\nLATCH", key .. ".reset", { color = "green" })
+	lamp("bench", x0 + 1.45, BACK_ROW + 1.12, "LATCHED", key .. ".stop", "green", { w = 1.0 })
+	jog("bench", x0 + 2.6, BACK_ROW, "STEAM ISOL", key .. ".iso", key .. ".iso", "%.0f", "%")
 	button("bench", x0, FRONT_ROW, "TRIP", key .. ".trip", { color = "red", guard = true })
-	lamp("bench", x0, FRONT_ROW + 1.45, "TRIPPED", key .. ".trip", "red", { w = 1.1 })
-	selector("bench", x0 + 1.35, FRONT_ROW, "SPEED SET", key .. ".speed", key .. ".speedTarget", { "STOP", "500", "1800" })
-	jog("bench", x0 + 3.1, FRONT_ROW, "LOAD SET", key .. ".load", key .. ".load", "%.0f", "%")
-	hmeter("bench", x0 + 5.05, FRONT_ROW + 0.1, "GENERATOR", "gen." .. k .. ".mw", 0, 450, "MW")
+	lamp("bench", x0, FRONT_ROW + 1.45, "TRIPPED", key .. ".trip", "red", { w = 1.0 })
+	selector("bench", x0 + 1.1, FRONT_ROW, "SPEED SET", key .. ".speed", key .. ".speedTarget", { "STOP", "500", "1800" })
+	jog("bench", x0 + 2.7, FRONT_ROW, "LOAD SET", key .. ".load", key .. ".load", "%.0f", "%")
 end
-group("bench", 6.9, BENCH_PLATE, 2.2, "PRESSURE REGULATOR")
-station("bench", 7.15, BACK_ROW, "DRUM PRESSURE", {
+group("bench", 4.6, BENCH_PLATE, 1.8, "PRESSURE REG")
+station("bench", 4.65, BACK_ROW, "DRUM PRESSURE", {
 	pv = "pri.press", lo = 0, hi = 10, unit = "MPa", fmt = "%.2f", sp = "ehc.pressSet",
 	out = "ehc.demand", auto = "ehc.pressAuto", adj = "ehc.press", adjusts = "SETPOINT",
 	tip = "Pressure regulator: holds drum pressure at the setpoint by moving the turbine steam demand. A puts it in, M takes it out; the arrows move the setpoint.",
 })
-digital("bench", 7.0, FRONT_ROW + 0.1, "PRESS SET", "ehc.pressSet", "%.2f", "MPa", 2.0, 3)
-digital("bench", 7.0, FRONT_ROW + 0.96, "STEAM DEMAND", "ehc.demand", "%.0f", "%", 2.0, 3)
+digital("bench", 4.65, FRONT_ROW + 0.1, "PRESS SET", "ehc.pressSet", "%.2f", "MPa", 1.7, 3)
+digital("bench", 4.65, FRONT_ROW + 0.96, "STEAM DEMAND", "ehc.demand", "%.0f", "%", 1.7, 3)
 
 -- ------------------------------------------------------------------ P6
 panel("P6", "ELECTRICAL")
 annunciators()
 for k = 1, 2 do
 	local key = "gen." .. k
-	meterGroup(if k == 1 then 0.3 else 7.2, PLATE_A, ROW_A, "GENERATOR " .. k, {
+	meterGroup(if k == 1 then 0.3 else 5.55, PLATE_A, ROW_A, "GENERATOR " .. k, {
 		{ "MW", key .. ".mw", 0, 450, "MW" },
-		{ "MVAR", key .. ".mvar", -200, 200, "MVAr" },
 		{ "VOLTS", key .. ".kv", 0, 26, "kV", { fmt = "%.1f" } },
 		{ "FREQ", key .. ".hz", 55, 65, "Hz", { fmt = "%.2f" } },
 	})
 end
-add({ kind = "sync", face = "vert", x = 3.6, y = 0.6, w = 3.2, h = 2.85, label = "SYNCHROSCOPE" })
-meterGroup(10.4, PLATE_A, ROW_A, "UNIT OUTPUT", {
+add({ kind = "sync", face = "vert", x = 2.65, y = 0.6, w = 2.65, h = 2.85, label = "SYNCHROSCOPE" })
+meterGroup(8.0, PLATE_A, ROW_A, "UNIT OUTPUT", {
 	{ "GROSS", "plant.gross", 0, 900, "MW" },
 	{ "AUXIL-\nIARIES", "plant.aux", 0, 80, "MW", { fmt = "%.1f" } },
 	{ "NET", "plant.net", 0, 900, "MW" },
 })
-group("vert", 12.9, PLATE_A, 2.8, "EMERGENCY POWER")
-for i = 1, 3 do
-	lamp("vert", 12.95, 1.0 + (i - 1) * 0.42, "BUS E" .. i .. " LIVE", "ebus." .. i .. ".live", "red", { w = 2.7 })
-	lamp("vert", 12.95, 2.26 + (i - 1) * 0.42, "DG-" .. i .. " RUNNING", "dg." .. i .. ".run", "red", { w = 2.7 })
-end
 meterGroup(0.3, PLATE_B, ROW_B, "BUS LOAD", {
 	{ "BUS\n1A", "bus.1A.mw", 0, 30, "MW", { fmt = "%.1f" } },
 	{ "BUS\n1B", "bus.1B.mw", 0, 30, "MW", { fmt = "%.1f" } },
 	{ "BUS\n2A", "bus.2A.mw", 0, 30, "MW", { fmt = "%.1f" } },
 	{ "BUS\n2B", "bus.2B.mw", 0, 30, "MW", { fmt = "%.1f" } },
 }, 2.4)
-group("vert", 3.4, PLATE_B, 3.8, "AUXILIARY BUS SUPPLY")
+group("vert", 3.4, PLATE_B, 3.75, "AUXILIARY BUS SUPPLY")
 for i, name in { "1A", "1B", "2A", "2B" } do
 	lamp("vert", 3.45, ROW_B + 0.08 + (i - 1) * 0.42, "BUS " .. name .. " LIVE", "bus." .. name .. ".live", "red", { w = 1.8 })
-	lamp("vert", 5.35, ROW_B + 0.08 + (i - 1) * 0.42, "ON RESERVE", "bus." .. name .. ".reserve", "amber", { w = 1.8 })
+	lamp("vert", 5.3, ROW_B + 0.08 + (i - 1) * 0.42, "ON RESERVE", "bus." .. name .. ".reserve", "amber", { w = 1.8 })
 end
-recorder("vert", 7.6, ROW_B, REC_W, REC_H, "UNIT OUTPUT", { pen("plant.gross", 0, 900, "red", "GROSS", "MW"), pen("plant.net", 0, 900, "blue", "NET", "MW") })
-recorder("vert", 9.55, ROW_B, REC_W, REC_H, "FREQUENCY", { pen("grid.hz", 58, 62, "red", "GRID", "Hz"), pen("gen.1.hz", 58, 62, "blue", "GEN 1", "Hz") })
-group("vert", 11.8, PLATE_B, 3.9, "DIESEL GENERATOR BREAKERS")
+group("vert", 7.45, PLATE_B, 3.4, "EMERGENCY POWER")
 for i = 1, 3 do
-	lamp("vert", 11.85, ROW_B + 0.08 + (i - 1) * 0.42, "DG-" .. i .. " BREAKER CLOSED", "dg." .. i .. ".bkr", "red", { w = 3.8 })
+	lamp("vert", 7.5, ROW_B + 0.08 + (i - 1) * 0.42, "BUS E" .. i .. " LIVE", "ebus." .. i .. ".live", "red", { w = 1.6 })
+	lamp("vert", 9.15, ROW_B + 0.08 + (i - 1) * 0.42, "DG-" .. i .. " RUN", "dg." .. i .. ".run", "red", { w = 1.6 })
+	lamp("vert", 7.5, ROW_B + 1.34 + (i - 1) * 0.42, "DG-" .. i .. " BREAKER", "dg." .. i .. ".bkr", "red", { w = 1.6 })
 end
--- Bench: each generator's field, generator and yard breakers under its
--- meters; the synchroscope selector; one selector for the three diesels;
--- one switch that moves all four auxiliary buses between the reserve feed
--- and their unit transformers. The voltage regulators, the automatic
--- transfer and the emergency bus ties look after themselves.
+
+-- Bench: each generator's field, generator and yard breakers in the front
+-- row, the synchronising lamp beside them; behind them the synchroscope
+-- selector, one selector for the three diesels, and one switch that moves
+-- all four auxiliary buses between the reserve feed and their unit
+-- transformers. The voltage regulators, the automatic transfer and the
+-- emergency bus ties look after themselves.
 for k = 1, 2 do
-	local x0 = if k == 1 then 0.4 else 5.25
+	local x0 = if k == 1 then 0.2 else 4.75
 	local key = "gen." .. k
-	group("bench", x0 - 0.05, BENCH_PLATE, 4.55, "GENERATOR " .. k)
-	hmeter("bench", x0, BACK_ROW, "OUTPUT", key .. ".mw", 0, 450, "MW", { w = 2.15 })
-	hmeter("bench", x0 + 2.3, BACK_ROW, "REACTIVE", key .. ".mvar", -200, 200, "MVAr", { w = 2.15 })
-	hmeter("bench", x0, BACK_ROW + 0.8, "VOLTAGE", key .. ".kv", 0, 26, "kV", { w = 2.15, fmt = "%.1f" })
-	hmeter("bench", x0 + 2.3, BACK_ROW + 0.8, "FREQUENCY", key .. ".hz", 55, 65, "Hz", { w = 2.15, fmt = "%.2f" })
+	group("bench", x0 - 0.05, FRONT_ROW - 0.34, 4.35, "GENERATOR " .. k)
 	toggle("bench", x0, FRONT_ROW, "FIELD\nBREAKER", key .. ".field", key .. ".field")
-	toggle("bench", x0 + 1.55, FRONT_ROW, "GENERATOR\nBREAKER", key .. ".gcb", key .. ".gcb", { labels = { "TRIP", "CLOSE" } })
-	toggle("bench", x0 + 3.1, FRONT_ROW, "YARD\nBREAKER", key .. ".yard", key .. ".yard", { labels = { "TRIP", "CLOSE" } })
+	toggle("bench", x0 + 1.45, FRONT_ROW, "GENERATOR\nBREAKER", key .. ".gcb", key .. ".gcb", { labels = { "TRIP", "CLOSE" } })
+	toggle("bench", x0 + 2.9, FRONT_ROW, "YARD\nBREAKER", key .. ".yard", key .. ".yard", { labels = { "TRIP", "CLOSE" } })
 	-- One-line: generator breaker to yard breaker and on to the grid.
-	mimic("bench", "power", { { x0 + 2.225, FRONT_ROW + 1.85 }, { x0 + 2.225, FOOT }, { x0 + 3.775, FOOT }, { x0 + 3.775, FRONT_ROW + 1.85 } })
-	mimic("bench", "power", { { x0 + 3.775, FOOT }, { x0 + 4.5, FOOT } })
+	mimic("bench", "power", { { x0 + 2.125, FRONT_ROW + 1.85 }, { x0 + 2.125, FOOT }, { x0 + 3.575, FOOT }, { x0 + 3.575, FRONT_ROW + 1.85 } })
+	mimic("bench", "power", { { x0 + 3.575, FOOT }, { x0 + 4.3, FOOT } })
 end
-group("bench", 10.15, BENCH_PLATE, 1.6, "SYNCHRONIZING")
-lamp("bench", 10.2, BACK_ROW, "IN SYNC", "sync.ok", "white", { w = 1.5 })
-digital("bench", 10.2, BACK_ROW + 0.56, "GRID FREQ", "grid.hz", "%.2f", "Hz", 1.5, 4)
-selector("bench", 10.2, FRONT_ROW, "SCOPE", "sync.select", "sync.select", { "OFF", "GEN 1", "GEN 2" })
-group("bench", 12.0, BENCH_PLATE, 1.7, "DIESEL GENERATORS")
+group("bench", 9.1, FRONT_ROW - 0.34, 1.8, "SYNC")
+lamp("bench", 9.15, FRONT_ROW, "IN SYNC", "sync.ok", "white", { w = 1.7 })
+digital("bench", 9.15, FRONT_ROW + 0.56, "GRID FREQ", "grid.hz", "%.2f", "Hz", 1.7, 4)
+group("bench", 0.15, BENCH_PLATE, 1.6, "SYNCHRONIZING")
+selector("bench", 0.2, BACK_ROW, "SCOPE", "sync.select", "sync.select", { "OFF", "GEN 1", "GEN 2" })
+group("bench", 1.85, BENCH_PLATE, 3.35, "DIESEL GENERATORS")
+selector("bench", 1.9, BACK_ROW, "DIESELS", "dg.mode", "dg.mode", { "OFF", "AUTO", "RUN" })
 for i = 1, 3 do
-	lamp("bench", 12.1, BACK_ROW + (i - 1) * 0.48, "DG-" .. i .. " RUNNING", "dg." .. i .. ".run", "red", { w = 1.5 })
+	lamp("bench", 3.5, BACK_ROW + (i - 1) * 0.48, "DG-" .. i .. " RUNNING", "dg." .. i .. ".run", "red", { w = 1.65 })
 end
-selector("bench", 12.1, FRONT_ROW, "DIESELS", "dg.mode", "dg.mode", { "OFF", "AUTO", "RUN" })
-group("bench", 14.0, BENCH_PLATE, 1.75, "AUXILIARY BUSES")
+group("bench", 5.35, BENCH_PLATE, 3.3, "AUXILIARY BUSES")
+toggle("bench", 5.4, BACK_ROW, "BUS\nSUPPLY", "bus.supply", "bus.supply", { labels = { "RESERVE", "UNIT" } })
 for i, name in { "1A", "1B", "2A", "2B" } do
-	lamp("bench", 14.05, BACK_ROW + (i - 1) * 0.48, name .. " ON RESERVE", "bus." .. name .. ".reserve", "amber", { w = 1.65 })
+	lamp("bench", 6.85, BACK_ROW + (i - 1) * 0.48, name .. " ON RESERVE", "bus." .. name .. ".reserve", "amber", { w = 1.75 })
 end
-toggle("bench", 14.2, FRONT_ROW, "BUS\nSUPPLY", "bus.supply", "bus.supply", { labels = { "RESERVE", "UNIT" } })
+group("bench", 8.8, BENCH_PLATE, 2.05, "OUTPUT")
+hmeter("bench", 8.85, BACK_ROW, "GENERATOR 1", "gen.1.mw", 0, 450, "MW", { w = 1.95 })
+hmeter("bench", 8.85, BACK_ROW + 0.8, "GENERATOR 2", "gen.2.mw", 0, 450, "MW", { w = 1.95 })
 
 PanelLayout.panels = panels
 
@@ -1348,8 +1274,10 @@ end
 for z = 1, 12 do
 	needSignal("core.zone" .. z)
 end
--- Commands with no panel widget of their own.
-for _, name in { "rod.select", "map.mode", "ann.ack" } do
+-- Commands with no panel widget of their own: the rod select matrix, the
+-- cartogram (a click changes what it shows) and the light boxes (a click
+-- acknowledges, a right click resets).
+for _, name in { "rod.select", "map.mode", "ann.ack", "ann.reset" } do
 	commandSet[name] = true
 end
 
@@ -1516,7 +1444,7 @@ Procedures.pages = {
 			"for them stand behind. Everything else runs on its automatics: tank makeup, letdown,",
 			"the turbine bypass valves, pegging steam, lube oil and turning gear, the emergency",
 			"feed pumps, the voltage regulators. Annunciators: click a light box to acknowledge,",
-			"right-click to reset. Panel 3 has ACK, RESET and TEST for the whole room.",
+			"right-click to reset. Click the cartogram on Panel 3 to change what it shows.",
 			"",
 			"Time is real. Xenon takes hours. A careful cold start takes 60 to 90 minutes;",
 			"it can be done in 20 if you ignore the limits and accept what that does to the plant.",
@@ -2367,8 +2295,9 @@ function RoomBuilder.build(): Folder
 	local room = Instance.new("Folder")
 	room.Name = "ControlRoom"
 
-	-- Shell: about 15 by 14 metres and 3.8 metres to the ceiling tiles.
-	local west, east, north, south = -50, 38, -50, 28
+	-- Shell: about 12.4 by 11.3 metres and 3.8 metres to the ceiling tiles,
+	-- close around the L of boards.
+	local west, east, north, south = -50, 18, -50, 12
 	local width, length, height = east - west, south - north, 3.8 * M
 	local cx, cz = (west + east) / 2, (north + south) / 2
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
@@ -2447,14 +2376,14 @@ function RoomBuilder.build(): Folder
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(8, 0.2, 8)
-	spawn.CFrame = CFrame.new(14, 0.1, 18)
+	spawn.CFrame = CFrame.new(6, 0.1, 5)
 	spawn.Transparency = 1
 	spawn.CanCollide = false
 	spawn.Neutral = true
 	spawn.Parent = room
 
 	-- The door, a sign over it, and a clock above the boards.
-	local doorX = 22
+	local doorX = 6
 	part(room, "Door", Vector3.new(0.9 * M, 2.1 * M, 0.25), CFrame.new(doorX, 1.05 * M, south - 0.12), Color3.fromRGB(126, 96, 70), Enum.Material.Wood)
 	prop(room, "DoorFrame", Vector3.new(1.0 * M, 2.16 * M, 0.15), CFrame.new(doorX, 1.08 * M, south - 0.12), DARK)
 	cylinderProp(room, "DoorHandle", 0.05 * M, 0.1 * M, CFrame.new(doorX - 0.36 * M, 1.0 * M, south - 0.3) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(190, 180, 150), Enum.Material.Metal)
@@ -2644,7 +2573,7 @@ function RoomBuilder.build(): Folder
 
 	-- The shift supervisor's desk behind the operators, facing the boards.
 	do
-		local ss = CFrame.new(10, 0, 10) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+		local ss = CFrame.new(-1, 0, -1) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
 		steelDesk(room, ss, 1.52 * M, 0.76 * M)
 		local top2 = ss * CFrame.new(0, deskH, 0)
 		telephone(room, top2 * CFrame.new(0.5 * M, 0, -0.18 * M), Color3.fromRGB(28, 28, 30))
@@ -10190,8 +10119,16 @@ function Panels.build(room: Instance, ctx: Context)
 			w = w.w,
 			h = w.h,
 			widget = w,
+			-- A click shows the next quantity, a right click the previous one.
+			press = function(button: number)
+				local mode = if current then buffer.readu8(current, 0) else 1
+				local n = #modeNames
+				ctx.click()
+				ctx.send("map.mode", (mode - 1 + (if button == 2 then -1 else 1)) % n + 1)
+				return nil
+			end,
 			tip = function()
-				return "Channel cartogram: one lamp per channel, dark through green, yellow and amber to red.\nRod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout."
+				return "Channel cartogram: one lamp per channel, dark through green, yellow and amber to red.\nRod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout.\nClick to show the next quantity, right-click the previous one."
 			end,
 		} :: any)
 		out.mapCellAt = function(u: number, v: number): number

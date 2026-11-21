@@ -85,7 +85,9 @@ ceiling is 3.8 m up.
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
   scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
   capitals, a dark title plate over each system, and a row of strip-chart recorders.
-- **Consoles**: few controls, and big ones: 65 in the whole room, one switch where a
+- **Compact**: five sections 2 m wide and the reactor section 3.5 m, each carrying only
+  the instruments that matter, with the room built close around them.
+- **Consoles**: few controls, and big ones: 61 in the whole room, one switch where a
   real board has a row of them, with the rest of the plant left to its automatics (tank
   makeup, letdown, the turbine bypass valves, pegging steam, lube oil and turning gear,
   the emergency feed pumps, the voltage regulators, automatic bus transfer). Each
@@ -107,12 +109,12 @@ ceiling is 3.8 m up.
 - **Reactor board (Panel 3)**, the widest section: on the vertical board, the rod position
   indicators (a dial for every one of the 211 rods, laid out as in the core, with a red
   lamp at full out and a green one at full in), the channel cartogram, the axial power
-  bargraph, neutron monitoring meters, the SKALA figures and display, and a neutron power
-  recorder. On the console, the SIUR's desk: rod selection keys in core geometry, the
+  bargraph (click the cartogram to change what it shows), the neutron monitoring meters
+  and the SKALA figures. On the console, the SIUR's desk: rod selection keys in core geometry, the
   spring-return rod movement switch (INSERT / OFF / WITHDRAW) and a four-rod display giving
   each selected rod's coordinates, position and FULL IN / FULL OUT / STUCK lamps; group
-  selection of the shutdown (AZ) and shortened (USP) rods, the power regulators, the
-  emergency protection, the bypass keys and the annunciator pushbuttons.
+  selection of the shutdown (AZ) and shortened (USP) rods, the power regulators, and the
+  emergency protection with the KOM key and the bypass keys.
 - **Guarded buttons**: AZ-5, a big red mushroom-head button with a red nameplate, sits
   under a hinged clear cover with a red tab, as the real one sat under a cover (the
   operator lifted it before pressing); ECCS MANUAL INITIATE and the turbine TRIP buttons
@@ -125,13 +127,12 @@ ceiling is 3.8 m up.
   emergency feed, condensate, emergency core cooling, rod channel cooling), and flow
   meters for each main circulation and feed pump.
 - **Light boxes** run along the top of every panel and follow a ringback sequence: a new
-  alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
-  flashes slowly until RESET; TEST lights every window in the room while held. The
-  windows are grouped in boxes of four columns in beige frames: milky white plastic with
-  black legends, glowing white when lit; the emergency ones are red plastic and glow red. The pushbuttons are on Panel 3;
-  clicking a light box acknowledges and right-clicking resets. In Roblox the board artwork takes the room's lighting, while the
-  self-lit displays (light boxes, digits, the cartogram, the SKALA tube) glow on their
-  own.
+  alarm flashes fast with the horn until it is acknowledged (click a light box), then
+  stays steady; when it clears it flashes slowly until it is reset (right-click a light
+  box). The windows are grouped in boxes of four columns in beige frames: milky white
+  plastic with black legends, glowing white when lit; the emergency ones are red plastic
+  and glow red. In Roblox the board artwork takes the room's lighting, while the self-lit
+  displays (light boxes, digits, the cartogram) glow on their own.
 - **Room**: a gray vinyl tile floor with yellow and black hazard stripes along the
   boards, light gray walls with a darker band to shoulder height, an acoustic tile ceiling
   with rows of fluorescent troffers, an electric wall clock and a green exit sign.

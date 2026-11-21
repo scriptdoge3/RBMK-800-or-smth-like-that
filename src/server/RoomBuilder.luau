@@ -232,8 +232,9 @@ function RoomBuilder.build(): Folder
 	local room = Instance.new("Folder")
 	room.Name = "ControlRoom"
 
-	-- Shell: about 15 by 14 metres and 3.8 metres to the ceiling tiles.
-	local west, east, north, south = -50, 38, -50, 28
+	-- Shell: about 12.4 by 11.3 metres and 3.8 metres to the ceiling tiles,
+	-- close around the L of boards.
+	local west, east, north, south = -50, 18, -50, 12
 	local width, length, height = east - west, south - north, 3.8 * M
 	local cx, cz = (west + east) / 2, (north + south) / 2
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
@@ -312,14 +313,14 @@ function RoomBuilder.build(): Folder
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(8, 0.2, 8)
-	spawn.CFrame = CFrame.new(14, 0.1, 18)
+	spawn.CFrame = CFrame.new(6, 0.1, 5)
 	spawn.Transparency = 1
 	spawn.CanCollide = false
 	spawn.Neutral = true
 	spawn.Parent = room
 
 	-- The door, a sign over it, and a clock above the boards.
-	local doorX = 22
+	local doorX = 6
 	part(room, "Door", Vector3.new(0.9 * M, 2.1 * M, 0.25), CFrame.new(doorX, 1.05 * M, south - 0.12), Color3.fromRGB(126, 96, 70), Enum.Material.Wood)
 	prop(room, "DoorFrame", Vector3.new(1.0 * M, 2.16 * M, 0.15), CFrame.new(doorX, 1.08 * M, south - 0.12), DARK)
 	cylinderProp(room, "DoorHandle", 0.05 * M, 0.1 * M, CFrame.new(doorX - 0.36 * M, 1.0 * M, south - 0.3) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(190, 180, 150), Enum.Material.Metal)
@@ -509,7 +510,7 @@ function RoomBuilder.build(): Folder
 
 	-- The shift supervisor's desk behind the operators, facing the boards.
 	do
-		local ss = CFrame.new(10, 0, 10) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
+		local ss = CFrame.new(-1, 0, -1) * CFrame.Angles(0, PanelLayout.DESK_YAW, 0)
 		steelDesk(room, ss, 1.52 * M, 0.76 * M)
 		local top2 = ss * CFrame.new(0, deskH, 0)
 		telephone(room, top2 * CFrame.new(0.5 * M, 0, -0.18 * M), Color3.fromRGB(28, 28, 30))

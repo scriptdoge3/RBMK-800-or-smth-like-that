@@ -22,7 +22,7 @@ Procedures.pages = {
 			"for them stand behind. Everything else runs on its automatics: tank makeup, letdown,",
 			"the turbine bypass valves, pegging steam, lube oil and turning gear, the emergency",
 			"feed pumps, the voltage regulators. Annunciators: click a light box to acknowledge,",
-			"right-click to reset. Panel 3 has ACK, RESET and TEST for the whole room.",
+			"right-click to reset. Click the cartogram on Panel 3 to change what it shows.",
 			"",
 			"Time is real. Xenon takes hours. A careful cold start takes 60 to 90 minutes;",
 			"it can be done in 20 if you ignore the limits and accept what that does to the plant.",

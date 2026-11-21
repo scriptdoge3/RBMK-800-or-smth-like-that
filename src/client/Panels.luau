@@ -1328,8 +1328,16 @@ function Panels.build(room: Instance, ctx: Context)
 			w = w.w,
 			h = w.h,
 			widget = w,
+			-- A click shows the next quantity, a right click the previous one.
+			press = function(button: number)
+				local mode = if current then buffer.readu8(current, 0) else 1
+				local n = #modeNames
+				ctx.click()
+				ctx.send("map.mode", (mode - 1 + (if button == 2 then -1 else 1)) % n + 1)
+				return nil
+			end,
 			tip = function()
-				return "Channel cartogram: one lamp per channel, dark through green, yellow and amber to red.\nRod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout."
+				return "Channel cartogram: one lamp per channel, dark through green, yellow and amber to red.\nRod channels are tinted by type and darken as the rod goes in.\nMagenta = ruptured channel, white = channel in dryout.\nClick to show the next quantity, right-click the previous one."
 			end,
 		} :: any)
 		out.mapCellAt = function(u: number, v: number): number
