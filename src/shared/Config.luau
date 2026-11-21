@@ -9,7 +9,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-21a (panel hardware of bricks and some cylinders)"
+Config.VERSION = "2026-11-21b (65 big controls, twist handles)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross

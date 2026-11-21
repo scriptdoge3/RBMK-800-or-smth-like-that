@@ -648,11 +648,15 @@ function Core.distributePower(self)
 	local prompt = self.fission * (1 - self.decayFrac)
 	self.thermalPower = prompt + decayPower
 	local histTotal = self.histTotal or 0
+	-- After a long shutdown the power history decays towards zero through
+	-- denormal numbers, and dividing by one of those overflows; below this
+	-- the decay heat is spread evenly instead.
+	local histLive = histTotal > 1e-12 * NF * NZ
 	-- psi is kept so that the production integral equals the node count.
 	local norm = (NF * NZ) / total
 	local promptScale = prompt / (NF * NZ)
-	local decayScale = if histTotal > 0 then decayPower / histTotal else 0
-	local uniformDecay = if histTotal > 0 then 0 else decayPower / (NF * NZ)
+	local decayScale = if histLive then decayPower / histTotal else 0
+	local uniformDecay = if histLive then 0 else decayPower / (NF * NZ)
 	local power = self.power
 	local fluxRel = self.fluxRel
 	local invNZ = 1 / NZ

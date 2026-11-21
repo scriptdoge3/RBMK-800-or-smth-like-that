@@ -63,4 +63,13 @@ do
 	plant:command("ann.reset", 1)
 	H.check(plant.alarms.state[index] == 0, "reset puts the window out")
 end
+
+-- About 60 hours after shutdown the power history decays through denormal
+-- numbers; a unit commissioned then used to start with a NaN core.
+do
+	local late = Plant.new({ seed = 6 * 7919, hoursSinceShutdown = 60.2, failures = false })
+	late:step(0.1)
+	local v = late.S["n.thermal"]
+	H.check(v == v and v > 0 and v < 1e9, string.format("a unit 60 hours after shutdown starts with a sane core (%.2f MW)", v))
+end
 H.finish()

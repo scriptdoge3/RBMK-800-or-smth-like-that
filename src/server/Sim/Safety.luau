@@ -120,6 +120,12 @@ function Safety.step(self, dt: number)
 		end
 	end
 	self.cpsFlow = Util.lag(self.cpsFlow, if flowing and self.cpsTank > 0.15 then 1 else 0, dt, 3)
+	-- The header tank tops itself up: makeup opens below 90% and shuts at 98%.
+	if self.cpsTank < 0.9 then
+		self.cpsMakeup = true
+	elseif self.cpsTank > 0.98 then
+		self.cpsMakeup = false
+	end
 	self.cpsTank = Util.clamp(self.cpsTank - self.cpsLeak * dt + (if self.cpsMakeup then 0.004 * dt else 0), 0, 1)
 	-- With no flow the water in the rod channels heats up and boils away.
 	if self.cpsFlow > 0.5 then

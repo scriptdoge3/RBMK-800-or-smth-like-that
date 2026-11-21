@@ -139,6 +139,29 @@ function Electrical.new(plant)
 			b.ats = v >= 0.5
 		end
 	end
+	-- All four auxiliary buses from one switch: their unit transformers
+	-- (1) or the reserve feed (0). The new feed closes before the old one
+	-- opens, and automatic transfer stays armed.
+	c["bus.supply"] = function(v)
+		local unit = v >= 0.5
+		for _, name in AUX do
+			local b = self.buses[name]
+			if unit then
+				b.normal = true
+				b.reserve = false
+			else
+				b.reserve = true
+				b.normal = false
+			end
+		end
+		plant:log(if unit then "Auxiliary buses to their unit transformers" else "Auxiliary buses to the reserve feed")
+	end
+	-- All three diesel generators from one selector: 0 off, 1 auto, 2 run.
+	c["dg.mode"] = function(v)
+		for _, e in EMERGENCY do
+			self.ebus[e.name].dgMode = Util.clamp(math.floor(v), 0, 2)
+		end
+	end
 	for _, e in EMERGENCY do
 		local b = self.ebus[e.name]
 		local i = b.index
@@ -476,6 +499,8 @@ function Electrical.publish(self, S)
 		end
 	end
 	S["bus.dead"] = dead
+	S["bus.supply"] = if self.buses["1A"].normal and not self.buses["1A"].reserve then 1 else 0
+	S["dg.mode"] = self.ebus.E1.dgMode
 	for _, e in EMERGENCY do
 		local b = self.ebus[e.name]
 		local i = b.index

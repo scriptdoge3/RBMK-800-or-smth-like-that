@@ -67,9 +67,10 @@ function Secondary.new(plant)
 			wear = 0,
 			bow = 0,
 			vib = 0,
-			lubeAC = false,
+			lubeAC = true, -- AC lube oil pump and turning gear run whenever the turbine is stopped
 			lube = 0,
-			turningGear = false,
+			turningGear = true,
+			aux = false, -- the AUXILIARIES switch
 			gland = false,
 			bypass = 0,
 			bypassAuto = true,
@@ -111,7 +112,7 @@ function Secondary.new(plant)
 	for l = 1, 2 do
 		self.level[l] = { auto = false, valve = 0, dir = 0, set = 0, int = 0, autoSeconds = 0, stuck = 0, lastFeed = 0, demand = 0 }
 	end
-	self.da = { mass = 1.2e5, temp = 35, peg = false, levelAuto = true, valve = 0, dir = 0, pegFlow = 0 }
+	self.da = { mass = 1.2e5, temp = 35, peg = true, levelAuto = true, valve = 0, dir = 0, pegFlow = 0 } -- pegging steam cuts in by itself above 6 MPa
 	self.condFlow = 0
 	self.poolHeat = 0 -- W dumped into the suppression pool this tick
 	self.autoSeconds = 0
@@ -170,9 +171,32 @@ function Secondary.new(plant)
 				self:switchPump(t.cw[j], v >= 0.5)
 			end
 		end
+		-- The AUXILIARIES switch: both circulating water pumps, the vacuum
+		-- breaker shut, the vacuum pump and the steam ejectors, gland steam.
+		-- Each piece of plant then works as soon as it can (gland steam and
+		-- the ejectors once there is steam pressure). Lube oil and turning
+		-- gear are always on.
+		c[key .. ".aux"] = function(v)
+			local on = v >= 0.5
+			t.aux = on
+			for j = 1, 2 do
+				self:switchPump(t.cw[j], on)
+			end
+			t.vacBreaker = not on
+			t.vacPump = on
+			t.sjae = on
+			t.gland = on
+			plant:log(string.format("Turbine %d auxiliaries %s", k, if on then "on" else "off"))
+		end
 	end
 	for g = 1, 3 do
 		c["srv." .. g] = function(v)
+			self.safety[g].manual = v >= 0.5
+		end
+	end
+	-- All three safety valve groups from one switch.
+	c["srv.manual"] = function(v)
+		for g = 1, 3 do
 			self.safety[g].manual = v >= 0.5
 		end
 	end
@@ -574,9 +598,11 @@ function Secondary.step(self, dt: number)
 	local need = condFlow * CP * math.max(0, target - condTemp) + da.mass * CP * (target - da.temp) / 400
 	local extraction = loadFrac * Sec.STEAM_NOMINAL * 0.13 * 2.0e6
 	-- Pegging steam comes off the main header through a pressure interlock:
-	-- below 6 MPa it shuts, so a shut-down reactor is not bled cold to keep
-	-- the feedwater warm.
-	local pegAvail = if da.peg and P > 6.0 then 110e6 else 0
+	-- it opens by itself once drum pressure is within 0.3 MPa of the
+	-- pressure regulator's setpoint (the heatup is over, so it does not slow
+	-- it), and below 6 MPa it shuts, so a shut-down reactor is not bled cold
+	-- to keep the feedwater warm.
+	local pegAvail = if da.peg and P > 6.0 and P > self.pressSet - 0.3 then 110e6 else 0
 	local heat = Util.clamp(need, 0, extraction + pegAvail)
 	da.pegFlow = math.max(0, heat - extraction) / 2.0e6
 	aux += da.pegFlow
@@ -679,14 +705,27 @@ function Secondary.step(self, dt: number)
 		end
 	end
 
-	-- Emergency feed pumps.
-	local lowLevel = math.min(pri.loops[1].level, pri.loops[2].level) < -500
+	-- Emergency feed pumps. They start by themselves on low drum level and
+	-- stop again once both drums have been back near normal for a minute
+	-- with a main feed pump running (the panel has no switches for them).
+	local lowest = math.min(pri.loops[1].level, pri.loops[2].level)
+	local lowLevel = lowest < -500
+	if lowest > -150 and mainFeed > 0 then
+		self.auxFeedClear = (self.auxFeedClear or 0) + dt
+	else
+		self.auxFeedClear = 0
+	end
 	local auxFlow = 0
 	for _, pump in self.auxFeed do
 		servicePump(self, pump, dt)
 		if self.auxFeedAuto and lowLevel and not pump.on and not pump.failed and plant:busLive(pump.bus) then
 			pump.on = true
+			pump.autoStarted = true
 			plant:log(pump.name .. " auto-started on low drum level")
+		elseif pump.on and pump.autoStarted and self.auxFeedClear > 60 then
+			pump.on = false
+			pump.autoStarted = false
+			plant:log(pump.name .. " stopped: drum levels recovered")
 		end
 		if pump.on then
 			if daLevel > 0.03 and P < 8.5 then
@@ -752,6 +791,7 @@ function Secondary.publish(self, S)
 		S[key .. ".vacPump"] = if t.vacPump then 1 else 0
 		S[key .. ".sjae"] = if t.sjae then 1 else 0
 		S[key .. ".vacBreaker"] = if t.vacBreaker then 1 else 0
+		S[key .. ".aux"] = if t.aux then 1 else 0
 		S[key .. ".hotwell"] = t.hotwell * 100
 		S[key .. ".wear"] = t.wear
 		for j = 1, 2 do
@@ -767,6 +807,7 @@ function Secondary.publish(self, S)
 		S["srv." .. g .. ".open"] = if v.open or v.manual then 1 else 0
 		S["srv." .. g .. ".sw"] = if v.manual then 1 else 0
 	end
+	S["srv.manual"] = if self.safety[1].manual and self.safety[2].manual and self.safety[3].manual then 1 else 0
 	local feedRunning = 0
 	-- Motor currents, in amperes, for the board ammeters: no-load current
 	-- plus a share that follows the pump's flow.

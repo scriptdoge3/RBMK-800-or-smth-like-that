@@ -52,9 +52,9 @@ from parts now. The game also takes it out of the room by itself when it starts.
 
 | Key | Action |
 | --- | --- |
-| Click | Operate the control under the mouse. Raise/lower buttons and the rod movement switch act while held (left half of the switch inserts, right half withdraws). |
+| Click | Operate the control under the mouse. Raise/lower switches and the rod movement switch act while held (left half of the switch: less / insert, right half: more / withdraw). |
 | Click a guarded button | AZ-5, ECCS MANUAL INITIATE and the turbine TRIP buttons sit under hinged covers: the first click lifts the cover, the next one presses the button. |
-| Right-click | Close a lifted cover; turn a selector back one position. |
+| Right-click | Close a lifted cover; turn a selector back one position; reset the light boxes. |
 | Hover | Name and live reading of anything on a panel. |
 | E | Sit at the nearest panel (locks the camera on it). E again to stand up. |
 | A / D | While seated: move to the next panel. |
@@ -83,13 +83,20 @@ ceiling is 3.8 m up.
 
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
   scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
-  capitals, a dark title plate over each system, and a row of strip-chart recorders. On
-  each console, simple, bold hardware built from a few plain bricks each, with a cylinder
-  only where the thing is round: black levers that stand up off the console and tip
-  towards their position, under a pair of round lamps that glow (green off, red on) and
-  an engraved plate with its two positions; key switches with brass keys; square
-  pushbuttons; black knobs with a tall fin.
-  Valves and setpoints are moved with spring-return levers marked LESS / MORE. Thick
+  capitals, a dark title plate over each system, and a row of strip-chart recorders.
+- **Consoles**: few controls, and big ones: 65 in the whole room, one switch where a
+  real board has a row of them, with the rest of the plant left to its automatics (tank
+  makeup, letdown, the turbine bypass valves, pegging steam, lube oil and turning gear,
+  the emergency feed pumps, the voltage regulators, automatic bus transfer). Each
+  console has its main controls in the front row, nearest the operator, and their meters
+  and lamps in the row behind. The hardware is simple and bold, a few plain bricks each
+  with a cylinder only where the thing is round: control switches with a black twist
+  handle that lies flat on a round base and turns to point its white end at the position
+  it is in, as on the RBMK's boards, under a pair of round lamps that glow (green off,
+  red on) and an engraved plate with its two positions; key switches with brass keys;
+  square pushbuttons; rotary selectors with a black finned knob and engraved position
+  marks. Valves and setpoints are moved with spring-return twist handles marked LESS /
+  MORE. Thick
   mimic lines trace the flow paths (water light blue, steam red, emergency cooling
   orange, power black). Every large pump has a motor ammeter. Digital readouts are red,
   and mechanical counters count ruptured,
@@ -100,25 +107,26 @@ ceiling is 3.8 m up.
   lamp at full out and a green one at full in), the channel cartogram, the axial power
   bargraph, neutron monitoring meters, the SKALA figures and display, and a neutron power
   recorder. On the console, the SIUR's desk: rod selection keys in core geometry, the
-  spring-return rod movement key (INSERT / OFF / WITHDRAW) and a four-rod display giving
-  each selected rod's coordinates, position and FULL IN / FULL OUT / STUCK lamps; then rod
-  group selection, the power regulators, the emergency protection and the bypass keys.
+  spring-return rod movement switch (INSERT / OFF / WITHDRAW) and a four-rod display giving
+  each selected rod's coordinates, position and FULL IN / FULL OUT / STUCK lamps; group
+  selection of the shutdown (AZ) and shortened (USP) rods, the power regulators, the
+  emergency protection, the bypass keys and the annunciator pushbuttons.
 - **Guarded buttons**: AZ-5, a big round red button with a red nameplate, sits under a
   hinged red cover, as the real one did (the operator lifted the cover before pressing
   it); ECCS MANUAL INITIATE and the turbine TRIP buttons are guarded the same way. Click
   once to lift the cover, again to press, right-click to close it.
 - **Controllers** are manual/automatic stations: a process scale with a red setpoint
   index, AUTO and MAN lamps, an output meter, and A / M / lower / raise pushbuttons (drum
-  level A and B, deaerator level, the pressure regulator).
+  level A and B, the pressure regulator).
 - **Pumps**: motor current meters for every large pump (main circulation, feed,
   emergency feed, condensate, emergency core cooling, rod channel cooling), and flow
   meters for each main circulation and feed pump.
 - **Light boxes** run along the top of every panel and follow a ringback sequence: a new
   alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
-  flashes slowly until RESET; TEST lights every window on the panel while held. The
+  flashes slowly until RESET; TEST lights every window in the room while held. The
   windows are grouped in boxes of four columns in beige frames: gray with a dark legend
-  when unlit, white when lit, red for the emergency ones. The pushbuttons are on
-  Panels 1, 3 and 4. In Roblox the board artwork takes the room's lighting, while the
+  when unlit, white when lit, red for the emergency ones. The pushbuttons are on Panel 3;
+  clicking a light box acknowledges and right-clicking resets. In Roblox the board artwork takes the room's lighting, while the
   self-lit displays (light boxes, digits, the cartogram, the SKALA tube) glow on their
   own.
 - **Room**: a dark tiled floor with yellow and black hazard stripes along the boards, dark
@@ -139,7 +147,7 @@ Where the RBMK features are on the boards:
 | Feature | Where |
 | --- | --- |
 | AZ-5 scram button, AZ-1 to AZ-5 lamps, KOM clutch key | Panel 3 console, EMERGENCY PROTECTION |
-| Shutdown (AZ) rods, shortened rods (USP), regulators | Panel 3 console: ROD GROUPS, ROD MOTION, POWER REGULATORS |
+| Shutdown (AZ) rods, shortened rods (USP), regulators | Panel 3 console: ROD MOTION, POWER REGULATORS |
 | Rod positions | Panel 3 board: ROD POSITION INDICATORS, one dial per rod; FOUR ROD DISPLAY on the console |
 | Void coefficient, operational reactivity margin (ORM) | Panel 3 board, SKALA figures |
 | Channel ruptures and reactor space pressure | Panel 1 board, CHANNEL INTEGRITY and the REACTOR SPACE recorder; magenta lamps on the cartogram |
@@ -156,8 +164,8 @@ the operator lifted before pressing it ([Dyatlov's account](https://www.scribd.c
 The unit starts in cold shutdown. Following the checklist, a startup takes about 90
 minutes; ignoring the heatup and turbine warm-up limits it can be done in about 20,
 at the cost of wear that shows up later as burst channels and failed equipment.
-Automatic controllers (power regulators, drum level, pressure, deaerator level) are all
-optional; the time spent under automatic control is recorded for a future scoring system.
+Automatic controllers (power regulators, drum level, pressure) are all optional; the
+time spent under automatic control is recorded for a future scoring system.
 
 If the reactor is destroyed, a new unit is commissioned after about a minute.
 
@@ -177,7 +185,7 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
   three-element level control, safety valves.
 - **Electrical**: generator excitation and synchronising, auxiliary buses with reserve
   transfer, emergency buses and diesels, islanded "rundown" operation.
-- **Control room**: a walkable 3D room. Buttons and their covers, levers, key
+- **Control room**: a walkable 3D room. Buttons and their covers, twist handles, key
   switches, knobs, lamp lenses, meter needles and the bezels around every instrument are
   physical parts; scales, legends and screens are drawn on the panel faces.
 - **Protection**: AZ-1 to AZ-5 with first-out logging and key-switch bypasses, ECCS,

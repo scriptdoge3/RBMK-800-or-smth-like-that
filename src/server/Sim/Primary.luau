@@ -58,7 +58,7 @@ function Primary.new(plant)
 			steam = 0,
 			blowdown = 0, -- valve position 0..1
 			blowdownDir = 0,
-			letdownAuto = false,
+			letdownAuto = true, -- letdown holds the drum level by itself
 			leak = 0, -- kg/s from a pipe break in the compartments
 			levelBias = 0, -- mm error on the narrow-range transmitter (instrument fault)
 			indicated = 0,
@@ -109,6 +109,13 @@ function Primary.new(plant)
 		end
 		c[string.format("loop.%d.letdownAuto", l)] = function(v)
 			loop.letdownAuto = v >= 0.5
+		end
+		-- The loop's throttles together: the panel has one control per loop.
+		c[string.format("loop.%d.throttle", l)] = function(v)
+			local dir = if v > 0.5 then 1 elseif v < -0.5 then -1 else 0
+			for _, pump in self.pumps[l] do
+				pump.valveDir = dir
+			end
 		end
 	end
 	c["pri.cooldown"] = function(v)
@@ -405,6 +412,11 @@ function Primary.publish(self, S)
 		S[k .. ".letdownAuto"] = if loop.letdownAuto then 1 else 0
 		S[k .. ".npsh"] = loop.npsh
 		S[k .. ".running"] = self:runningCount(l)
+		local valves = 0
+		for _, pump in self.pumps[l] do
+			valves += pump.valve
+		end
+		S[k .. ".throttle"] = valves / #self.pumps[l] * 100
 		total += loop.flow
 		local rho = Steam.rhoLiquid(loop.inletTemp)
 		for i, pump in self.pumps[l] do

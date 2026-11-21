@@ -9,6 +9,7 @@ local H = require("./harness")
 local process = require("@lune/process")
 local Config = H.require(H.shared.Config)
 local Plant = H.require(H.server.Sim.Plant)
+local PanelLayout = H.require(H.shared.PanelLayout)
 
 local quiet = table.find(process.args, "quiet") ~= nil
 local trace = table.find(process.args, "trace") ~= nil
@@ -91,13 +92,24 @@ local function waitUntil(cond: () -> boolean, timeout: number, what: string)
 	end
 end
 
+-- Every command the scripted operator gives must come from a control on
+-- the panels: the startup has to be possible with the board as built.
+local offBoard: { [string]: boolean } = {}
+local function onBoard(name: string)
+	if not PanelLayout.commands[name] then
+		offBoard[name] = true
+	end
+end
+
 local function cmd(name: string, v: number?)
+	onBoard(name)
 	if not plant:command(name, v or 1) then
 		error("unknown command " .. name)
 	end
 end
 
 local function hold(name: string, v: number)
+	onBoard(name)
 	if not plant.cmd[name] then
 		error("unknown command " .. name)
 	end
@@ -308,34 +320,26 @@ local wall = os.clock()
 
 phase = "aux"
 H.check(S["bus.1A.live"] == 1 and S["bus.2B.live"] == 1, "auxiliary buses energised from the startup transformer")
+H.check(S["tg.1.lubeAC"] == 1 and S["tg.1.tgear"] == 1, "lube oil and turning gear run by themselves")
 cmd("cond.pump.1", 1)
+-- One switch per turbine: circulating water, vacuum, then gland steam and
+-- the ejectors as soon as there is steam for them.
 for k = 1, 2 do
-	cmd("tg." .. k .. ".cw1", 1)
-	cmd("tg." .. k .. ".cw2", 1)
-	cmd("tg." .. k .. ".lube", 1)
-	cmd("tg." .. k .. ".tgear", 1)
-	cmd("tg." .. k .. ".vacBreaker", 0)
-	cmd("tg." .. k .. ".vacPump", 1)
+	cmd("tg." .. k .. ".aux", 1)
 end
-cmd("loop.1.letdownAuto", 1)
-cmd("loop.2.letdownAuto", 1)
 wait(5)
 
 phase = "mcp"
 -- Cold water at low pressure gives the pumps little suction head, so they
 -- are started against partly closed throttles.
 for l = 1, 2 do
-	for i = 1, 3 do
-		hold(string.format("mcp.%d%d.valve", l, i), -1)
-	end
+	hold("loop." .. l .. ".throttle", -1)
 end
 waitUntil(function()
-	return S["mcp.11.valve"] <= 35
+	return S["loop.1.throttle"] <= 35 and S["loop.2.throttle"] <= 35
 end, 60, "throttles to 35%")
 for l = 1, 2 do
-	for i = 1, 3 do
-		release(string.format("mcp.%d%d.valve", l, i))
-	end
+	release("loop." .. l .. ".throttle")
 end
 for l = 1, 2 do
 	for i = 1, 3 do
@@ -404,24 +408,12 @@ phase = "heatup"
 rampSetpoint(1.0)
 rampSetpoint(3.6, 20)
 cmd("ehc.pressAuto", 1)
-local glandOn, sjaeOn, feedOn = false, false, false
+local feedOn = false
 local maxRate = 0
 while S["pri.press"] < 6.6 do
 	waitCompensating(10)
 	maxRate = math.max(maxRate, S["pri.heatup"])
 	local p = S["pri.press"]
-	if p > 0.6 and not glandOn then
-		glandOn = true
-		cmd("tg.1.gland", 1)
-		cmd("tg.2.gland", 1)
-	end
-	if p > 1.2 and not sjaeOn then
-		sjaeOn = true
-		cmd("tg.1.sjae", 1)
-		cmd("tg.2.sjae", 1)
-		cmd("tg.1.vacPump", 0)
-		cmd("tg.2.vacPump", 0)
-	end
 	if p > 1.0 and not feedOn then
 		feedOn = true
 		cmd("fw.pump.1", 1)
@@ -436,14 +428,14 @@ report()
 print(string.format("  heatup complete at %.1f min, peak rate %.1f C/min", plant.time / 60, maxRate))
 H.check(maxRate < 11.5, "heatup stayed inside the 10 C/min limit")
 H.check(S["az5.active"] == 0, "no scram during heatup")
+H.check(S["tg.1.vac"] < 15 and S["tg.2.vac"] < 15, string.format("condenser vacuum drawn by the auxiliaries switch (%.1f / %.1f kPa)", S["tg.1.vac"], S["tg.2.vac"]))
 
 checkpoint("heatup")
 
 phase = "regulator"
--- With pressure held by the bypass there is steam to spare: start warming
--- the feedwater, then hand over from the low-range regulator to AR-1 with
--- the setpoint matched.
-cmd("da.peg", 1)
+-- With pressure held by the bypass there is steam to spare (the pegging
+-- steam starts warming the feedwater by itself), so hand over from the
+-- low-range regulator to AR-1 with the setpoint matched.
 rampSetpoint(6)
 waitCompensating(30)
 cmd("ar.mode", 1)
@@ -535,6 +527,14 @@ H.check(S["core.minMargin"] > 1.3, string.format("dryout margin healthy (%.2f)",
 H.check(scrams == 0, "no scram on the way up")
 H.check(S["core.ruptured"] == 0, "no channel ruptures")
 H.check(plant.time < 100 * 60, string.format("by-the-book startup takes under 100 minutes (%.0f)", plant.time / 60))
+do
+	local names = {}
+	for name in offBoard do
+		table.insert(names, name)
+	end
+	table.sort(names)
+	H.check(#names == 0, "every command of the startup is on the panels (" .. table.concat(names, ", ") .. ")")
+end
 
 -- Finally, the big red button from full power: at the design point the
 -- scram must work cleanly.
