@@ -189,7 +189,7 @@ local Config = {}
 
 -- Shown in the corner of the screen and printed at startup, so it is easy
 -- to tell which version of the game a place is running.
-Config.VERSION = "2026-11-20b (chunky panel hardware)"
+Config.VERSION = "2026-11-21a (panel hardware of bricks and some cylinders)"
 
 Config.NOMINAL_THERMAL = 2560e6 -- W
 Config.NOMINAL_ELECTRIC = 800e6 -- W gross
@@ -8914,13 +8914,6 @@ local function basePart(folder: Instance, size: Vector3, color: Color3): Part
 	return p
 end
 
-local function cylinder(folder: Instance, face: PanelLayout.Face, x: number, y: number, diameter: number, height: number, color: Color3): Part
-	local p = basePart(folder, Vector3.new(height, diameter, diameter), color)
-	p.Shape = Enum.PartType.Cylinder
-	p.CFrame = CFrame.fromMatrix(PanelLayout.toWorld(face, x, y, height / 2), face.normal, face.up, -face.right)
-	return p
-end
-
 -- A block lying on the face, turned `angle` degrees clockwise as the operator sees it.
 local function blockCFrame(face: PanelLayout.Face, x: number, y: number, lift: number, angle: number): CFrame
 	return CFrame.fromMatrix(PanelLayout.toWorld(face, x, y, lift), face.right, face.up, face.normal) * CFrame.Angles(0, 0, -math.rad(angle))
@@ -8945,11 +8938,10 @@ end
 -- The hardware standing proud of the panels is built from parts in the
 -- frame of each device: X to the operator's right, Y up the panel, Z out of
 -- it, in board units, with the origin at the device's mounting point on the
--- panel face. The style is bold and chunky so that it reads from across
--- the room: black levers that stand up off the console and tip towards
--- their position, round lamps that glow, square pushbuttons with tall caps,
--- black knobs with a tall fin, a big round AZ-5 under a hinged cover.
--- Blocks and cylinders only, no spheres.
+-- panel face. The style is simple and bold: each device is a few plain
+-- bricks, with a cylinder only where the thing itself is round (a lamp's
+-- lens, a knob, a lock, the AZ-5 button). No stacked rings, steps or
+-- decorative extras, and no spheres.
 local CHROME = Color3.fromRGB(200, 202, 206)
 local PHENOLIC = Color3.fromRGB(22, 22, 24) -- black bakelite handles and knobs
 local HOUSING = Color3.fromRGB(46, 48, 50) -- lamp and button housings, mounting plates
@@ -8970,9 +8962,8 @@ local function v3(x: number, y: number, z: number): Vector3
 	return Vector3.new(x, y, z)
 end
 
--- One part of a device, centred at `at`. `kind` is "block"; "disc", a
--- cylinder standing out of the panel (size: diameter, diameter, height);
--- or "rod", a cylinder lying along X (size: length, diameter, diameter).
+-- One part of a device, centred at `at`: a "block" (a brick), or a "disc",
+-- a cylinder standing out of the panel (size: diameter, diameter, height).
 -- Returns the part and where it sits in the device frame.
 local function piece(folder: Instance, frame: CFrame, kind: string, size: Vector3, at: Vector3, color: Color3, material: Enum.Material?, transparency: number?): (Part, CFrame)
 	local p = Instance.new("Part")
@@ -8989,9 +8980,6 @@ local function piece(folder: Instance, frame: CFrame, kind: string, size: Vector
 		p.Shape = Enum.PartType.Cylinder
 		p.Size = Vector3.new(size.Z, size.Y, size.X) * S
 		rel *= OUT_OF_PANEL
-	elseif kind == "rod" then
-		p.Shape = Enum.PartType.Cylinder
-		p.Size = size * S
 	else
 		p.Size = size * S
 	end
@@ -9032,63 +9020,46 @@ local function turned(angle: number): CFrame
 	return CFrame.Angles(0, 0, -math.rad(angle))
 end
 
--- A signal lamp: a round coloured lens with a raised face in a black ring;
--- glass when dark, glowing when lit. `size` is the lens's diameter.
+-- A signal lamp: a round coloured lens in a square black housing; glass
+-- when dark, glowing when lit. `size` is the lens's diameter.
 local function lens(folder: Instance, face: PanelLayout.Face, x: number, y: number, size: number, colors: { Color3 }): (boolean) -> ()
 	local frame = blockCFrame(face, x, y, 0, 0)
 	local d = size
-	piece(folder, frame, "disc", v3(d + 0.08, d + 0.08, 0.05), v3(0, 0, 0.025), PHENOLIC)
-	local body = piece(folder, frame, "disc", v3(d, d, 0.09), v3(0, 0, 0.045), colors[2], GLASS)
-	local top = piece(folder, frame, "disc", v3(d * 0.7, d * 0.7, 0.03), v3(0, 0, 0.1), colors[2], GLASS)
+	piece(folder, frame, "block", v3(d + 0.08, d + 0.08, 0.04), v3(0, 0, 0.02), PHENOLIC)
+	local body = piece(folder, frame, "disc", v3(d, d, 0.1), v3(0, 0, 0.05), colors[2], GLASS)
 	return function(on: boolean)
-		for _, p in { body, top } do
-			p.Color = colors[if on then 1 else 2]
-			p.Material = if on then Enum.Material.Neon else GLASS
-		end
+		body.Color = colors[if on then 1 else 2]
+		body.Material = if on then Enum.Material.Neon else GLASS
 	end
 end
 
--- A pushbutton standing at `frame`: a tall square coloured cap with a
--- raised face in a square black housing. Returns the cap, which moves in
--- when the button is pressed.
+-- A pushbutton standing at `frame`: a square coloured cap in a square
+-- black housing. Returns the cap, which moves in when the button is
+-- pressed.
 local function pushbutton(folder: Instance, frame: CFrame, color: Color3): Assembly
-	piece(folder, frame, "block", v3(0.4, 0.4, 0.04), v3(0, 0, 0.02), HOUSING)
-	piece(folder, frame, "block", v3(0.33, 0.33, 0.07), v3(0, 0, 0.035), PHENOLIC)
+	piece(folder, frame, "block", v3(0.38, 0.38, 0.05), v3(0, 0, 0.025), PHENOLIC)
 	local cap = assembly(folder, frame)
-	cap.add("block", v3(0.27, 0.27, 0.16), v3(0, 0, 0.08), color)
-	cap.add("block", v3(0.2, 0.2, 0.03), v3(0, 0, 0.175), color)
+	cap.add("block", v3(0.26, 0.26, 0.16), v3(0, 0, 0.08), color)
 	return cap
 end
 
--- The AZ-5 button: a big round red button in a black ring, stepped in
--- towards its face.
+-- The AZ-5 button: a big round red button on a square black housing.
 local function scramButton(folder: Instance, frame: CFrame, color: Color3): Assembly
-	piece(folder, frame, "disc", v3(0.6, 0.6, 0.035), v3(0, 0, 0.0175), PHENOLIC)
-	piece(folder, frame, "disc", v3(0.52, 0.52, 0.08), v3(0, 0, 0.04), HOUSING)
+	piece(folder, frame, "block", v3(0.56, 0.56, 0.06), v3(0, 0, 0.03), PHENOLIC)
 	local cap = assembly(folder, frame)
-	cap.add("disc", v3(0.44, 0.44, 0.2), v3(0, 0, 0.1), color)
-	cap.add("disc", v3(0.34, 0.34, 0.04), v3(0, 0, 0.22), color)
+	cap.add("disc", v3(0.44, 0.44, 0.22), v3(0, 0, 0.11), color)
 	return cap
 end
 
 -- A guard for a protective pushbutton, `k` times the size of a standard
--- one: a base plate with rounded corners, two screws and hinge knuckles
--- along its top edge, under a hinged box of translucent red plastic with a
--- tab to lift it by. The button stands on the base. Returns the base's
--- thickness, the cover, and a function that swings the cover open by an
--- angle in degrees.
+-- one: a base brick under a hinged lid of translucent red plastic (five
+-- thin bricks and a tab to lift it by), which has to be raised before the
+-- button can be pressed. The button stands on the base. Returns the base's
+-- thickness, the lid, and a function that swings the lid open by an angle
+-- in degrees about its top edge.
 local function guard(folder: Instance, frame: CFrame, k: number, baseColor: Color3, coverHeight: number): (number, Assembly, (number) -> ())
-	local half, base, r = 0.31 * k, 0.05 * k, 0.06 * k
-	-- Two crossed blocks and four corner discs make the rounded plate.
-	piece(folder, frame, "block", v3(2 * half, 2 * (half - r), base), v3(0, 0, base / 2), baseColor)
-	piece(folder, frame, "block", v3(2 * (half - r), 2 * half, base), v3(0, 0, base / 2), baseColor)
-	for _, sx in { -1, 1 } do
-		for _, sy in { -1, 1 } do
-			piece(folder, frame, "disc", v3(2 * r, 2 * r, base), v3(sx * (half - r), sy * (half - r), base / 2), baseColor)
-		end
-		piece(folder, frame, "disc", v3(0.06 * k, 0.06 * k, 0.012 * k), v3(sx * (half - 0.075 * k), -(half - 0.075 * k), base + 0.006 * k), CHROME, METAL)
-		piece(folder, frame, "rod", v3(0.11 * k, 0.06 * k, 0.06 * k), v3(sx * 0.205 * k, half, base), baseColor)
-	end
+	local half, base = 0.31 * k, 0.05 * k
+	piece(folder, frame, "block", v3(2 * half, 2 * half, base), v3(0, 0, base / 2), baseColor)
 	local cover = assembly(folder, frame)
 	local w, h, t = 2 * half - 0.03 * k, 2 * half - 0.05 * k, 0.02 * k
 	local cy = -0.012 * k
@@ -9103,10 +9074,7 @@ local function guard(folder: Instance, frame: CFrame, k: number, baseColor: Colo
 	wall(v3(t, h, wallH), v3((w - t) / 2, cy, wallZ))
 	wall(v3(w - 2 * t, t, wallH), v3(0, cy - (h - t) / 2, wallZ))
 	wall(v3(w - 2 * t, t, wallH), v3(0, cy + (h - t) / 2, wallZ))
-	-- The lifting tab, the strap out to the hinge, and the hinge barrel.
 	wall(v3(0.24 * k, 0.07 * k, t), v3(0, cy - h / 2 - 0.025 * k, top - 0.03 * k))
-	wall(v3(0.28 * k, 0.05 * k, t), v3(0, half - 0.03 * k, base + 0.012 * k))
-	cover.add("rod", v3(0.29 * k, 0.056 * k, 0.056 * k), v3(0, half, base), COVER_RED, GLASS, COVER_TRANSPARENCY)
 	local function swing(angle: number)
 		local hy, hz = half * S, base * S
 		cover.move(CFrame.new(0, hy, hz) * CFrame.Angles(-math.rad(angle), 0, 0) * CFrame.new(0, -hy, -hz))
@@ -9624,17 +9592,15 @@ function Panels.build(room: Instance, ctx: Context)
 		end)
 	end
 
-	-- A control lever, `k` times the standard size: a square black base and
-	-- a round hub carrying a black lever that stands up off the panel, a
-	-- stalk with a tall paddle grip on top. It tips left or right towards
-	-- its position; `angle` is in switch degrees (-45 to 45, 0 upright).
-	-- Returns a function that moves it.
+	-- A control lever, `k` times the standard size: a square base brick and
+	-- a black lever that stands up off it, a stalk with a tall grip on top.
+	-- It tips left or right towards its position; `angle` is in switch
+	-- degrees (-45 to 45, 0 upright). Returns a function that moves it.
 	local LEVER_TIP = 0.62 -- degrees of tip per switch degree
 	local function controlKey(face: PanelLayout.Face, hx: number, hy: number, angle: number, k: number?): (number) -> ()
 		local s = k or 1
 		local frame = blockCFrame(face, hx, hy, 0, 0)
-		piece(controls, frame, "block", v3(0.32 * s, 0.32 * s, 0.035), v3(0, 0, 0.0175), HOUSING)
-		piece(controls, frame, "disc", v3(0.19 * s, 0.19 * s, 0.07), v3(0, 0, 0.035), PHENOLIC)
+		piece(controls, frame, "block", v3(0.3 * s, 0.3 * s, 0.06), v3(0, 0, 0.03), HOUSING)
 		local pivot = 0.06
 		local lever = assembly(controls, frame)
 		lever.add("block", v3(0.07 * s, 0.07 * s, 0.26 * s), v3(0, 0, pivot + 0.13 * s), PHENOLIC)
@@ -9679,15 +9645,13 @@ function Panels.build(room: Instance, ctx: Context)
 		local hx, hy = cx, ey + eh * 0.62
 		local set: (boolean) -> ()
 		if key then
-			-- A chrome lock cylinder with a brass key standing in it.
+			-- A chrome lock on a base brick, with a brass key standing in it.
 			local frame = blockCFrame(face, hx, hy, 0, 0)
-			piece(controls, frame, "disc", v3(0.3, 0.3, 0.025), v3(0, 0, 0.0125), CHROME, METAL)
-			piece(controls, frame, "disc", v3(0.25, 0.25, 0.07), v3(0, 0, 0.035), CHROME, METAL)
-			piece(controls, frame, "disc", v3(0.16, 0.16, 0.074), v3(0, 0, 0.037), Color3.fromRGB(150, 151, 155), METAL)
+			piece(controls, frame, "block", v3(0.3, 0.3, 0.04), v3(0, 0, 0.02), HOUSING)
+			piece(controls, frame, "disc", v3(0.2, 0.2, 0.08), v3(0, 0, 0.04), Color3.fromRGB(120, 122, 126), METAL)
 			local keyParts = assembly(controls, frame)
-			keyParts.add("block", v3(0.03, 0.08, 0.06), v3(0, 0, 0.1), BRASS, METAL)
-			keyParts.add("block", v3(0.034, 0.13, 0.03), v3(0, 0, 0.14), BRASS, METAL)
-			keyParts.add("rod", v3(0.03, 0.2, 0.2), v3(0, 0, 0.25), BRASS, METAL)
+			keyParts.add("block", v3(0.03, 0.08, 0.1), v3(0, 0, 0.12), BRASS, METAL)
+			keyParts.add("block", v3(0.03, 0.18, 0.14), v3(0, 0, 0.24), BRASS, METAL)
 			set = function(on: boolean)
 				keyParts.move(turned(if on then 45 else -45))
 			end
@@ -9761,11 +9725,10 @@ function Panels.build(room: Instance, ctx: Context)
 		local esc = box(gui, cx - 0.32, cy - 0.3, 0.64, 0.6, Color3.fromRGB(22, 22, 24))
 		local _ = esc
 		local n = #w.positions
-		-- A black knob: a skirt and a round body carrying a tall fin that
-		-- turns with it, the end that points marked white.
+		-- A black knob: a round body carrying a tall fin that turns with it,
+		-- the end that points marked white.
 		local frame = blockCFrame(face, cx, cy, 0, 0)
-		piece(controls, frame, "disc", v3(0.44, 0.44, 0.04), v3(0, 0, 0.02), PHENOLIC)
-		piece(controls, frame, "disc", v3(0.32, 0.32, 0.1), v3(0, 0, 0.05), PHENOLIC)
+		piece(controls, frame, "disc", v3(0.36, 0.36, 0.1), v3(0, 0, 0.05), PHENOLIC)
 		local pointer = assembly(controls, frame)
 		pointer.add("block", v3(0.09, 0.4, 0.18), v3(0, 0.02, 0.19), PHENOLIC)
 		pointer.add("block", v3(0.094, 0.12, 0.1), v3(0, 0.17, 0.22), INDEX_WHITE)
@@ -9906,7 +9869,7 @@ function Panels.build(room: Instance, ctx: Context)
 		glass.Transparency = 0.88
 		glass.Reflectance = 0.08
 		-- Door latch.
-		cylinder(controls, face, cx + cw - 0.06, cy + ch / 2, 0.07, 0.1, Color3.fromRGB(150, 150, 150)).Material = Enum.Material.Metal
+		block(controls, face, cx + cw - 0.06, cy + ch / 2, 0.05, 0.14, 0.08, Color3.fromRGB(150, 150, 150)).Material = Enum.Material.Metal
 		local penY = gy + 0.16
 		local N = 48
 		local stepY = (gh - 0.2) / N

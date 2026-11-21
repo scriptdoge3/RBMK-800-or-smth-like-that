@@ -67,7 +67,7 @@ the Soviet RBMK unit control rooms, with a moody, stylized art direction rather 
 photo-realism: putty-beige boards packed with instruments, light boxes that stay dark until
 they light, glowing lamps and screens, a bright ceiling of luminous panels over a dimmer
 room, a dark floor with yellow and black hazard stripes, and a warm, contrasty colour
-grade. Shapes are kept simple (blocks and cylinders, no spheres). The boards form an L. On the left wing: **Panel 1** reactor
+grade. Shapes are kept simple: plain bricks, some cylinders, no spheres. The boards form an L. On the left wing: **Panel 1** reactor
 auxiliaries and emergency cooling and **Panel 2** main circulation (the SIUB's, the senior
 unit engineer). Along the back wall: **Panel 4** feedwater (SIUB), **Panel 5** turbines
 (SIUT, the senior turbine engineer) and **Panel 6** electrical. **Panel 3**, reactor control,
@@ -84,10 +84,11 @@ ceiling is 3.8 m up.
 - **Boards**: on each vertical board, rows of narrow black-cased profile meters (white
   scale, red pointer, coloured limit bands) under black engraved nameplates in white condensed
   capitals, a dark title plate over each system, and a row of strip-chart recorders. On
-  each console, chunky hardware that reads from across the room: black levers that stand
-  up off the console and tip towards their position, under a pair of round lamps that
-  glow (green off, red on) and an engraved plate with its two positions; key switches
-  with brass keys; square pushbuttons with tall caps; black knobs with a tall fin.
+  each console, simple, bold hardware built from a few plain bricks each, with a cylinder
+  only where the thing is round: black levers that stand up off the console and tip
+  towards their position, under a pair of round lamps that glow (green off, red on) and
+  an engraved plate with its two positions; key switches with brass keys; square
+  pushbuttons; black knobs with a tall fin.
   Valves and setpoints are moved with spring-return levers marked LESS / MORE. Thick
   mimic lines trace the flow paths (water light blue, steam red, emergency cooling
   orange, power black). Every large pump has a motor ammeter. Digital readouts are red,

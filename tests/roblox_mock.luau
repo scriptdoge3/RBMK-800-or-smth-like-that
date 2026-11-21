@@ -326,13 +326,16 @@ H.check(findText("CHANNEL CARTOGRAM   FLUX"), "channel cartogram received and ti
 H.check(findText("Unit in cold shutdown"), "event log reached the client")
 
 local controlsFolder = room:FindFirstChild("PanelControls")
--- The panel hardware is blocks and cylinders: no spheres anywhere in the
--- room, neither ball parts nor sphere meshes.
+-- The panel hardware is plain bricks with only some cylinders, and no
+-- spheres anywhere in the room (neither ball parts nor sphere meshes).
 do
-	local hardware, spheres = 0, 0
+	local hardware, cylinders, spheres = 0, 0, 0
 	for _, d in controlsFolder:GetChildren() do
 		if d:IsA("BasePart") then
 			hardware += 1
+			if d:IsA("Part") and d.Shape == Enum.PartType.Cylinder then
+				cylinders += 1
+			end
 		end
 	end
 	for _, d in room:GetDescendants() do
@@ -340,7 +343,7 @@ do
 			spheres += 1
 		end
 	end
-	H.check(hardware > 1500 and spheres == 0, string.format("panel hardware: %d parts, %d spheres", hardware, spheres))
+	H.check(hardware > 1000 and cylinders * 4 < hardware and spheres == 0, string.format("panel hardware: %d parts, %d of them cylinders, %d spheres", hardware, cylinders, spheres))
 end
 
 -- The scram button is under a hinged cover: the first click lifts the
