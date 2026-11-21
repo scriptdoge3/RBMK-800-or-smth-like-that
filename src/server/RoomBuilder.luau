@@ -4,17 +4,17 @@
 -- are plain parts with known names; each client dresses them with
 -- instruments and controls from the shared layout.
 --
--- The look follows the Soviet RBMK unit control rooms, given a moody,
--- atmospheric art direction rather than a flat or photo-real one: warm
--- beige boards and consoles packed with instruments, in an L around a
--- square corner with the reactor panel set across the corner itself, light
--- boxes along the top that stay dark until they light, a bright ceiling of
--- square luminous panels over a dim room, warm gray walls, a dark floor
--- with yellow and black hazard stripes along the boards, and plain office
--- furniture: two operators' desks with rotary telephones, the SKALA
--- computer's console with its two displays, the alarm printer, the shift
--- supervisor's desk, shelving of procedures and a chalkboard. The lighting
--- and colour grade that finish the look are in default.project.json.
+-- The layout follows the Soviet RBMK unit control rooms, Americanized: warm
+-- beige boards and consoles in an L around a square corner with the
+-- reactor panel set across the corner itself, milky white light boxes
+-- along the top, in a bright room as American control rooms were, under an
+-- acoustic tile ceiling with fluorescent troffers, with light gray walls,
+-- a gray tile floor with yellow and black hazard stripes along the boards,
+-- and plain office furniture: two operators' desks with rotary telephones,
+-- the SKALA computer's console with its two displays, the alarm printer,
+-- the shift supervisor's desk, shelving of procedures and a chalkboard. The
+-- lighting and colour grade that finish the look are in
+-- default.project.json.
 --
 -- Everything is laid out in board units (see PanelLayout) and scaled to
 -- studs at the end, so the room comes out life-size around a standard
@@ -37,12 +37,14 @@ local CAP_COLOR = Color3.fromRGB(60, 58, 54)
 local RUBBER = Color3.fromRGB(54, 50, 44)
 local ANN_COLOR = Color3.fromRGB(36, 34, 30)
 local DARK = Color3.fromRGB(38, 36, 34)
--- A dark floor with hazard stripes along the boards, dark gray walls with a
--- darker band to shoulder height, a ceiling of luminous panels.
-local FLOOR_TILE = Color3.fromRGB(52, 51, 50)
-local WALL = Color3.fromRGB(78, 76, 72)
-local DADO = Color3.fromRGB(58, 56, 53)
-local TILE = Color3.fromRGB(150, 148, 140)
+-- A gray vinyl tile floor with hazard stripes along the boards, light warm
+-- gray walls with a darker band to shoulder height, and an acoustic tile
+-- ceiling with fluorescent troffers: a bright, evenly lit room, as American
+-- control rooms of the period were.
+local FLOOR_TILE = Color3.fromRGB(112, 110, 104)
+local WALL = Color3.fromRGB(172, 170, 162)
+local DADO = Color3.fromRGB(124, 120, 112)
+local TILE = Color3.fromRGB(206, 204, 196)
 local HAZARD_YELLOW = Color3.fromRGB(226, 182, 40)
 local HAZARD_BLACK = Color3.fromRGB(28, 28, 28)
 -- Office furniture: beige-gray enamel with wood-veneer tops.
@@ -237,7 +239,7 @@ function RoomBuilder.build(): Folder
 	local floor = part(room, "Floor", Vector3.new(width, 1, length), CFrame.new(cx, -0.5, cz), FLOOR_TILE)
 	floor.Reflectance = 0.04
 	-- Floor tiles in 0.6 m squares.
-	local tileJoint = Color3.fromRGB(42, 41, 40)
+	local tileJoint = Color3.fromRGB(94, 92, 88)
 	local ft = 0.6 * M
 	for x = west + ft, east - 0.1, ft do
 		prop(room, "FloorJoint", Vector3.new(0.05, 0.02, length), CFrame.new(x, 0.01, cz), tileJoint)
@@ -255,48 +257,53 @@ function RoomBuilder.build(): Folder
 	local dadoH = 1.6 * M
 	for _, z in { north + 0.04, south - 0.04 } do
 		prop(room, "Dado", Vector3.new(width, dadoH, 0.08), CFrame.new(cx, dadoH / 2, z), DADO)
-		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(62, 58, 50))
+		prop(room, "DadoLine", Vector3.new(width, 0.12, 0.1), CFrame.new(cx, dadoH, z), Color3.fromRGB(96, 92, 84))
 		prop(room, "Skirting", Vector3.new(width, 0.5, 0.12), CFrame.new(cx, 0.25, z), DARK)
 	end
 	for _, x in { west + 0.04, east - 0.04 } do
 		prop(room, "Dado", Vector3.new(0.08, dadoH, length), CFrame.new(x, dadoH / 2, cz), DADO)
-		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(62, 58, 50))
+		prop(room, "DadoLine", Vector3.new(0.1, 0.12, length), CFrame.new(x, dadoH, cz), Color3.fromRGB(96, 92, 84))
 		prop(room, "Skirting", Vector3.new(0.12, 0.5, length), CFrame.new(x, 0.25, cz), DARK)
 	end
 
-	-- A luminous ceiling: square diffuser panels in a dark grid, the
-	-- brightest thing in the room. The room light comes from fittings
-	-- hidden behind them.
-	local nx, nz = math.floor(width / (1.2 * M) + 0.5), math.floor(length / (1.2 * M) + 0.5)
-	local mx, mz = width / nx, length / nz
-	local grid = Color3.fromRGB(44, 44, 44)
-	for ix = 0, nx - 1 do
-		for iz = 0, nz - 1 do
-			prop(room, "CeilingPanel", Vector3.new(mx - 0.32, 0.06, mz - 0.32), CFrame.new(west + (ix + 0.5) * mx, height - 0.12, north + (iz + 0.5) * mz), Color3.fromRGB(146, 148, 138), Enum.Material.Neon)
-		end
-	end
-	for ix = 0, nx do
-		prop(room, "CeilingGrid", Vector3.new(0.32, 0.26, length), CFrame.new(west + ix * mx, height - 0.18, cz), grid)
-	end
-	for iz = 0, nz do
-		prop(room, "CeilingGrid", Vector3.new(width, 0.26, 0.32), CFrame.new(cx, height - 0.18, north + iz * mz), grid)
-	end
+	-- An acoustic tile ceiling on a light T-bar grid in two-foot squares,
+	-- with two-by-four fluorescent troffers in rows. Each troffer has a
+	-- diffuser that glows and a light that falls on the room below it.
 	local tileSize = 0.61 * M
+	local tbar = Color3.fromRGB(180, 180, 174)
+	for x = west + tileSize, east - 0.1, tileSize do
+		prop(room, "CeilingGrid", Vector3.new(0.12, 0.08, length), CFrame.new(x, height - 0.04, cz), tbar)
+	end
+	for z = north + tileSize, south - 0.1, tileSize do
+		prop(room, "CeilingGrid", Vector3.new(width, 0.08, 0.12), CFrame.new(cx, height - 0.04, z), tbar)
+	end
 	for ix = 0, 6 do
 		for iz = 0, 5 do
 			local x = west + tileSize * (1.5 + ix * 4)
 			local z = north + tileSize * (2 + iz * 4)
 			if x < east - tileSize and z < south - tileSize then
-				local light = prop(room, "Light", Vector3.new(tileSize, 0.05, 2 * tileSize), CFrame.new(x, height - 0.06, z), TILE)
+				prop(room, "TrofferFrame", Vector3.new(tileSize, 0.1, 2 * tileSize), CFrame.new(x, height - 0.05, z), Color3.fromRGB(216, 216, 210))
+				prop(room, "Troffer", Vector3.new(tileSize - 0.5, 0.06, 2 * tileSize - 0.5), CFrame.new(x, height - 0.1, z), Color3.fromRGB(206, 210, 212), Enum.Material.Neon)
+				local light = prop(room, "Light", Vector3.new(tileSize, 0.05, 2 * tileSize), CFrame.new(x, height - 0.16, z), TILE)
 				light.Transparency = 1
 				local glow = Instance.new("SurfaceLight")
 				glow.Face = Enum.NormalId.Bottom
-				glow.Angle = 140
-				glow.Range = 34
-				glow.Brightness = 0.72
-				glow.Color = Color3.fromRGB(255, 244, 226)
+				glow.Angle = 150
+				glow.Range = 40
+				glow.Brightness = 0.95
+				glow.Color = Color3.fromRGB(250, 250, 244)
 				glow.Shadows = false
 				glow.Parent = light
+				-- A little light thrown back up, as a white ceiling gets from
+				-- the room below it.
+				local bounce = Instance.new("SurfaceLight")
+				bounce.Face = Enum.NormalId.Top
+				bounce.Angle = 180
+				bounce.Range = 12
+				bounce.Brightness = 0.4
+				bounce.Color = Color3.fromRGB(250, 250, 244)
+				bounce.Shadows = false
+				bounce.Parent = light
 			end
 		end
 	end

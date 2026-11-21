@@ -3,7 +3,7 @@
 A Roblox control-room simulator of an "Americanized" pre-1986 RBMK: the full-size
 graphite core (1,661 fuel channels, 211 control rods) derated to 2,560 MW thermal /
 800 MW electric, built for the American 60 Hz grid. It keeps the Soviet design's control
-room, given a moody, stylized look and labelled in English. Only the physics and the control
+room layout, fitted out with American control-board hardware and labelled in English. Only the physics and the control
 room exist; there is no building around it.
 
 It keeps the reactor's real character: a positive void coefficient that grows as rods
@@ -27,8 +27,8 @@ in real time, and fuel channels that burst when you starve or overheat them.
 
 *Preview renders. These are drawn outside Roblox from exactly the parts and panel artwork
 the game's scripts create, so the geometry is the game's; Roblox's own lighting and
-materials will look different, though the previews imitate the game's bloom and colour
-grade. The blocky figures are added to the previews only, at the size of a standard
+materials will look different, though the previews imitate the game's lights, bloom and
+colour grade. The blocky figures are added to the previews only, at the size of a standard
 Roblox character, to show the scale.*
 
 ## Getting it into Roblox Studio
@@ -62,12 +62,13 @@ from parts now. The game also takes it out of the room by itself when it starts.
 | Mouse wheel | While seated: zoom. |
 | P | Procedures binder: startup checklist, shutdown, emergencies, limits. |
 
-The unit is Americanized (English labels, the 60 Hz grid), but its control room follows
-the Soviet RBMK unit control rooms, with a moody, stylized art direction rather than
-photo-realism: putty-beige boards packed with instruments, light boxes that stay dark until
-they light, glowing lamps and screens, a bright ceiling of luminous panels over a dimmer
-room, a dark floor with yellow and black hazard stripes, and a warm, contrasty colour
-grade. Shapes are kept simple: plain bricks, some cylinders, no spheres. The boards form an L. On the left wing: **Panel 1** reactor
+The unit is Americanized (English labels, the 60 Hz grid, American control-board
+hardware), but its control room follows the layout of the Soviet RBMK unit control rooms.
+The look is stylized rather than photo-real: putty-beige boards, black pistol-grip switch
+handles on brushed aluminium plates, round lamps and pushbuttons in chrome rings, milky
+white light boxes, glowing lamps and screens, in a bright room under an acoustic tile
+ceiling with fluorescent troffers, with yellow and black hazard stripes along the boards.
+Shapes are kept simple: plain bricks, some cylinders, no spheres. The boards form an L. On the left wing: **Panel 1** reactor
 auxiliaries and emergency cooling and **Panel 2** main circulation (the SIUB's, the senior
 unit engineer). Along the back wall: **Panel 4** feedwater (SIUB), **Panel 5** turbines
 (SIUT, the senior turbine engineer) and **Panel 6** electrical. **Panel 3**, reactor control,
@@ -90,13 +91,14 @@ ceiling is 3.8 m up.
   the emergency feed pumps, the voltage regulators, automatic bus transfer). Each
   console has its main controls in the front row, nearest the operator, and their meters
   and lamps in the row behind. The hardware is simple and bold, a few plain bricks each
-  with a cylinder only where the thing is round: control switches with a black twist
-  handle that lies flat on a round base and turns to point its white end at the position
-  it is in, as on the RBMK's boards, under a pair of round lamps that glow (green off,
-  red on) and an engraved plate with its two positions; key switches with brass keys;
-  square pushbuttons; rotary selectors with a black finned knob and engraved position
-  marks. Valves and setpoints are moved with spring-return twist handles marked LESS /
-  MORE. Thick
+  with a cylinder only where the thing is round, after American boards of the 1970s:
+  control switches with a black pistol-grip handle, high at the hub and stepping down to
+  its point, with a white line along its top that points at the position it is in, on a
+  brushed aluminium plate engraved with the two positions, under a pair of round lamps
+  in chrome bezels (green off, red on, dark tinted lenses until they light); key switches
+  with brass keys; round oiltight pushbuttons in chrome rings; rotary selectors with a
+  black barred knob and engraved position marks. Valves and setpoints are moved with
+  spring-return pistol grips marked LESS / MORE. Thick
   mimic lines trace the flow paths (water light blue, steam red, emergency cooling
   orange, power black). Every large pump has a motor ammeter. Digital readouts are red,
   and mechanical counters count ruptured,
@@ -111,10 +113,11 @@ ceiling is 3.8 m up.
   each selected rod's coordinates, position and FULL IN / FULL OUT / STUCK lamps; group
   selection of the shutdown (AZ) and shortened (USP) rods, the power regulators, the
   emergency protection, the bypass keys and the annunciator pushbuttons.
-- **Guarded buttons**: AZ-5, a big round red button with a red nameplate, sits under a
-  hinged red cover, as the real one did (the operator lifted the cover before pressing
-  it); ECCS MANUAL INITIATE and the turbine TRIP buttons are guarded the same way. Click
-  once to lift the cover, again to press, right-click to close it.
+- **Guarded buttons**: AZ-5, a big red mushroom-head button with a red nameplate, sits
+  under a hinged clear cover with a red tab, as the real one sat under a cover (the
+  operator lifted it before pressing); ECCS MANUAL INITIATE and the turbine TRIP buttons
+  are guarded the same way. Click once to lift the cover, again to press, right-click to
+  close it.
 - **Controllers** are manual/automatic stations: a process scale with a red setpoint
   index, AUTO and MAN lamps, an output meter, and A / M / lower / raise pushbuttons (drum
   level A and B, the pressure regulator).
@@ -124,23 +127,24 @@ ceiling is 3.8 m up.
 - **Light boxes** run along the top of every panel and follow a ringback sequence: a new
   alarm flashes fast with the horn until ACKNOWLEDGE, then stays steady; when it clears it
   flashes slowly until RESET; TEST lights every window in the room while held. The
-  windows are grouped in boxes of four columns in beige frames: gray with a dark legend
-  when unlit, white when lit, red for the emergency ones. The pushbuttons are on Panel 3;
+  windows are grouped in boxes of four columns in beige frames: milky white plastic with
+  black legends, glowing white when lit; the emergency ones are red plastic and glow red. The pushbuttons are on Panel 3;
   clicking a light box acknowledges and right-clicking resets. In Roblox the board artwork takes the room's lighting, while the
   self-lit displays (light boxes, digits, the cartogram, the SKALA tube) glow on their
   own.
-- **Room**: a dark tiled floor with yellow and black hazard stripes along the boards, dark
-  gray walls, a ceiling of square luminous panels, an electric wall clock and a green exit
-  sign.
+- **Room**: a gray vinyl tile floor with yellow and black hazard stripes along the
+  boards, light gray walls with a darker band to shoulder height, an acoustic tile ceiling
+  with rows of fluorescent troffers, an electric wall clock and a green exit sign.
 - **Furniture**: two operators' desks with rotary telephones (the red one, with no dial,
   is the direct line to the grid dispatcher), logbooks and binders; the SKALA computer's
   console with two green displays (unit summary and alarm summary); the alarm printer
   printing the event log; an ashtray stand; the shift supervisor's desk; shelving of
   procedures; file cabinets; and a chalkboard where the shift status is kept up to date.
 
-The place is set up for Roblox's Future lighting, with a low warm ambient light, bloom
-on everything that glows, and a warm, contrasty colour grade (the `Lighting` settings in
-`default.project.json`).
+The place is set up for Roblox's Future lighting: neutral white light from the troffers
+(each also throws a little light back up onto the ceiling), a moderate ambient light, a
+little bloom on everything that glows and an almost neutral colour grade (the `Lighting`
+settings in `default.project.json`).
 
 Where the RBMK features are on the boards:
 
@@ -185,7 +189,7 @@ If the reactor is destroyed, a new unit is commissioned after about a minute.
   three-element level control, safety valves.
 - **Electrical**: generator excitation and synchronising, auxiliary buses with reserve
   transfer, emergency buses and diesels, islanded "rundown" operation.
-- **Control room**: a walkable 3D room. Buttons and their covers, twist handles, key
+- **Control room**: a walkable 3D room. Buttons and their covers, switch handles, key
   switches, knobs, lamp lenses, meter needles and the bezels around every instrument are
   physical parts; scales, legends and screens are drawn on the panel faces.
 - **Protection**: AZ-1 to AZ-5 with first-out logging and key-switch bypasses, ECCS,

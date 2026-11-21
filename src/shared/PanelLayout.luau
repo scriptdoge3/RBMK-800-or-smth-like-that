@@ -106,7 +106,7 @@ end
 
 -- A control switch module: nameplate, red/green lamps (white for a mode
 -- switch, none for a key switch) and an engraved escutcheon with a
--- twist handle or a key lock.
+-- pistol-grip handle or a key lock.
 local function toggle(face: string, x: number, y: number, label: string, cmd: string, sig: string, opts: any?)
 	local o = opts or {}
 	local compact = o.compact
