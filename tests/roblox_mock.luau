@@ -451,9 +451,10 @@ for _, fn in delayed do
 end
 
 -- Panel view: sit down, look around, stand up.
+local standOrigin, _, standBack = PanelLayout.panelFrame(5)
 fakePlayer.Character = {
 	FindFirstChild = function()
-		return { Position = Vector3.new(0, 3, -30) }
+		return { Position = standOrigin + standBack * 6 * PanelLayout.SCALE + Vector3.new(0, 3, 0) }
 	end,
 }
 local function key(code)
